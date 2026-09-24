@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "battle_setup.h"
 #include "bike.h"
 #include "coord_event_weather.h"
@@ -457,7 +458,7 @@ static const u8 *GetInteractedBackgroundEventScript(struct MapPosition *position
         if (bgEvent->bgUnion.hiddenItem.underfoot == TRUE)
             return NULL;
         gSpecialVar_0x8004 = bgEvent->bgUnion.hiddenItem.hiddenItemId + FLAG_HIDDEN_ITEMS_START;
-        gSpecialVar_0x8005 = bgEvent->bgUnion.hiddenItem.item;
+        gSpecialVar_0x8005 = RH_FieldItem(bgEvent->bgUnion.hiddenItem.item, gSpecialVar_0x8004);
         gSpecialVar_0x8009 = bgEvent->bgUnion.hiddenItem.quantity;
         if (FlagGet(gSpecialVar_0x8004) == TRUE)
             return NULL;

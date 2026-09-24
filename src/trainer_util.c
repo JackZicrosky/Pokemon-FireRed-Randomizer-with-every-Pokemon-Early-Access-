@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "main.h"
 #include "data.h"
 #include "move.h"
@@ -104,6 +105,7 @@ void MakeTrainerGenerator(struct TrainerGenerator *trainerGen, const struct Trai
     trainerGen->trainerClass = trainer->trainerClass;
     trainerGen->otID = OTID_STRUCT_RANDOM_NO_SHINY;
     trainerGen->localRngState = GeneratePartySeed(trainer);
+    trainerGen->trainer = trainer;
 }
 
 void MakePartnerGenerator(struct TrainerGenerator *trainerGen, const struct Trainer *partner)
@@ -118,10 +120,15 @@ void MakePartnerGenerator(struct TrainerGenerator *trainerGen, const struct Trai
     otID = Crc32B((const u8 *)partner, sizeof(struct Trainer));
     trainerGen->otID = OTID_STRUCT_PRESET(otID);
     trainerGen->localRngState = LocalRandomSeed(otID);
+    trainerGen->trainer = NULL;
 }
 
-void GenerateMonFromTrainerMon(struct Pokemon *mon, const struct TrainerMon *trainerMon, struct TrainerGenerator *trainer)
+void GenerateMonFromTrainerMon(struct Pokemon *mon, const struct TrainerMon *origTrainerMon, struct TrainerGenerator *trainer)
 {
+    struct TrainerMon rhMon = *origTrainerMon;
+    const struct TrainerMon *trainerMon = &rhMon;
+    if (gSaveBlock3Ptr->rhSettings.enabled && trainer->trainer != NULL)
+        RH_ModifyTrainerMon(&rhMon, trainer->trainer, origTrainerMon - trainer->trainer->party);
     u32 data;
     u32 personality = (LocalRandom32(&trainer->localRngState) & 0xFFFFDF00) + 0x1000;
     u32 genderValue = 0;

@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "battle.h"
 #include "battle_hold_effects.h"
 #include "battle_message.h"
@@ -8055,7 +8056,7 @@ static u32 GetBattleMonCatchRate(struct BattlePokemon *battleMon)
         species = battleMon->species;
     else
         species = battleMon->volatiles.transformedMonSpecies;
-    return gSpeciesInfo[species].catchRate;
+    return RH_CatchRate(species, gSpeciesInfo[species].catchRate);
 }
 
 static u32 ComputeCaptureOdds(u32 wildMonBattler, u32 playerBattler)

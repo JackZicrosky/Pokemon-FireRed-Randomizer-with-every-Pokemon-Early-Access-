@@ -7,7 +7,7 @@ R = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')) + '/'
 ELF = sys.argv[1] if len(sys.argv) > 1 else R + 'pokefirered.elf'
 VER = sys.argv[2] if len(sys.argv) > 2 else 'FIRERED'
 tmp = R + 'build/rh_tmp'; os.makedirs(tmp, exist_ok=True)
-open(tmp + '/layout.c', 'w').write('#include "global.h"\n#include "pokemon.h"\nstruct SpeciesInfo gDwS; struct Evolution gDwE;\n')
+open(tmp + '/layout.c', 'w').write('#include "global.h"\n#include "pokemon.h"\n#include "move.h"\nstruct SpeciesInfo gDwS; struct Evolution gDwE; struct MoveInfo gDwM;\n')
 subprocess.check_call(['arm-none-eabi-gcc', '-g', '-c', '-iquote', R + 'include', '-DMODERN=1', '-DTESTING=0', f'-D{VER}',
                        '-std=gnu17', '-mthumb', '-mthumb-interwork', '-O0', '-mabi=apcs-gnu', '-march=armv4t',
                        tmp + '/layout.c', '-o', tmp + '/layout.o'])
@@ -41,6 +41,7 @@ def struct_layout(objpath, name):
 
 SI_SIZE, SI = struct_layout(tmp + '/layout.o', 'SpeciesInfo')
 EV_SIZE, EV = struct_layout(tmp + '/layout.o', 'Evolution')
+MV_SIZE, MV = struct_layout(tmp + '/layout.o', 'MoveInfo')
 
 f = open(ELF, 'rb'); elf = ELFFile(f)
 symtab = elf.get_section_by_name('.symtab')
@@ -122,3 +123,20 @@ for i in range(n):
 os.makedirs(R + 'build', exist_ok=True)
 json.dump(out, open(R + f'build/rh_species_{VER.lower()}.json', 'w'), indent=0)
 print('species extracted:', len(out), 'struct size', SI_SIZE)
+
+# ---------------- moves ----------------
+mvn = enum_names(R + 'include/constants/moves.h', 'MOVE_')
+EFF = seq_enum(R + 'include/constants/battle_move_effects.h', 'BattleMoveEffects', 'EFFECT_') if os.path.exists(R + 'include/constants/battle_move_effects.h') else {}
+mbase, msize = sym('gMovesInfo')
+mout = {}
+for i in range(msize // MV_SIZE):
+    buf = read(mbase + i * MV_SIZE, MV_SIZE)
+    name = mvn.get(i)
+    if not name: continue
+    d = {'id': i}
+    for k in ['effect', 'type', 'category', 'power', 'accuracy', 'pp', 'priority', 'metronomeBanned', 'strikeCount', 'multiHit', 'explosion']:
+        if k in MV: d[k] = field(buf, MV[k])
+    d['type'] = TYPES.get(d['type'], d['type']); d['effectName'] = EFF.get(d['effect'], d['effect'])
+    mout[name] = d
+json.dump(mout, open(R + f'build/rh_moves_{VER.lower()}.json', 'w'), indent=0)
+print('moves extracted:', len(mout))

@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "malloc.h"
 #include "apprentice.h"
 #include "battle.h"
@@ -2408,7 +2409,7 @@ u32 GetBoxMonData3(struct BoxPokemon *boxMon, s32 field, u8 *data)
                 }
                 else if (substruct0->teraType == TYPE_NONE) // Tera Type hasn't been modified so we can just use the personality
                 {
-                    const enum Type *types = gSpeciesInfo[substruct0->species].types;
+                    const enum Type types[2] = { GetSpeciesType(substruct0->species, 0), GetSpeciesType(substruct0->species, 1) };
                     retVal = (boxMon->personality & 0x1) == 0 ? types[0] : types[1];
                 }
                 else
@@ -3212,42 +3213,66 @@ u32 GetSpeciesWeight(enum Species species)
 
 enum Type GetSpeciesType(enum Species species, u8 slot)
 {
-    return gSpeciesInfo[SanitizeSpeciesId(species)].types[slot];
+    enum Type type = gSpeciesInfo[SanitizeSpeciesId(species)].types[slot];
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_SpeciesType(SanitizeSpeciesId(species), slot, type);
+    return type;
 }
 
 enum Ability GetSpeciesAbility(enum Species species, u8 slot)
 {
-    return gSpeciesInfo[SanitizeSpeciesId(species)].abilities[slot];
+    enum Ability ability = gSpeciesInfo[SanitizeSpeciesId(species)].abilities[slot];
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_SpeciesAbility(SanitizeSpeciesId(species), slot, ability);
+    return ability;
 }
 
 u32 GetSpeciesBaseHP(enum Species species)
 {
-    return gSpeciesInfo[SanitizeSpeciesId(species)].baseHP;
+    u32 value = gSpeciesInfo[SanitizeSpeciesId(species)].baseHP;
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_SpeciesBaseStat(SanitizeSpeciesId(species), STAT_HP, value);
+    return value;
 }
 
 u32 GetSpeciesBaseAttack(enum Species species)
 {
-    return gSpeciesInfo[SanitizeSpeciesId(species)].baseAttack;
+    u32 value = gSpeciesInfo[SanitizeSpeciesId(species)].baseAttack;
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_SpeciesBaseStat(SanitizeSpeciesId(species), STAT_ATK, value);
+    return value;
 }
 
 u32 GetSpeciesBaseDefense(enum Species species)
 {
-    return gSpeciesInfo[SanitizeSpeciesId(species)].baseDefense;
+    u32 value = gSpeciesInfo[SanitizeSpeciesId(species)].baseDefense;
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_SpeciesBaseStat(SanitizeSpeciesId(species), STAT_DEF, value);
+    return value;
 }
 
 u32 GetSpeciesBaseSpAttack(enum Species species)
 {
-    return gSpeciesInfo[SanitizeSpeciesId(species)].baseSpAttack;
+    u32 value = gSpeciesInfo[SanitizeSpeciesId(species)].baseSpAttack;
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_SpeciesBaseStat(SanitizeSpeciesId(species), STAT_SPATK, value);
+    return value;
 }
 
 u32 GetSpeciesBaseSpDefense(enum Species species)
 {
-    return gSpeciesInfo[SanitizeSpeciesId(species)].baseSpDefense;
+    u32 value = gSpeciesInfo[SanitizeSpeciesId(species)].baseSpDefense;
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_SpeciesBaseStat(SanitizeSpeciesId(species), STAT_SPDEF, value);
+    return value;
 }
 
 u32 GetSpeciesBaseSpeed(enum Species species)
 {
-    return gSpeciesInfo[SanitizeSpeciesId(species)].baseSpeed;
+    u32 value = gSpeciesInfo[SanitizeSpeciesId(species)].baseSpeed;
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_SpeciesBaseStat(SanitizeSpeciesId(species), STAT_SPEED, value);
+    return value;
 }
 
 u32 GetSpeciesBaseStat(enum Species species, u32 statIndex)
@@ -3285,6 +3310,8 @@ const struct LevelUpMove *GetSpeciesLevelUpLearnset(enum Species species)
     const struct LevelUpMove *learnset = gSpeciesInfo[SanitizeSpeciesId(species)].levelUpLearnset;
     if (learnset == NULL)
         return gSpeciesInfo[SPECIES_NONE].levelUpLearnset;
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_LevelUpLearnset(SanitizeSpeciesId(species), learnset);
     return learnset;
 }
 
@@ -3321,6 +3348,8 @@ const struct Evolution *GetSpeciesEvolutions(enum Species species)
     const struct Evolution *evolutions = gSpeciesInfo[SanitizeSpeciesId(species)].evolutions;
     if (evolutions == NULL)
         return gSpeciesInfo[SPECIES_NONE].evolutions;
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_Evolutions(SanitizeSpeciesId(species), evolutions);
     return evolutions;
 }
 
@@ -5021,7 +5050,15 @@ bool8 TryIncrementMonLevel(struct Pokemon *mon)
     }
 }
 
+static bool32 CanLearnTeachableMoveVanilla(enum Species species, enum Move move);
 bool32 CanLearnTeachableMove(enum Species species, enum Move move)
+{
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_CanLearnTeachable(species, move, CanLearnTeachableMoveVanilla);
+    return CanLearnTeachableMoveVanilla(species, move);
+}
+
+static bool32 CanLearnTeachableMoveVanilla(enum Species species, enum Move move)
 {
     const u16 *teachableLearnset = GetSpeciesTeachableLearnset(species);
     if (species == SPECIES_EGG)
@@ -6634,8 +6671,8 @@ bool32 IsSpeciesForeignRegionalForm(enum Species species, enum Region currentReg
 
 enum Type GetTeraTypeFromPersonality(struct Pokemon *mon)
 {
-    const u8 *types = gSpeciesInfo[GetMonData(mon, MON_DATA_SPECIES)].types;
-    return (GetMonData(mon, MON_DATA_PERSONALITY) & 0x1) == 0 ? types[0] : types[1];
+    enum Species species = GetMonData(mon, MON_DATA_SPECIES);
+    return (GetMonData(mon, MON_DATA_PERSONALITY) & 0x1) == 0 ? GetSpeciesType(species, 0) : GetSpeciesType(species, 1);
 }
 
 struct Pokemon *GetSavedPlayerPartyMon(u32 index)
@@ -6655,8 +6692,8 @@ void SavePlayerPartyMon(u32 index, struct Pokemon *mon)
 
 bool32 IsSpeciesOfType(enum Species species, enum Type type)
 {
-    if (gSpeciesInfo[species].types[0] == type
-     || gSpeciesInfo[species].types[1] == type)
+    if (GetSpeciesType(species, 0) == type
+     || GetSpeciesType(species, 1) == type)
         return TRUE;
     return FALSE;
 }

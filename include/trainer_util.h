@@ -11,6 +11,7 @@ struct TrainerGenerator
     u8 name[TRAINER_NAME_LENGTH + 1];
     struct OriginalTrainerId otID;
     rng_value_t localRngState;
+    const struct Trainer *trainer; // RH: set for NPC trainers so the randomizer can identify them
 };
 
 rng_value_t GeneratePartySeed(const struct Trainer *trainer);

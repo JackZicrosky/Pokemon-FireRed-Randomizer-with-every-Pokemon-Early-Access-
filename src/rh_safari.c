@@ -66,7 +66,7 @@ static s32 LandPoolForMap(void)
     return -1;
 }
 
-static enum Species SafariSpecies(enum Species species, enum WildPokemonArea area)
+enum Species RH_SafariSpecies(enum Species species, enum WildPokemonArea area)
 {
     u32 mode = VarGet(VAR_RH_SAFARI_GEN), total;
     s32 pool, alt = -1;
@@ -94,11 +94,6 @@ static enum Species SafariSpecies(enum Species species, enum WildPokemonArea are
     return ApplyFormGroup(PickFromPool(pool, mode, total));
 }
 
-enum Species RH_ModifyWildSpecies(enum Species species, enum WildPokemonArea area)
-{
-    species = SafariSpecies(species, area);
-    return species;
-}
 
 static const u8 *const sGenNames[] = {
     [0] = COMPOUND_STRING("CLASSIC KANTO"),

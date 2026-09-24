@@ -1,5 +1,6 @@
 // Progressive Poke Mart stock (badge-gated) for the romhack.
 #include "global.h"
+#include "rh.h"
 #include "event_data.h"
 #include "shop.h"
 #include "script.h"
@@ -50,13 +51,13 @@ void RH_OpenMart(void)
     themed = sRhMarts[mart].themed;
 
     for (i = 0; base[i] != ITEM_NONE; i++)
-        count = Append(count, base[i]);
+        count = Append(count, RH_ShopItem(base[i], mart, i));
     for (i = 0; i < ARRAY_COUNT(sRhProgressive); i++)
         if (badges >= sRhProgressive[i].minBadges)
             count = Append(count, sRhProgressive[i].item);
     for (i = 0; themed[i].item != ITEM_NONE; i++)
         if (badges >= themed[i].minBadges)
-            count = Append(count, themed[i].item);
+            count = Append(count, RH_ShopItem(themed[i].item, mart, 64 + i));
     sRhMartBuffer[count] = ITEM_NONE;
 
     CreatePokemartMenu(sRhMartBuffer);

@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "frontier_util.h"
 #include "battle_setup.h"
 #include "battle_util.h"
@@ -2271,7 +2272,7 @@ bool8 ScrCmd_bufferboxname(struct ScriptContext *ctx)
 
 bool8 ScrCmd_giveegg(struct ScriptContext *ctx)
 {
-    enum Species species = VarGet(ScriptReadHalfword(ctx));
+    enum Species species = RH_StaticSpecies(VarGet(ScriptReadHalfword(ctx)));
 
     Script_RequestEffects(SCREFF_V1 | SCREFF_SAVE);
 
@@ -2469,10 +2470,10 @@ bool8 ScrCmd_cleartrainerflag(struct ScriptContext *ctx)
 
 bool8 ScrCmd_setwildbattle(struct ScriptContext *ctx)
 {
-    enum Species species = ScriptReadHalfword(ctx);
+    enum Species species = RH_StaticSpecies(ScriptReadHalfword(ctx));
     u8 level = ScriptReadByte(ctx);
     enum Item item = ScriptReadHalfword(ctx);
-    enum Species species2 = ScriptReadHalfword(ctx);
+    enum Species species2 = RH_StaticSpecies(ScriptReadHalfword(ctx));
     u8 level2 = ScriptReadByte(ctx);
     enum Item item2 = ScriptReadHalfword(ctx);
 

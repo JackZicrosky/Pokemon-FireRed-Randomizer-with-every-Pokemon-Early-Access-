@@ -20,6 +20,7 @@
 #include "easy_chat.h"
 #include "event_data.h"
 #include "money.h"
+#include "rh.h"
 #include "script_pokemon_util.h"
 #include "safari_zone.h"
 #include "trainer_hill.h"
@@ -242,6 +243,7 @@ void NewGameInitData(void)
     ResetItemFlags();
     ResetDexNav();
     ClearFollowerNPCData();
+    RH_ApplyPendingSettings();
 #if defined(RH_TEST_MAP) && !defined(RELEASE)
     for (u32 b = 0; b < RH_TEST_BADGES; b++) FlagSet(FLAG_BADGE01_GET + b);
     SetMoney(&gSaveBlock1Ptr->money, 900000);

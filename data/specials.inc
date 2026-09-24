@@ -640,3 +640,6 @@ gSpecials::
 	def_special CheckAddCoins
 	def_special RH_OpenMart, waitstate=1
 	def_special RH_BufferSafariGenName
+	def_special RH_RemapStarterVars
+	def_special RH_StartersRandomized
+	def_special RH_RandomizeItemBall

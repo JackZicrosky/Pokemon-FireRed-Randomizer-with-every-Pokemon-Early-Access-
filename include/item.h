@@ -131,7 +131,9 @@ static inline enum TMHMIndex GetItemTMHMIndex(enum Item item)
     }
 }
 
-static inline enum Move GetItemTMHMMoveId(enum Item item)
+enum Move RH_TMMove(u32 tmhmIndex, enum Move vanilla);
+static inline enum TMHMIndex GetItemTMHMIndex(enum Item item);
+static inline enum Move GetItemTMHMMoveIdVanilla(enum Item item)
 {
     switch (item)
     {
@@ -179,7 +181,17 @@ static inline enum Item GetTMHMItemId(enum TMHMIndex index)
 
 static inline enum Move GetTMHMMoveId(enum TMHMIndex index)
 {
+    if (gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_TMMove(index, gTMHMItemMoveIds[index].moveId);
     return gTMHMItemMoveIds[index].moveId;
+}
+
+static inline enum Move GetItemTMHMMoveId(enum Item item)
+{
+    enum Move move = GetItemTMHMMoveIdVanilla(item);
+    if (move != MOVE_NONE && gSaveBlock3Ptr->rhSettings.enabled)
+        return RH_TMMove(GetItemTMHMIndex(item) - 1, move);
+    return move;
 }
 
 #define GET_BERRY_ID(_berry) case ITEM_##_berry##_BERRY: return BERRY_ID_##_berry;

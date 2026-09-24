@@ -579,7 +579,7 @@ bool8 TryGenerateWildMon(const struct WildPokemonInfo *wildMonInfo, enum WildPok
     if (gMapHeader.mapLayoutId != LAYOUT_BATTLE_FRONTIER_BATTLE_PIKE_ROOM_WILD_MONS && flags & WILD_CHECK_KEEN_EYE && !IsAbilityAllowingEncounter(level))
         return FALSE;
 
-    CreateWildMon(RH_ModifyWildSpecies(wildMonInfo->wildPokemon[wildMonIndex].species, area), level);
+    CreateWildMon(RH_ModifyWildSpecies(wildMonInfo->wildPokemon[wildMonIndex].species, area), RH_ModifyWildLevel(level));
     return TRUE;
 }
 
@@ -587,7 +587,7 @@ static u16 GenerateFishingWildMon(const struct WildPokemonInfo *wildMonInfo, u8 
 {
     u8 wildMonIndex = ChooseWildMonIndex_Fishing(rod);
     enum Species wildMonSpecies = RH_ModifyWildSpecies(wildMonInfo->wildPokemon[wildMonIndex].species, WILD_AREA_FISHING);
-    u8 level = ChooseWildMonLevel(wildMonInfo->wildPokemon, wildMonIndex, WILD_AREA_FISHING);
+    u8 level = RH_ModifyWildLevel(ChooseWildMonLevel(wildMonInfo->wildPokemon, wildMonIndex, WILD_AREA_FISHING));
 
     UpdateChainFishingStreak();
     CreateWildMon(wildMonSpecies, level);

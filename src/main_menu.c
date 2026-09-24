@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "trainer_pokemon_sprites.h"
 #include "bg.h"
 #include "constants/rgb.h"
@@ -1085,7 +1086,8 @@ static void Task_HandleMainMenuAPressed(u8 taskId)
                     sCurrItemAndOptionMenuCheck = 0;
                 else
                     sCurrItemAndOptionMenuCheck |= OPTION_MENU_FLAG;  // entering the options menu
-                StartNewGameSceneFrlg();
+                gMain.state = 0;
+                SetMainCallback2(CB2_InitRandomizerMenu);   // RH: randomizer options before Oak's speech
                 return;
             }
 

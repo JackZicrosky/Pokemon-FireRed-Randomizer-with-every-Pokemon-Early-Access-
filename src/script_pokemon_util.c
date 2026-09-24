@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "battle.h"
 #include "battle_gfx_sfx_util.h"
 #include "berry.h"
@@ -410,7 +411,7 @@ void ScrCmd_createmon(struct ScriptContext *ctx)
     u8 slot                   = ScriptReadByte(ctx);
 
     struct PokemonTemplate monTemplate = {0};
-    monTemplate.species      = VarGet(ScriptReadHalfword(ctx));
+    monTemplate.species      = RH_StaticSpecies(VarGet(ScriptReadHalfword(ctx)));
     monTemplate.level        = VarGet(ScriptReadHalfword(ctx));
 
     u32 flags                 = ScriptReadWord(ctx);

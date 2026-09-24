@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "malloc.h"
 #include "battle_anim.h"
 #include "battle_interface.h"
@@ -4545,9 +4546,10 @@ static void SpriteCB_BouncingPokeballArrive(struct Sprite *sprite)
 u16 GetInGameTradeSpeciesInfo(void)
 {
     const struct InGameTrade *inGameTrade = &sIngameTrades[gSpecialVar_0x8005];
-    StringCopy(gStringVar1, GetSpeciesName(inGameTrade->requestedSpecies));
-    StringCopy(gStringVar2, GetSpeciesName(inGameTrade->species));
-    return inGameTrade->requestedSpecies;
+    enum Species requested = RH_TradeSpecies(gSpecialVar_0x8005, inGameTrade->requestedSpecies, TRUE);
+    StringCopy(gStringVar1, GetSpeciesName(requested));
+    StringCopy(gStringVar2, GetSpeciesName(RH_TradeSpecies(gSpecialVar_0x8005, inGameTrade->species, FALSE)));
+    return requested;
 }
 
 static void BufferInGameTradeMonName(void)
@@ -4556,7 +4558,7 @@ static void BufferInGameTradeMonName(void)
     const struct InGameTrade *inGameTrade = &sIngameTrades[gSpecialVar_0x8005];
     GetMonData(&gParties[B_TRAINER_PLAYER][gSpecialVar_0x8005], MON_DATA_NICKNAME, nickname);
     StringCopy_Nickname(gStringVar1, nickname);
-    StringCopy(gStringVar2, GetSpeciesName(inGameTrade->species));
+    StringCopy(gStringVar2, GetSpeciesName(RH_TradeSpecies(gSpecialVar_0x8005, inGameTrade->species, FALSE)));
 }
 
 static void CreateInGameTradePokemonInternal(u8 whichPlayerMon, u8 whichInGameTrade)
@@ -4570,7 +4572,7 @@ static void CreateInGameTradePokemonInternal(u8 whichPlayerMon, u8 whichInGameTr
     u8 mailNum;
     struct Pokemon *pokemon = &gParties[B_TRAINER_OPPONENT_A][0];
 
-    CreateMon(pokemon, inGameTrade->species, level, inGameTrade->personality, OTID_STRUCT_PRESET(inGameTrade->otId));
+    CreateMon(pokemon, RH_TradeSpecies(whichInGameTrade, inGameTrade->species, FALSE), level, inGameTrade->personality, OTID_STRUCT_PRESET(inGameTrade->otId));
     GiveMonInitialMoveset(pokemon);
 
     SetMonData(pokemon, MON_DATA_HP_IV, &inGameTrade->ivs[0]);
@@ -4623,7 +4625,7 @@ static void GetInGameTradeMail(struct Mail *mail, const struct InGameTrade *trad
     mail->trainerId[1] = trade->otId >> 16;
     mail->trainerId[2] = trade->otId >> 8;
     mail->trainerId[3] = trade->otId;
-    mail->species = trade->species;
+    mail->species = RH_TradeSpecies(trade - sIngameTrades, trade->species, FALSE);
     mail->itemId = trade->heldItem;
 }
 

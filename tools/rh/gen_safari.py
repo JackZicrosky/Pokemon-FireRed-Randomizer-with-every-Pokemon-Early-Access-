@@ -54,6 +54,20 @@ FORM_GROUPS = {
     'TAUROS_PALDEA': None,  # the three Paldean breeds are separate pool entries (different types)
 }
 
+import re as _re
+ALIAS = dict(_re.findall(r'^\s*(SPECIES_\w+)\s*=\s*(SPECIES_\w+)\s*,', open(R + 'include/constants/species.h').read(), _re.M))
+def canon(n):
+    for _ in range(4):
+        if n in S: return n
+        n = ALIAS.get(n, n)
+    return n
+GROUPS_CANON = {}
+for _k, _fg in FORM_GROUPS.items():
+    if not _fg: continue
+    _b = canon('SPECIES_' + _k)
+    if _b not in S: raise SystemExit('FORM_GROUPS base not found: ' + _k)
+    GROUPS_CANON[_b] = _fg
+
 def base_name(sp, v):
     return v['forms'][0] if v['forms'] else sp
 
@@ -101,9 +115,9 @@ for sp, v in sorted(S.items(), key=lambda kv: (kv[1]['natDexNum'], kv[1]['id']))
     st = stage(sp)
     w = 0 if legendary(v) else {1: 10, 2: 9}.get(st, 8)
     pools[area_of(v)].append([sp, g, w, 0])
-    if short in FORM_GROUPS and FORM_GROUPS[short]:
-        fg = FORM_GROUPS[short]
-        members = [f for f in v['forms'] if f in S and not any(S[f].get(x) for x in BAD_FLAGS) and not is_regional(S[f])] if fg == 'all' else ['SPECIES_' + f for f in fg]
+    if sp in GROUPS_CANON:
+        fg = GROUPS_CANON[sp]
+        members = [f for f in v['forms'] if f in S and not any(S[f].get(x) for x in BAD_FLAGS) and not is_regional(S[f])] if fg == 'all' else [canon('SPECIES_' + f) for f in fg]
         for m in members:
             if m not in S: raise SystemExit('bad form ' + m)
         groups[sp] = members
