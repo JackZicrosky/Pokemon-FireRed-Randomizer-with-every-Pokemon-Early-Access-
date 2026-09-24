@@ -14,7 +14,8 @@ FuchsiaCity_Mart_EventScript_Clerk::
 	faceplayer
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart FuchsiaCity_Mart_Items
+	setvar VAR_0x8004, RH_MART_FUCHSIA
+	special RH_OpenMart
 	msgbox gText_PleaseComeAgain
 	release
 	end

@@ -133,8 +133,16 @@ static void ClearFrontierRecord(void)
     gSaveBlock2Ptr->frontier.opponentNames[1][0] = EOS;
 }
 
+#include "config/rh_test.h"
 static void WarpToTruck(void)
 {
+#ifdef RH_TEST_MAP
+    for (u32 b = 0; b < RH_TEST_BADGES; b++) FlagSet(FLAG_BADGE01_GET + b);
+    AddMoney(&gSaveBlock1Ptr->money, 900000);
+    SetWarpDestination(MAP_GROUP(RH_TEST_MAP), MAP_NUM(RH_TEST_MAP), WARP_ID_NONE, RH_TEST_X, RH_TEST_Y);
+    WarpIntoMap();
+    return;
+#endif
     if (IS_FRLG)
         SetWarpDestination(MAP_GROUP(MAP_PALLET_TOWN_PLAYERS_HOUSE_2F), MAP_NUM(MAP_PALLET_TOWN_PLAYERS_HOUSE_2F), WARP_ID_NONE, 6, 6);
     else

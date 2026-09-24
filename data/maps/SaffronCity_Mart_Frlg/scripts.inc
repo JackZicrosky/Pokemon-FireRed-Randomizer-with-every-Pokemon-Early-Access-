@@ -14,7 +14,8 @@ SaffronCity_Mart_EventScript_Clerk::
 	faceplayer
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart SaffronCity_Mart_Items
+	setvar VAR_0x8004, RH_MART_SAFFRON
+	special RH_OpenMart
 	msgbox gText_PleaseComeAgain
 	release
 	end

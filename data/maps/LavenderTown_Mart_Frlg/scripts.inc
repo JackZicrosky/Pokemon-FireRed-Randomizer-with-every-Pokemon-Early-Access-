@@ -18,7 +18,8 @@ LavenderTown_Mart_EventScript_Clerk::
 	faceplayer
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart LavenderTown_Mart_Items
+	setvar VAR_0x8004, RH_MART_LAVENDER
+	special RH_OpenMart
 	msgbox gText_PleaseComeAgain
 	release
 	end

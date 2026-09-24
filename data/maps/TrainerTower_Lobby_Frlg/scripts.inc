@@ -119,7 +119,8 @@ TrainerTower_Lobby_EventScript_MartClerk::
 	faceplayer
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart TrainerTower_Lobby_Mart_Items
+	setvar VAR_0x8004, RH_MART_TRAINER_TOWER
+	special RH_OpenMart
 	msgbox gText_PleaseComeAgain
 	release
 	end

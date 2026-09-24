@@ -14,7 +14,8 @@ CinnabarIsland_Mart_EventScript_Clerk::
 	faceplayer
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart CinnabarIsland_Mart_Items
+	setvar VAR_0x8004, RH_MART_CINNABAR
+	special RH_OpenMart
 	msgbox gText_PleaseComeAgain
 	release
 	end

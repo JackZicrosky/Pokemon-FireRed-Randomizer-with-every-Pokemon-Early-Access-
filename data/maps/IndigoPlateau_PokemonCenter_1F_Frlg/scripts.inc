@@ -43,7 +43,8 @@ IndigoPlateau_PokemonCenter_1F_EventScript_Clerk::
 	faceplayer
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart IndigoPlateau_PokemonCenter_1F_Items
+	setvar VAR_0x8004, RH_MART_INDIGO
+	special RH_OpenMart
 	msgbox gText_PleaseComeAgain
 	release
 	end

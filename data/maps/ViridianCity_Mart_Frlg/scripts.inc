@@ -55,7 +55,8 @@ ViridianCity_Mart_EventScript_Clerk::
 	goto_if_eq VAR_MAP_SCENE_VIRIDIAN_CITY_MART, 1, ViridianCity_Mart_EventScript_SayHiToOak
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart ViridianCity_Mart_Items
+	setvar VAR_0x8004, RH_MART_VIRIDIAN
+	special RH_OpenMart
 	msgbox gText_PleaseComeAgain
 	release
 	end

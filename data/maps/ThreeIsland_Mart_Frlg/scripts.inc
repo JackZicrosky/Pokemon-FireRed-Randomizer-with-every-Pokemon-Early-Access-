@@ -6,7 +6,8 @@ ThreeIsland_Mart_EventScript_Clerk::
 	faceplayer
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart ThreeIsland_Mart_Items
+	setvar VAR_0x8004, RH_MART_THREE_ISLAND
+	special RH_OpenMart
 	msgbox gText_PleaseComeAgain
 	release
 	end
