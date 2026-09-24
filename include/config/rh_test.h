@@ -1,6 +1,6 @@
-// Test hook: normally empty. Test builds may define RH_TEST_MAP / RH_TEST_X / RH_TEST_Y / RH_TEST_BADGES
-// to start a quickstart game somewhere else. Never ship a build with these defined.
-#define RH_TEST_MAP MAP_PEWTER_CITY_MART
+// Test hook: normally empty. Ignored in RELEASE builds.
+#define RH_TEST_MAP MAP_FUCHSIA_CITY_SAFARI_ZONE_ENTRANCE
 #define RH_TEST_X 4
-#define RH_TEST_Y 3
-#define RH_TEST_BADGES 8
+#define RH_TEST_Y 5
+#define RH_TEST_BADGES 5
+#define RH_TEST_EXTRA do { VarSet(VAR_RH_SAFARI_GEN, 10); ScriptGiveMon(SPECIES_PIKACHU, 30, ITEM_NONE); } while (0)

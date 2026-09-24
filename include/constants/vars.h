@@ -277,6 +277,11 @@
 #define VAR_UNUSED_0x40FF                                0x40FF // Unused Var
 
 #define VARS_END                                         0x40FF
+
+// Romhack vars. 0x40F7-0x40FF are unused by both the Emerald and FRLG code paths.
+// (Do not use FRLG "VAR_0x40xx" gaps: shared expansion code writes Emerald var IDs there.)
+#define VAR_RH_MOM_GAVE_RINGS                            0x40F7 // Mom gave Mega Ring + Z-Power Ring
+#define VAR_RH_SAFARI_GEN                                0x40F8 // Safari Zone generation (0 = classic, 2-9, 10 = all)
 #define VARS_COUNT                                       (VARS_END - VARS_START + 1)
 
 #define SPECIAL_VARS_START            0x8000

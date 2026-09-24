@@ -20,6 +20,8 @@
 #include "easy_chat.h"
 #include "event_data.h"
 #include "money.h"
+#include "script_pokemon_util.h"
+#include "safari_zone.h"
 #include "trainer_hill.h"
 #include "trainer_tower.h"
 #include "tv.h"
@@ -136,9 +138,7 @@ static void ClearFrontierRecord(void)
 #include "config/rh_test.h"
 static void WarpToTruck(void)
 {
-#ifdef RH_TEST_MAP
-    for (u32 b = 0; b < RH_TEST_BADGES; b++) FlagSet(FLAG_BADGE01_GET + b);
-    AddMoney(&gSaveBlock1Ptr->money, 900000);
+#if defined(RH_TEST_MAP) && !defined(RELEASE)
     SetWarpDestination(MAP_GROUP(RH_TEST_MAP), MAP_NUM(RH_TEST_MAP), WARP_ID_NONE, RH_TEST_X, RH_TEST_Y);
     WarpIntoMap();
     return;
@@ -242,6 +242,14 @@ void NewGameInitData(void)
     ResetItemFlags();
     ResetDexNav();
     ClearFollowerNPCData();
+#if defined(RH_TEST_MAP) && !defined(RELEASE)
+    for (u32 b = 0; b < RH_TEST_BADGES; b++) FlagSet(FLAG_BADGE01_GET + b);
+    SetMoney(&gSaveBlock1Ptr->money, 900000);
+    gSaveBlock2Ptr->optionsTextSpeed = OPTIONS_TEXT_SPEED_INSTANT;
+#ifdef RH_TEST_EXTRA
+    RH_TEST_EXTRA;
+#endif
+#endif
 }
 
 static void ResetMiniGamesRecords(void)
