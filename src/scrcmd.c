@@ -2317,6 +2317,12 @@ bool8 ScrCmd_checkfieldmove(struct ScriptContext *ctx)
             break;
         }
     }
+    if (gSpecialVar_Result == PARTY_SIZE && RH_HMKitCovers(fieldMove))
+    {
+        // HM Kit: the lead Pokemon "uses" the move
+        gSpecialVar_Result = 0;
+        gSpecialVar_0x8004 = GetMonData(&gParties[B_TRAINER_PLAYER][0], MON_DATA_SPECIES);
+    }
 
     return FALSE;
 }
@@ -2471,10 +2477,10 @@ bool8 ScrCmd_cleartrainerflag(struct ScriptContext *ctx)
 bool8 ScrCmd_setwildbattle(struct ScriptContext *ctx)
 {
     enum Species species = RH_StaticSpecies(ScriptReadHalfword(ctx));
-    u8 level = ScriptReadByte(ctx);
+    u8 level = RH_StaticLevel(ScriptReadByte(ctx));
     enum Item item = ScriptReadHalfword(ctx);
     enum Species species2 = RH_StaticSpecies(ScriptReadHalfword(ctx));
-    u8 level2 = ScriptReadByte(ctx);
+    u8 level2 = RH_StaticLevel(ScriptReadByte(ctx));
     enum Item item2 = ScriptReadHalfword(ctx);
 
     Script_RequestEffects(SCREFF_V1);

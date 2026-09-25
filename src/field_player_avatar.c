@@ -1,4 +1,6 @@
 #include "global.h"
+#include "rh.h"
+#include "field_move.h"
 #include "main.h"
 #include "bike.h"
 #include "event_data.h"
@@ -909,7 +911,7 @@ static void PlayerNotOnBikeMoving(enum Direction direction, u16 heldKeys)
 
     if (!(gPlayerAvatar.flags & PLAYER_AVATAR_FLAG_UNDERWATER)
      && (heldKeys & B_BUTTON)
-     && FlagGet(FLAG_SYS_B_DASH)
+     && (FlagGet(FLAG_SYS_B_DASH) || gSaveBlock3Ptr->rhSettings.runWithoutShoes)
      && IsRunningDisallowed(gObjectEvents[gPlayerAvatar.objectEventId].currentMetatileBehavior) == 0
      && !FollowerNPCComingThroughDoor()
      && (I_ORAS_DOWSING_FLAG == 0 || (I_ORAS_DOWSING_FLAG != 0 && !FlagGet(I_ORAS_DOWSING_FLAG))))
@@ -1626,6 +1628,8 @@ bool8 PartyHasMonWithSurf(void)
             if (MonKnowsMove(&gParties[B_TRAINER_PLAYER][i], MOVE_SURF))
                 return TRUE;
         }
+        if (RH_HMKitCovers(FIELD_MOVE_SURF))
+            return TRUE;
     }
     return FALSE;
 }

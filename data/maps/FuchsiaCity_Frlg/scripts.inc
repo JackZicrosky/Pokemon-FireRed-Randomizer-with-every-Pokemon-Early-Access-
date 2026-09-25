@@ -228,17 +228,17 @@ Text_SubstituteTeach::
 	.string "And snuggle in the mother\n"
 	.string "KANGASKHAN's belly pouch.\p"
 	.string "But only POKéMON can use the\n"
-	.string "technique SUBSTITUTE…\p"
-	.string "Want me to teach SUBSTITUTE to\n"
+	.string "technique {STR_VAR_2}…\p"
+	.string "Want me to teach {STR_VAR_2} to\n"
 	.string "one of your POKéMON?$"
 
 Text_SubstituteDeclined::
 	.string "Oh, really?\n"
-	.string "SUBSTITUTE seems so fun…$"
+	.string "{STR_VAR_2} seems so fun…$"
 
 Text_SubstituteWhichMon::
 	.string "Which POKéMON wants to learn\n"
-	.string "SUBSTITUTE?$"
+	.string "{STR_VAR_2}?$"
 
 Text_SubstituteTaught::
 	.string "Boy, what I'd give to crawl inside\n"

@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "item.h"
 #include "berry.h"
 #include "pokeball.h"
@@ -819,7 +820,7 @@ const u8 *GetItemName(enum Item itemId)
 
 u32 GetItemPrice(enum Item itemId)
 {
-    return gItemsInfo[SanitizeItemId(itemId)].price;
+    return RH_ItemPrice(itemId, gItemsInfo[SanitizeItemId(itemId)].price);
 }
 
 static bool32 DoesItemHavePluralName(enum Item itemId)
@@ -868,6 +869,8 @@ const u8 *GetItemDescription(enum Item itemId)
 
 u8 GetItemImportance(enum Item itemId)
 {
+    if (gSaveBlock3Ptr->rhSettings.reusableTMs && GetItemTMHMIndex(itemId) != 0)
+        return TRUE;                                  // Misc. tweak "Infinitely Reusable TMs"
     return gItemsInfo[SanitizeItemId(itemId)].importance;
 }
 

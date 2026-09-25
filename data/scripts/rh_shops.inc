@@ -6,7 +6,8 @@ RH_EventScript_EvoShop::
 	msgbox RH_Text_EvoShop
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart RH_Items_Evo
+	setvar VAR_0x8004, RH_SPECIAL_EVO
+	special RH_OpenSpecialShop
 	msgbox gText_PleaseComeAgain
 	release
 	end
@@ -75,7 +76,8 @@ RH_EventScript_HerbShop::
 	msgbox RH_Text_HerbShop
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart RH_Items_Herb
+	setvar VAR_0x8004, RH_SPECIAL_HERB
+	special RH_OpenSpecialShop
 	msgbox gText_PleaseComeAgain
 	release
 	end
@@ -125,7 +127,8 @@ RH_EventScript_CeladonCompetitive::
 	msgbox RH_Text_Competitive
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart RH_Items_Competitive
+	setvar VAR_0x8004, RH_SPECIAL_COMPETITIVE
+	special RH_OpenSpecialShop
 	msgbox gText_PleaseComeAgain
 	release
 	end
@@ -157,7 +160,8 @@ RH_EventScript_CeladonForms::
 	msgbox RH_Text_Forms
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart RH_Items_Forms
+	setvar VAR_0x8004, RH_SPECIAL_FORMS
+	special RH_OpenSpecialShop
 	msgbox gText_PleaseComeAgain
 	release
 	end
@@ -243,7 +247,8 @@ RH_EventScript_CeladonMega::
 	msgbox RH_Text_Mega
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart RH_Items_Mega
+	setvar VAR_0x8004, RH_SPECIAL_MEGA
+	special RH_OpenSpecialShop
 	msgbox gText_PleaseComeAgain
 	release
 	end
@@ -350,7 +355,8 @@ RH_EventScript_CeladonZ::
 	msgbox RH_Text_ZCrystal
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart RH_Items_ZCrystal
+	setvar VAR_0x8004, RH_SPECIAL_ZCRYSTAL
+	special RH_OpenSpecialShop
 	msgbox gText_PleaseComeAgain
 	release
 	end
@@ -400,7 +406,8 @@ RH_EventScript_CeladonTraining::
 	msgbox RH_Text_Training
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart RH_Items_Training
+	setvar VAR_0x8004, RH_SPECIAL_TRAINING
+	special RH_OpenSpecialShop
 	msgbox gText_PleaseComeAgain
 	release
 	end
@@ -425,7 +432,8 @@ RH_EventScript_CeladonBerries::
 	msgbox RH_Text_Berries
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart RH_Items_Berries
+	setvar VAR_0x8004, RH_SPECIAL_BERRIES
+	special RH_OpenSpecialShop
 	msgbox gText_PleaseComeAgain
 	release
 	end
@@ -506,7 +514,8 @@ RH_EventScript_CeladonSnacks::
 	msgbox RH_Text_Snacks
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart RH_Items_Snacks
+	setvar VAR_0x8004, RH_SPECIAL_SNACKS
+	special RH_OpenSpecialShop
 	msgbox gText_PleaseComeAgain
 	release
 	end

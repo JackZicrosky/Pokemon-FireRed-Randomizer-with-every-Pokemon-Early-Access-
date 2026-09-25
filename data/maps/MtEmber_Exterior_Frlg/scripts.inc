@@ -128,7 +128,7 @@ Text_ExplosionTeach::
 	.string "The explosion would be the end of\n"
 	.string "us. How terrifying is that?\p"
 	.string "While we're terrified, would you\n"
-	.string "like me to teach EXPLOSION?$"
+	.string "like me to teach {STR_VAR_2}?$"
 
 Text_ExplosionDeclined::
 	.string "Yeah, you're right.\n"
@@ -137,10 +137,10 @@ Text_ExplosionDeclined::
 Text_ExplosionWhichMon::
 	.string "You're terribly brave!\p"
 	.string "Which POKéMON should I teach\n"
-	.string "EXPLOSION?$"
+	.string "{STR_VAR_2}?$"
 
 Text_ExplosionTaught::
-	.string "Using EXPLOSION while on this\n"
+	.string "Using {STR_VAR_2} while on this\n"
 	.string "volcano…\p"
 	.string "What a terrifying thrill!$"
 

@@ -27,8 +27,13 @@ extern struct ConfigChanges *gConfigChangesTestOverride;
 #define GET_CONFIG_VALUE(_field, _default) (_default)
 #endif
 
-#define UNPACK_BATTLE_CONFIG_GETTER(_name, _field, ...) static inline u32 GetConfig_##_name(void) { return GET_CONFIG_VALUE(_field, _name); }
-#define UNPACK_POKEMON_CONFIG_GETTER(_name, _field, ...) static inline u32 GetConfig_##_name(void) { return GET_CONFIG_VALUE(_field, P_##_name); }
+// Romhack: generation-valued configs are capped to the "Battle Mechanics" generation picked on the randomizer screen.
+u32 RH_MechanicsGenConfig(void);
+#define RH_CONFIG_MAX_(_type, _max, ...) (_max)
+#define RH_CONFIG_MAX(_typeMaxValue) INVOKE_WITH_(RH_CONFIG_MAX_, UNPACK_B(_typeMaxValue))
+#define RH_CLAMP_GEN(_typeMaxValue, _value) ((RH_CONFIG_MAX(_typeMaxValue) == GEN_COUNT - 1) ? min((u32)(_value), RH_MechanicsGenConfig()) : (u32)(_value))
+#define UNPACK_BATTLE_CONFIG_GETTER(_name, _field, _typeMaxValue, ...) static inline u32 GetConfig_##_name(void) { return RH_CLAMP_GEN(_typeMaxValue, GET_CONFIG_VALUE(_field, _name)); }
+#define UNPACK_POKEMON_CONFIG_GETTER(_name, _field, _typeMaxValue, ...) static inline u32 GetConfig_##_name(void) { return RH_CLAMP_GEN(_typeMaxValue, GET_CONFIG_VALUE(_field, P_##_name)); }
 
 BATTLE_CONFIG_DEFINITIONS(UNPACK_BATTLE_CONFIG_GETTER)
 POKEMON_CONFIG_DEFINITIONS(UNPACK_POKEMON_CONFIG_GETTER)

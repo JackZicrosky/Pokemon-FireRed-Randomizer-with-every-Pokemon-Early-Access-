@@ -55,6 +55,8 @@ static EWRAM_DATA struct OakSpeechResources *sOakSpeechResources = NULL;
 
 static void Task_NewGameScene(u8);
 
+#define RH_SKIP_CONTROLS_GUIDE TRUE  // romhack: no controls guide / Pikachu pages before Oak
+
 static void ControlsGuide_LoadPage1(void);
 static void Task_ControlsGuide_HandleInput(u8);
 static void Task_ControlsGuide_ChangePage(u8);
@@ -774,6 +776,13 @@ static void Task_NewGameScene(u8 taskId)
         CopyBgTilemapBufferToVram(1);
         break;
     case 7:
+        if (RH_SKIP_CONTROLS_GUIDE)
+        {
+            // Romhack: skip the controls guide and the Pikachu story pages, go straight to Prof. Oak.
+            gPaletteFade.bufferTransferDisabled = FALSE;
+            BlendPalettes(PALETTES_ALL, 16, RGB_BLACK);
+            break;
+        }
         HofPCTopBar_AddWindow(0, 30, 0, 13, 0x1C4);
         FillBgTilemapBufferRect_Palette0(1, 0xD00F, 0,  0, 30, 2);
         FillBgTilemapBufferRect_Palette0(1, 0xD002, 0,  2, 30, 1);
@@ -789,6 +798,13 @@ static void Task_NewGameScene(u8 taskId)
         ShowBg(0);
         ShowBg(1);
         SetVBlankCallback(VBlankCB_NewGameScene);
+        if (RH_SKIP_CONTROLS_GUIDE)
+        {
+            gTasks[taskId].tTimer = 30;
+            gTasks[taskId].func = Task_OakSpeech_Init;
+            gMain.state = 0;
+            return;
+        }
         PlayBGM(MUS_RG_NEW_GAME_INSTRUCT);
         gTasks[taskId].func = Task_ControlsGuide_HandleInput;
         gMain.state = 0;

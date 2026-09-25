@@ -1052,6 +1052,11 @@ enum __attribute__((packed)) Item
     ITEM_TATSUGIRINITE = 872,
     ITEM_GLIMMORANITE = 873,
 
+    // Romhack key items
+    ITEM_INFINITE_CANDY = 874,
+    ITEM_HEALING_KIT = 875,
+    ITEM_HM_KIT = 876,
+
     ITEMS_COUNT,
     ITEM_FIELD_ARROW = ITEMS_COUNT,
 };

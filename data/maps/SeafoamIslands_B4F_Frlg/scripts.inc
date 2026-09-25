@@ -200,14 +200,14 @@ Text_RockSlideTeach::
 	.string "That'd be, like, waaaaaaaaaaah!\n"
 	.string "Total terror!\p"
 	.string "You don't seem to be scared.\n"
-	.string "Want to try using ROCK SLIDE?$"
+	.string "Want to try using {STR_VAR_2}?$"
 
 Text_RockSlideDeclined::
 	.string "Oh, so you are scared after all.$"
 
 Text_RockSlideWhichMon::
 	.string "Which POKéMON should I teach\n"
-	.string "ROCK SLIDE?$"
+	.string "{STR_VAR_2}?$"
 
 Text_RockSlideTaught::
 	.string "It might be scary to use it in this\n"

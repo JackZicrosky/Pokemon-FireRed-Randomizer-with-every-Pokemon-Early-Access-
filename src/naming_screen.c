@@ -185,6 +185,7 @@ struct NamingScreenData
 
 EWRAM_DATA static struct NamingScreenData *sNamingScreen = NULL;
 
+static EWRAM_DATA struct NamingScreenTemplate sRhTextTemplate = {0};
 static const u8 sPCIconOff_Gfx[] = INCGFX_U8("graphics/naming_screen/pc_icon_off.png", ".4bpp");
 static const u8 sPCIconOn_Gfx[] = INCGFX_U8("graphics/naming_screen/pc_icon_on.png", ".4bpp");
 static const u16 sKeyboard_Pal[] = INCGFX_U16("graphics/naming_screen/keyboard.pal", ".gbapal");
@@ -410,6 +411,15 @@ void DoNamingScreen(u8 templateNum, u8 *destBuffer, u16 monSpeciesOrPlayerGender
     else
     {
         sNamingScreen->templateNum = templateNum;
+        if (templateNum == NAMING_SCREEN_RH_TEXT)
+        {
+            sRhTextTemplate.copyExistingString = TRUE;
+            sRhTextTemplate.maxChars = gRhNamingMaxChars ? gRhNamingMaxChars : 10;
+            sRhTextTemplate.iconFunction = 0;
+            sRhTextTemplate.addGenderIcon = FALSE;
+            sRhTextTemplate.initialPage = KBPAGE_LETTERS_UPPER;
+            sRhTextTemplate.title = gRhNamingTitle ? gRhNamingTitle : COMPOUND_STRING("Enter text:");
+        }
         sNamingScreen->monSpecies = monSpeciesOrPlayerGender;
         sNamingScreen->monGender = monGender;
         sNamingScreen->monPersonality = monPersonality;
@@ -2212,8 +2222,12 @@ static const struct NamingScreenTemplate sRivalNamingScreenTemplate =
     .title = sText_RivalsName,
 };
 
+EWRAM_DATA const u8 *gRhNamingTitle = NULL;
+EWRAM_DATA u8 gRhNamingMaxChars = 0;
+
 static const struct NamingScreenTemplate *const sNamingScreenTemplates[] =
 {
+    [NAMING_SCREEN_RH_TEXT]    = &sRhTextTemplate,
     [NAMING_SCREEN_PLAYER]     = &sPlayerNamingScreenTemplate,
     [NAMING_SCREEN_BOX]        = &sPCBoxNamingTemplate,
     [NAMING_SCREEN_CAUGHT_MON] = &sMonNamingScreenTemplate,

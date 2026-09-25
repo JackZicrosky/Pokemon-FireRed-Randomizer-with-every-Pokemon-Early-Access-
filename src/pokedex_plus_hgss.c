@@ -1938,7 +1938,7 @@ static void SaveMonDataInStruct(void)
     sPokedexView->sPokemonStats.evYield_Defense     = evs[STAT_SPATK];
     sPokedexView->sPokemonStats.evYield_SpDefense   = evs[STAT_SPDEF];
     sPokedexView->sPokemonStats.catchRate           = gSpeciesInfo[species].catchRate;
-    sPokedexView->sPokemonStats.growthRate          = gSpeciesInfo[species].growthRate;
+    sPokedexView->sPokemonStats.growthRate          = GetSpeciesGrowthRate(species);
     sPokedexView->sPokemonStats.eggGroup1           = gSpeciesInfo[species].eggGroups[0];
     sPokedexView->sPokemonStats.eggGroup2           = gSpeciesInfo[species].eggGroups[1];
     sPokedexView->sPokemonStats.eggCycles           = gSpeciesInfo[species].eggCycles;
@@ -3426,7 +3426,7 @@ static u8 PrintPreEvolutions(u8 taskId, enum Species species)
         if (!IsSpeciesEnabled(i))
             continue;
 
-        const struct Evolution *evolutions = GetSpeciesEvolutions(i);
+        const struct Evolution *evolutions = GetSpeciesEvolutionsVanilla(i);
         if (evolutions == NULL)
             continue;
 
@@ -3475,7 +3475,7 @@ static u8 PrintPreEvolutions(u8 taskId, enum Species species)
             if (!IsSpeciesEnabled(i))
                 continue;
 
-            const struct Evolution *evolutions = GetSpeciesEvolutions(i);
+            const struct Evolution *evolutions = GetSpeciesEvolutionsVanilla(i);
             if (evolutions == NULL)
                 continue;
 

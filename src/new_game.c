@@ -244,6 +244,7 @@ void NewGameInitData(void)
     ResetDexNav();
     ClearFollowerNPCData();
     RH_ApplyPendingSettings();
+    RH_OnNewGame();
 #if defined(RH_TEST_MAP) && !defined(RELEASE)
     for (u32 b = 0; b < RH_TEST_BADGES; b++) FlagSet(FLAG_BADGE01_GET + b);
     SetMoney(&gSaveBlock1Ptr->money, 900000);

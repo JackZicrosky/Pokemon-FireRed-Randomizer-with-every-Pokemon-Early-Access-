@@ -190,7 +190,7 @@ static inline enum Move GetItemTMHMMoveId(enum Item item)
 {
     enum Move move = GetItemTMHMMoveIdVanilla(item);
     if (move != MOVE_NONE && gSaveBlock3Ptr->rhSettings.enabled)
-        return RH_TMMove(GetItemTMHMIndex(item) - 1, move);
+        return RH_TMMove(GetItemTMHMIndex(item), move);
     return move;
 }
 

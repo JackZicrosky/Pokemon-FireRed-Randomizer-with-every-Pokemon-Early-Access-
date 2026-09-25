@@ -14107,6 +14107,56 @@ const struct ItemInfo gItemsInfo[] =
         .iconPalette = gItemIconPalette_DowsingMachine,
     },
 
+    [ITEM_INFINITE_CANDY] =
+    {
+        .name = ITEM_NAME("Infinite Candy"),
+        .price = 0,
+        .description = COMPOUND_STRING(
+            "A Rare Candy that\n"
+            "never runs out.\n"
+            "Raises a level."),
+        .importance = 1,
+        .pocket = POCKET_KEY_ITEMS,
+        .sortType = ITEM_TYPE_LEVEL_UP_ITEM,
+        .type = ITEM_USE_PARTY_MENU,
+        .fieldUseFunc = ItemUseOutOfBattle_RareCandy,
+        .effect = gItemEffect_RareCandy,
+        .iconPic = gItemIcon_RareCandy,
+        .iconPalette = gItemIconPalette_RareCandy,
+    },
+
+    [ITEM_HEALING_KIT] =
+    {
+        .name = ITEM_NAME("Healing Kit"),
+        .price = 0,
+        .description = COMPOUND_STRING(
+            "Fully heals your\n"
+            "whole party, just\n"
+            "like a Poké Center."),
+        .importance = 1,
+        .pocket = POCKET_KEY_ITEMS,
+        .type = ITEM_USE_BAG_MENU,
+        .fieldUseFunc = ItemUseOutOfBattle_HealingKit,
+        .iconPic = gItemIcon_LargePotion,
+        .iconPalette = gItemIconPalette_FullRestore,
+    },
+
+    [ITEM_HM_KIT] =
+    {
+        .name = ITEM_NAME("HM Kit"),
+        .price = 0,
+        .description = COMPOUND_STRING(
+            "Uses the HMs you\n"
+            "own (with Badges)\n"
+            "without a Pokémon."),
+        .importance = 1,
+        .pocket = POCKET_KEY_ITEMS,
+        .type = ITEM_USE_BAG_MENU,
+        .fieldUseFunc = ItemUseOutOfBattle_HMKit,
+        .iconPic = gItemIcon_TMCase,
+        .iconPalette = gItemIconPalette_TMCase,
+    },
+
     [ITEM_TOWN_MAP] =
     {
         .name = ITEM_NAME("Town Map"),

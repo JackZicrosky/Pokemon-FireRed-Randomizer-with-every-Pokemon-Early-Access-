@@ -59,6 +59,7 @@
 #include "constants/rtc.h"
 #include "constants/roulette.h"
 #include "constants/rh_shops.h"
+#include "constants/rh_special_shops.h"
 #include "constants/script_menu.h"
 #include "constants/seagallop.h"
 #include "constants/secret_bases.h"

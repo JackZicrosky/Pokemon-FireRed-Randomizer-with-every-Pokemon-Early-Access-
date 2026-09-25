@@ -639,6 +639,8 @@ gSpecials::
 	def_special StickerManGetBragFlags
 	def_special CheckAddCoins
 	def_special RH_OpenMart, waitstate=1
+	def_special RH_OpenSpecialShop, waitstate=1
+	def_special RH_RemapTutorMove
 	def_special RH_BufferSafariGenName
 	def_special RH_RemapStarterVars
 	def_special RH_StartersRandomized

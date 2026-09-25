@@ -411,11 +411,16 @@ void ScrCmd_createmon(struct ScriptContext *ctx)
     u8 slot                   = ScriptReadByte(ctx);
 
     struct PokemonTemplate monTemplate = {0};
-    monTemplate.species      = RH_StaticSpecies(VarGet(ScriptReadHalfword(ctx)));
+    enum Species rhOriginal  = VarGet(ScriptReadHalfword(ctx));
+    monTemplate.species      = RH_StaticSpecies(rhOriginal);
     monTemplate.level        = VarGet(ScriptReadHalfword(ctx));
+    if (RH_IsStaticGift(rhOriginal))
+        monTemplate.level    = RH_StaticLevel(RH_BalanceStaticLevel(rhOriginal, monTemplate.level));
 
     u32 flags                 = ScriptReadWord(ctx);
     monTemplate.heldItem     = PARSE_FLAG(0, ITEM_NONE);
+    if (side == 0)
+        monTemplate.heldItem = RH_StarterHeldItem(monTemplate.heldItem);
     if (flags & (1 << 1))
     {
         monTemplate.ball = VarGet(ScriptReadHalfword(ctx));

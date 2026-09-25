@@ -1367,7 +1367,7 @@ static bool32 CheckBattlePyramidEvoRequirement(enum Species species, const u16 *
         if (!IsSpeciesEnabled(i))
             continue;
 
-        const struct Evolution *evolutions = GetSpeciesEvolutions(i);
+        const struct Evolution *evolutions = GetSpeciesEvolutionsVanilla(i);
         if (evolutions == NULL)
             continue;
         for (j = 0; evolutions[j].method != EVOLUTIONS_END; j++)
@@ -1501,7 +1501,7 @@ void GenerateBattlePyramidWildMon(enum Species forceSpecies)
     }
     SetMonData(&gParties[B_TRAINER_OPPONENT_A][0],
                MON_DATA_EXP,
-               &gExperienceTables[gSpeciesInfo[species].growthRate][lvl]);
+               &gExperienceTables[GetSpeciesGrowthRate(species)][lvl]);
 
     // Give initial moves and replace one with desired move
     GiveBoxMonInitialMoveset(&gParties[B_TRAINER_OPPONENT_A][0].box);
@@ -1602,7 +1602,7 @@ void GenerateBattlePyramidWildMon(enum Species forceSpecies)
     }
     SetMonData(&gParties[B_TRAINER_OPPONENT_A][0],
                MON_DATA_EXP,
-               &gExperienceTables[gSpeciesInfo[wildMons[id].species].growthRate][lvl]);
+               &gExperienceTables[GetSpeciesGrowthRate(wildMons[id].species)][lvl]);
 
     switch (wildMons[id].abilityNum)
     {

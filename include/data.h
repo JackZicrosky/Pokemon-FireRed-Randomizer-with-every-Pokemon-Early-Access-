@@ -300,14 +300,20 @@ static inline const enum TrainerClassID GetTrainerClassFromId(u16 trainerId)
     return trainer->trainerClass;
 }
 
+// Romhack randomizer (src/rh_trainers.c)
+const u8 *RH_TrainerName(u16 trainerId, const u8 *vanilla);
+const u8 *RH_TrainerClassName(u32 trainerClass, const u8 *vanilla);
+enum TrainerBattleType RH_TrainerBattleType(u16 trainerId, enum TrainerBattleType vanilla);
+
 static inline const u8 *GetTrainerClassNameFromId(u16 trainerId)
 {
-    return gTrainerClasses[GetTrainerClassFromId(trainerId)].name;
+    enum TrainerClassID trainerClass = GetTrainerClassFromId(trainerId);
+    return RH_TrainerClassName(trainerClass, gTrainerClasses[trainerClass].name);
 }
 
 static inline const u8 *GetTrainerNameFromId(u16 trainerId)
 {
-    return GetTrainerStructFromId(trainerId)->trainerName;
+    return RH_TrainerName(trainerId, GetTrainerStructFromId(trainerId)->trainerName);
 }
 
 static inline const enum TrainerPicID GetTrainerPicFromId(u16 trainerId)
@@ -322,7 +328,7 @@ static inline const struct StartingStatuses GetTrainerStartingStatusFromId(u16 t
 
 static inline const enum TrainerBattleType GetTrainerBattleType(u16 trainerId)
 {
-    return GetTrainerStructFromId(trainerId)->battleType;
+    return RH_TrainerBattleType(trainerId, GetTrainerStructFromId(trainerId)->battleType);
 }
 
 static inline const u8 GetTrainerPartySizeFromId(u16 trainerId)

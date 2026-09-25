@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "bike.h"
 #include "event_object_movement.h"
 #include "field_player_avatar.h"
@@ -1361,7 +1362,7 @@ void Bike_HandleBumpySlopeJump(void)
 
 bool32 IsRunningDisallowed(u8 metatile)
 {
-    if ((OW_RUNNING_INDOORS == GEN_3 && !gMapHeader.allowRunning) || IsRunningDisallowedByMetatile(metatile) == TRUE)
+    if ((OW_RUNNING_INDOORS == GEN_3 && !gMapHeader.allowRunning && !gSaveBlock3Ptr->rhSettings.runIndoors) || IsRunningDisallowedByMetatile(metatile) == TRUE)
         return TRUE;
 
     return FALSE;

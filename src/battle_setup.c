@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "data.h"
 #include "main.h"
 #include "battle.h"
@@ -522,7 +523,7 @@ void StartWallyTutorialBattle(void)
 
 void StartOldManTutorialBattle(void)
 {
-    CreateMaleMon(&gParties[B_TRAINER_OPPONENT_A][0], SPECIES_WEEDLE, 5);
+    CreateMaleMon(&gParties[B_TRAINER_OPPONENT_A][0], RH_CatchTutorialSpecies(SPECIES_WEEDLE), 5);
     LockPlayerFieldControls();
     gMain.savedCallback = CB2_ReturnToFieldContinueScriptPlayMapMusic;
     gBattleTypeFlags = BATTLE_TYPE_CATCH_TUTORIAL;
@@ -590,7 +591,9 @@ void BattleSetup_StartLegendaryBattle(void)
     gMain.savedCallback = CB2_EndScriptedWildBattle;
     gBattleTypeFlags = BATTLE_TYPE_LEGENDARY;
 
-    switch (GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_SPECIES))
+    if (!RH_StaticUsesLegendMusic(GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_SPECIES), TRUE))
+        CreateBattleStartTask(GetWildBattleTransition(), 0);   // randomized into a regular Pokemon ("Fix Music")
+    else switch (GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_SPECIES))
     {
     case SPECIES_GROUDON:
     case SPECIES_GROUDON_PRIMAL:
@@ -2253,6 +2256,11 @@ void CreateNPCTrainerPartyFromTrainer(struct Pokemon *party, const struct Traine
     {
         u32 monIndex = monIndices[i];
         GenerateMonFromTrainerMon(&party[i], &trainer->party[monIndex], trainerGen);
+    }
+    if (!(gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS))
+    {
+        u32 rhCount = monsCount;
+        RH_FinishTrainerParty(party, trainer, &rhCount, trainerGen);
     }
     Free(trainerGen);
 }

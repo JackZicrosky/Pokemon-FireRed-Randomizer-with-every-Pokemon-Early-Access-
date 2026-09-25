@@ -247,6 +247,7 @@ u32 RH_MoveAccuracy(enum Move move, u32 vanilla);
 u32 RH_MovePP(enum Move move, u32 vanilla);
 enum Type RH_MoveType(enum Move move, enum Type vanilla);
 u32 RH_MoveCategory(enum Move move, u32 vanilla);
+const u8 *RH_MoveName(enum Move move, const u8 *vanilla);
 
 static inline enum Move SanitizeMoveId(enum Move moveId)
 {
@@ -260,7 +261,7 @@ static inline enum Move SanitizeMoveId(enum Move moveId)
 
 static inline const u8 *GetMoveName(enum Move moveId)
 {
-    return gMovesInfo[SanitizeMoveId(moveId)].name;
+    return RH_MoveName(moveId, gMovesInfo[SanitizeMoveId(moveId)].name);
 }
 
 static inline enum BattleMoveEffects GetMoveEffect(enum Move moveId)
@@ -279,33 +280,25 @@ static inline const u8 *GetMoveDescription(enum Move moveId)
 static inline enum Type GetMoveType(enum Move moveId)
 {
     moveId = SanitizeMoveId(moveId);
-    if (gSaveBlock3Ptr->rhSettings.enabled)
-        return RH_MoveType(moveId, gMovesInfo[moveId].type);
-    return gMovesInfo[moveId].type;
+    return RH_MoveType(moveId, gMovesInfo[moveId].type);
 }
 
 static inline enum DamageCategory GetMoveCategory(enum Move moveId)
 {
     moveId = SanitizeMoveId(moveId);
-    if (gSaveBlock3Ptr->rhSettings.enabled)
-        return RH_MoveCategory(moveId, gMovesInfo[moveId].category);
-    return gMovesInfo[moveId].category;
+    return RH_MoveCategory(moveId, gMovesInfo[moveId].category);
 }
 
 static inline u32 GetMovePower(enum Move moveId)
 {
     moveId = SanitizeMoveId(moveId);
-    if (gSaveBlock3Ptr->rhSettings.enabled)
-        return RH_MovePower(moveId, gMovesInfo[moveId].power);
-    return gMovesInfo[moveId].power;
+    return RH_MovePower(moveId, gMovesInfo[moveId].power);
 }
 
 static inline u32 GetMoveAccuracy(enum Move moveId)
 {
     moveId = SanitizeMoveId(moveId);
-    if (gSaveBlock3Ptr->rhSettings.enabled)
-        return RH_MoveAccuracy(moveId, gMovesInfo[moveId].accuracy);
-    return gMovesInfo[moveId].accuracy;
+    return RH_MoveAccuracy(moveId, gMovesInfo[moveId].accuracy);
 }
 
 static inline enum MoveTarget GetMoveTarget(enum Move moveId)
@@ -319,9 +312,7 @@ static inline enum MoveTarget GetMoveTarget(enum Move moveId)
 static inline u32 GetMovePP(enum Move moveId)
 {
     moveId = SanitizeMoveId(moveId);
-    if (gSaveBlock3Ptr->rhSettings.enabled)
-        return RH_MovePP(moveId, gMovesInfo[moveId].pp);
-    return gMovesInfo[moveId].pp;
+    return RH_MovePP(moveId, gMovesInfo[moveId].pp);
 }
 
 static inline enum ZEffect GetMoveZEffect(enum Move moveId)

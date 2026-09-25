@@ -2305,7 +2305,7 @@ static void Cmd_getexp(void)
 
                     if (B_EXP_CAP_TYPE == EXP_CAP_HARD && gBattleStruct->battlerExpReward != 0)
                     {
-                        enum GrowthRate growthRate = gSpeciesInfo[GetMonData(&gParties[B_TRAINER_PLAYER][*expMonId], MON_DATA_SPECIES)].growthRate;
+                        enum GrowthRate growthRate = GetSpeciesGrowthRate(GetMonData(&gParties[B_TRAINER_PLAYER][*expMonId], MON_DATA_SPECIES));
                         u32 currentExp = GetMonData(&gParties[B_TRAINER_PLAYER][*expMonId], MON_DATA_EXP);
                         u32 levelCap = GetCurrentLevelCap();
 
@@ -7585,7 +7585,8 @@ static void Cmd_pickup(void)
                         percentTotal += sPickupTable[j].percentage[lvlDivBy10];
                         if (rand < percentTotal)
                         {
-                            SetMonData(&gParties[B_TRAINER_PLAYER][i], MON_DATA_HELD_ITEM, &sPickupTable[j].itemId);
+                            enum Item pickupItem = RH_PickupItem(sPickupTable[j].itemId, j);
+                            SetMonData(&gParties[B_TRAINER_PLAYER][i], MON_DATA_HELD_ITEM, &pickupItem);
                             break;
                         }
                     }
@@ -8064,7 +8065,7 @@ static u32 ComputeCaptureOdds(u32 wildMonBattler, u32 playerBattler)
     struct BallData ball;
     ComputeBallData(wildMonBattler, playerBattler, &ball);
 
-    if (ball.guaranteedCapture)
+    if (ball.guaranteedCapture || RH_GuaranteedCatch())
         return CAPTURE_GUARANTEED;
     struct BattlePokemon *battleMon = &gBattleMons[wildMonBattler];
     u32 odds = (battleMon->maxHP * 3 -  battleMon->hp * 2);

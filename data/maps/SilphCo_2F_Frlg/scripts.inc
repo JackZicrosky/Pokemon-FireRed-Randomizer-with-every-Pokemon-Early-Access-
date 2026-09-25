@@ -87,18 +87,18 @@ Text_ThunderWaveTeach::
 	.string "Oh, you're not with TEAM ROCKET.\n"
 	.string "I'm sorry, I thought…\p"
 	.string "Will you forgive me if I teach\n"
-	.string "you the THUNDER WAVE technique?$"
+	.string "you the {STR_VAR_2} technique?$"
 
 Text_ThunderWaveDeclined::
 	.string "Oh…\n"
-	.string "But THUNDER WAVE is convenient…$"
+	.string "But {STR_VAR_2} is convenient…$"
 
 Text_ThunderWaveWhichMon::
 	.string "Which POKéMON should I teach\n"
-	.string "THUNDER WAVE?$"
+	.string "{STR_VAR_2}?$"
 
 Text_ThunderWaveTaught::
-	.string "THUNDER WAVE causes paralysis in\n"
+	.string "{STR_VAR_2} causes paralysis in\n"
 	.string "the target POKéMON.\p"
 	.string "A paralyzed POKéMON may be unable\n"
 	.string "to move in battle.\p"

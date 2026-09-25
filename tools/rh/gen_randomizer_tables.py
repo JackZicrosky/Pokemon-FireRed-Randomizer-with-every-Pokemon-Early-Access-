@@ -23,11 +23,13 @@ for name, d in M.items():
     if i == 0 or i >= first_z or d['metronomeBanned'] or d['type'] not in TYPES: continue
     dmg = d['category'] in (1, 2) and d['power'] > 1
     broken = d['effectName'] in BROKEN_EFFECTS
-    pool.append((TYPES.index(d['type']), i, name, dmg, broken))
+    good = dmg and not broken and d['power'] * max(1, d['strikeCount']) >= 75 and (d['accuracy'] == 0 or d['accuracy'] >= 80) \
+        and d['effectName'] not in ('EFFECT_RECHARGE', 'EFFECT_FUTURE_SIGHT', 'EFFECT_SOLAR_BEAM', 'EFFECT_TWO_TURNS_ATTACK', 'EFFECT_EXPLOSION', 'EFFECT_MISTY_EXPLOSION', 'EFFECT_FOCUS_PUNCH', 'EFFECT_DREAM_EATER', 'EFFECT_SKY_DROP', 'EFFECT_SEMI_INVULNERABLE')
+    pool.append((TYPES.index(d['type']), i, name, dmg, broken, good))
 pool.sort()
-out += 'struct RhMove { u16 move; u8 type; u8 damaging:1; u8 broken:1; u8 pad:6; };\n'
+out += 'struct RhMove { u16 move; u8 type; u8 damaging:1; u8 broken:1; u8 good:1; u8 pad:5; };\n'
 out += f'#define RH_MOVE_COUNT {len(pool)}\nstatic const struct RhMove sRhMoves[RH_MOVE_COUNT] = {{\n'
-for t, i, n, dmg, br in pool: out += f'    {{{n}, {TYPES[t]}, {int(dmg)}, {int(br)}, 0}},\n'
+for t, i, n, dmg, br, gd in pool: out += f'    {{{n}, {TYPES[t]}, {int(dmg)}, {int(br)}, {int(gd)}, 0}},\n'
 out += '};\n'
 starts = []
 for t in range(len(TYPES) + 1):
@@ -129,3 +131,26 @@ out += '};\n'
 open(R + 'src/data/rh_randomizer_tables.h', 'w').write(out)
 print('moves', len(pool), 'items', len(item_pool), 'field items', len(field), 'trainer themes', len(themes), 'statics', len(statics))
 print('statics:', [s[8:] for s in statics])
+
+# ---------------- wild encounter (map, area, species) pairs: used by Catch Em' All ----------------
+frlg_maps = set()
+for mj in glob.glob(R + f'data/maps/*{MAP_SUFFIX}/map.json'):
+    frlg_maps.add(json.load(open(mj))['id'])
+W = json.load(open(R + 'src/data/wild_encounters.json'))['wild_encounter_groups'][0]
+AREAS = ['land_mons', 'water_mons', 'rock_smash_mons', 'fishing_mons']
+pairs = set()
+for e in W['encounters']:
+    if e['map'] not in frlg_maps or ('LeafGreen' in e['base_label'] and VER == 'firered'):
+        continue
+    for ai, k in enumerate(AREAS):
+        if k in e:
+            for m in e[k]['mons']:
+                pairs.add((e['map'], ai, canon(m['species'])))
+pairs = sorted(pairs)
+out2 = '\n// Every (map, area, species) wild encounter in the game, sorted by map id then area then species name.\n'
+out2 += 'struct RhWildPair { u16 map; u16 area:2; u16 species:14; };\n'
+out2 += f'#define RH_WILD_PAIR_COUNT {len(pairs)}\nstatic const struct RhWildPair sRhWildPairs[RH_WILD_PAIR_COUNT] = {{\n'
+for mp, ai, sp in pairs: out2 += f'    {{{mp}, {ai}, {sp}}},\n'
+out2 += '};\n'
+open(R + 'src/data/rh_randomizer_tables.h', 'a').write(out2)
+print('wild pairs', len(pairs))

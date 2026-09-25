@@ -3065,7 +3065,7 @@ static const u8 *BattleStringGetOpponentClassByTrainerId(u16 trainerId)
     else if (trainerId == TRAINER_LINK_OPPONENT)
         toCpy = gTrainerClasses[TRAINER_NONE].name;
     else
-        toCpy = gTrainerClasses[GetTrainerClassFromId(trainerId)].name;
+        toCpy = GetTrainerClassNameFromId(trainerId);
 
     return toCpy;
 }

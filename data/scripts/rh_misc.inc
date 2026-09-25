@@ -3,16 +3,41 @@
 RH_EventScript_MomGivesRings::
 	lockall
 	textcolor NPC_TEXT_COLOR_FEMALE
+	playse SE_PIN
+	applymovement LOCALID_PLAYERS_HOUSE_1F_MOM, Common_Movement_ExclamationMark
+	waitmovement 0
+	applymovement LOCALID_PLAYERS_HOUSE_1F_MOM, Common_Movement_Delay48
+	waitmovement 0
 	msgbox RH_Text_MomWait
 	closemessage
+	applymovement LOCALID_PLAYERS_HOUSE_1F_MOM, RH_Movement_MomWalkToPlayer
+	waitmovement 0
+	applymovement OBJ_EVENT_ID_PLAYER, Common_Movement_FaceDown
+	waitmovement 0
 	msgbox RH_Text_MomRings
 	giveitem ITEM_MEGA_RING
 	giveitem ITEM_Z_POWER_RING
 	msgbox RH_Text_MomRingsAfter
 	closemessage
+	applymovement LOCALID_PLAYERS_HOUSE_1F_MOM, RH_Movement_MomWalkBack
+	waitmovement 0
 	setvar VAR_RH_MOM_GAVE_RINGS, 1
 	releaseall
 	end
+
+RH_Movement_MomWalkToPlayer:
+	walk_up
+	walk_right
+	walk_right
+	face_up
+	step_end
+
+RH_Movement_MomWalkBack:
+	walk_left
+	walk_left
+	walk_down
+	face_left
+	step_end
 
 RH_Text_MomWait::
 	.string "MOM: {PLAYER}! Wait a moment!$"

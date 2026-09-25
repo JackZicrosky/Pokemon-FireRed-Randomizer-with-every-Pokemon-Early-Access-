@@ -1,4 +1,8 @@
 #include "global.h"
+#include "field_move.h"
+#include "region_map.h"
+#include "rh.h"
+#include "script_pokemon_util.h"
 #include "item_use.h"
 #include "battle.h"
 #include "battle_anim.h"
@@ -1577,6 +1581,49 @@ void ItemUseOutOfBattle_TownMap(u8 taskId)
     else
     {
         gTasks[taskId].func = ItemUseOnFieldCB_TownMap;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Romhack key items: Healing Kit (Nuzlocke mode) and HM Kit.
+// ---------------------------------------------------------------------------
+static const u8 sText_RH_PartyHealed[] = _("Your POKéMON were fully healed!");
+static const u8 sText_RH_HMKitAuto[] = _("The HM KIT works by itself: just walk\nup to a tree, boulder, rock or water.\pIt can FLY you from the bag once you\nhave HM02 and the right BADGE.");
+
+void ItemUseOutOfBattle_HealingKit(u8 taskId)
+{
+    HealPlayerParty();
+    PlaySE(SE_USE_ITEM);
+    if (!gTasks[taskId].tUsingRegisteredKeyItem)
+        DisplayItemMessage(taskId, FONT_NORMAL, sText_RH_PartyHealed, CloseItemMessage);
+    else
+        DisplayItemMessageOnField(taskId, sText_RH_PartyHealed, Task_CloseCantUseKeyItemMessage);
+}
+
+static void ItemUseOnFieldCB_HMKitFlash(u8 taskId)
+{
+    PlaySE(SE_M_REFLECT);
+    FlagSet(FLAG_SYS_USE_FLASH);
+    ScriptContext_SetupScript(EventScript_UseFlash);
+    DestroyTask(taskId);
+}
+
+void ItemUseOutOfBattle_HMKit(u8 taskId)
+{
+    if (gMapHeader.cave == TRUE && !FlagGet(FLAG_SYS_USE_FLASH) && RH_HMKitCovers(FIELD_MOVE_FLASH))
+    {
+        sItemUseOnFieldCB = ItemUseOnFieldCB_HMKitFlash;
+        SetUpItemUseOnFieldCallback(taskId);
+    }
+    else if (!gTasks[taskId].tUsingRegisteredKeyItem && RH_HMKitCovers(FIELD_MOVE_FLY)
+          && Overworld_MapTypeAllowsTeleportAndFly(gMapHeader.mapType))
+    {
+        gBagMenu->newScreenCallback = CB2_OpenFlyMap;
+        Task_FadeAndCloseBagMenu(taskId);
+    }
+    else
+    {
+        DisplayCannotUseItemMessage(taskId, gTasks[taskId].tUsingRegisteredKeyItem, sText_RH_HMKitAuto);
     }
 }
 

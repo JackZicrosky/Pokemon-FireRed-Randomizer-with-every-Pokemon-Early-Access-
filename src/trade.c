@@ -4608,6 +4608,7 @@ static void CreateInGameTradePokemonInternal(u8 whichPlayerMon, u8 whichInGameTr
             SetMonData(pokemon, MON_DATA_HELD_ITEM, &inGameTrade->heldItem);
         }
     }
+    RH_ModifyTradeMon(pokemon, whichInGameTrade);
     CalculateMonStats(&gParties[B_TRAINER_OPPONENT_A][0]);
 }
 

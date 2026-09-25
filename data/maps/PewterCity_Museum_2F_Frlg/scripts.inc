@@ -37,7 +37,7 @@ Text_SeismicTossTeach::
 	.string "But that should spur us to study\n"
 	.string "harder, not toss in the towel.\p"
 	.string "The only thing you should toss…\p"
-	.string "Well, how about SEISMIC TOSS?\n"
+	.string "Well, how about {STR_VAR_2}?\n"
 	.string "Should I teach that to a POKéMON?$"
 
 Text_SeismicTossDeclined::
@@ -46,7 +46,7 @@ Text_SeismicTossDeclined::
 
 Text_SeismicTossWhichMon::
 	.string "Which POKéMON wants to learn\n"
-	.string "SEISMIC TOSS?$"
+	.string "{STR_VAR_2}?$"
 
 Text_SeismicTossTaught::
 	.string "I hope you won't toss in the towel.\n"

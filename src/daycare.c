@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "pokemon.h"
 #include "battle.h"
 #include "daycare.h"
@@ -321,7 +322,7 @@ static void ApplyDaycareExperience(struct Pokemon *mon)
 
 static u32 GetExpAtLevelCap(struct Pokemon *mon)
 {
-    return gExperienceTables[gSpeciesInfo[GetMonData(mon, MON_DATA_SPECIES)].growthRate][GetCurrentLevelCap()];
+    return gExperienceTables[GetSpeciesGrowthRate(GetMonData(mon, MON_DATA_SPECIES))][GetCurrentLevelCap()];
 }
 
 static u16 TakeSelectedPokemonFromDaycare(struct DaycareMon *daycareMon)
@@ -486,7 +487,7 @@ enum Species GetEggSpecies(enum Species species)
         {
             if (!IsSpeciesEnabled(j))
                 continue;
-            const struct Evolution *evolutions = GetSpeciesEvolutions(j);
+            const struct Evolution *evolutions = GetSpeciesEvolutionsVanilla(j);
             if (evolutions == NULL)
                 continue;
             for (k = 0; evolutions[k].method != EVOLUTIONS_END; k++)
@@ -1032,7 +1033,8 @@ void CreateEgg(struct Pokemon *mon, enum Species species, bool8 setHotSpringsLoc
     language = LANGUAGE_JAPANESE;
     SetMonData(mon, MON_DATA_POKEBALL, &ball);
     SetMonData(mon, MON_DATA_NICKNAME, sJapaneseEggNickname);
-    SetMonData(mon, MON_DATA_FRIENDSHIP, &gSpeciesInfo[species].eggCycles);
+    u8 rhEggCycles = gSaveBlock3Ptr->rhSettings.fastEggs ? 1 : gSpeciesInfo[species].eggCycles;
+    SetMonData(mon, MON_DATA_FRIENDSHIP, &rhEggCycles);
     SetMonData(mon, MON_DATA_MET_LEVEL, &metLevel);
     SetMonData(mon, MON_DATA_LANGUAGE, &language);
     if (setHotSpringsLocation)
@@ -1056,7 +1058,8 @@ static void SetInitialEggData(struct Pokemon *mon, enum Species species, struct 
     metLevel = 0;
     language = LANGUAGE_JAPANESE;
     SetMonData(mon, MON_DATA_NICKNAME, sJapaneseEggNickname);
-    SetMonData(mon, MON_DATA_FRIENDSHIP, &gSpeciesInfo[species].eggCycles);
+    u8 rhEggCycles = gSaveBlock3Ptr->rhSettings.fastEggs ? 1 : gSpeciesInfo[species].eggCycles;
+    SetMonData(mon, MON_DATA_FRIENDSHIP, &rhEggCycles);
     SetMonData(mon, MON_DATA_MET_LEVEL, &metLevel);
     SetMonData(mon, MON_DATA_LANGUAGE, &language);
 }
