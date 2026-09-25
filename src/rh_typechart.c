@@ -36,7 +36,7 @@ static u32 NextRand(void)
 
 static u32 RandBelow(u32 n)
 {
-    return NextRand() % n;
+    return ((NextRand() >> 16) * n) >> 16;   // no division (slow on the GBA)
 }
 
 static u8 EffOfModifier(uq4_12_t m)
@@ -141,37 +141,34 @@ static bool32 RandomizeChart(u8 eff[NT][NT], bool32 balanced)
     return TRUE;
 }
 
-// "Keep Type Identities": swap chunks of two defender columns when the chunk holds the same multiset of values,
-// so every type keeps its number of weaknesses / resistances / immunities offensively and defensively.
+// "Keep Type Identities": every type keeps its number of weaknesses / resistances / immunities offensively (rows)
+// and defensively (columns). Checkerboard swaps (a,c)=(b,d)=X, (a,d)=(b,c)=Y -> Y/X preserve every row and column
+// count (the same invariant as FVX's chunk swaps, but cheap enough to run on a GBA).
 static void KeepIdentities(u8 eff[NT][NT])
 {
     u32 swaps = 0, guard = 0;
-    while (swaps < 3000 && guard < 60000)
+    while (swaps < 600 && guard < 4000)
     {
-        u32 colA = RandBelow(NT), colB = RandBelow(NT), chunk = 0, i, n;
-        u8 countA[EFF_COUNT] = {0}, countB[EFF_COUNT] = {0};
+        u32 a = RandBelow(NT), b = RandBelow(NT), c = RandBelow(NT), d, n = 0;
+        u8 x, y, cand[NT];
         guard++;
-        n = RandBelow(NT);
-        for (i = 0; i < n; i++)
-            chunk |= 1u << RandBelow(NT);
-        for (i = 0; i < NT; i++)
-        {
-            if (!(chunk & (1u << i)))
-                continue;
-            countA[eff[i][colA]]++;
-            countB[eff[i][colB]]++;
-        }
-        if (memcmp(countA, countB, sizeof(countA)) != 0)
+        if (a == b)
             continue;
-        for (i = 0; i < NT; i++)
-        {
-            if (chunk & (1u << i))
-            {
-                u8 t = eff[i][colA];
-                eff[i][colA] = eff[i][colB];
-                eff[i][colB] = t;
-            }
-        }
+        x = eff[a][c];
+        y = eff[b][c];
+        if (x == y)
+            continue;
+        // columns d where the 2x2 square (a,b) x (c,d) is a checkerboard
+        for (d = 0; d < NT; d++)
+            if (d != c && eff[a][d] == y && eff[b][d] == x)
+                cand[n++] = d;
+        if (n == 0)
+            continue;
+        d = cand[RandBelow(n)];
+        eff[a][c] = y;
+        eff[b][c] = x;
+        eff[a][d] = x;
+        eff[b][d] = y;
         swaps++;
     }
 }

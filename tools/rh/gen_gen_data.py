@@ -93,6 +93,8 @@ for gn in range(1, 9):
     counts_m.append(len(diffs))
 c += 'static const struct RhGenStats *const sRhGenStats[] = { NULL, ' + ', '.join(f'sRhGenStats{gn}' for gn in range(1, 9)) + ', NULL };\n'
 c += 'static const struct RhGenMove *const sRhGenMoves[] = { NULL, ' + ', '.join(f'sRhGenMoves{gn}' for gn in range(1, 9)) + ', NULL };\n'
+c += 'static const u16 sRhGenStatsCount[] = { 0, ' + ', '.join(map(str, counts_s)) + ', 0 };\n'
+c += 'static const u16 sRhGenMovesCount[] = { 0, ' + ', '.join(map(str, counts_m)) + ', 0 };\n'
 open(R + 'src/data/rh_gen_data.h', 'w').write(c)
 print('stat diffs per gen', counts_s)
 print('move diffs per gen', counts_m)

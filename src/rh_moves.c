@@ -196,7 +196,7 @@ bool32 RH_IsDamagingMove(u16 move)
 // ---------------------------------------------------------------------------
 #define LEARNSET_MAX 40
 struct LearnsetCache { u16 species; u32 key; struct LevelUpMove moves[LEARNSET_MAX + 1]; };
-static EWRAM_DATA struct LearnsetCache sLearnsetCache[3] = {0};
+static EWRAM_DATA struct LearnsetCache sLearnsetCache[8] = {0};
 static EWRAM_DATA u8 sLearnsetCacheNext = 0;
 
 static u32 LearnsetKey(void)

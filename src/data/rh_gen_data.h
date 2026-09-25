@@ -1426,3 +1426,5 @@ static const struct RhGenMove sRhGenMoves8[] = {
 };
 static const struct RhGenStats *const sRhGenStats[] = { NULL, sRhGenStats1, sRhGenStats2, sRhGenStats3, sRhGenStats4, sRhGenStats5, sRhGenStats6, sRhGenStats7, sRhGenStats8, NULL };
 static const struct RhGenMove *const sRhGenMoves[] = { NULL, sRhGenMoves1, sRhGenMoves2, sRhGenMoves3, sRhGenMoves4, sRhGenMoves5, sRhGenMoves6, sRhGenMoves7, sRhGenMoves8, NULL };
+static const u16 sRhGenStatsCount[] = { 0, 166, 64, 64, 64, 64, 33, 7, 5, 0 };
+static const u16 sRhGenMovesCount[] = { 0, 179, 171, 167, 150, 122, 51, 39, 28, 0 };

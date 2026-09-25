@@ -112,13 +112,6 @@ void RH_OnNewGame(void)
     }
 }
 
-// ---------------------------------------------------------------------------
-// Custom player graphics (UPR FVX graphics packs). Index 0 = the normal sprites.
-// ---------------------------------------------------------------------------
-const u8 *const gRhPlayerGraphicsNames[] = {
-    COMPOUND_STRING("Default"),
-};
-const u8 gRhPlayerGraphicsCount = ARRAY_COUNT(gRhPlayerGraphicsNames);
 
 #ifndef RELEASE
 #include "config/rh_test.h"
@@ -129,20 +122,23 @@ void RH_TestSetup(void)
     struct Pokemon mon;
     S->enabled = TRUE;
     S->seed = 0x1234567;
-    S->mechanicsGen = 4;
-    S->baseStats = 2; S->baseStatsRandomAdded = TRUE;
-    S->types = 1;
-    S->abilities = 1;
-    S->evolutions = 1; S->evoSimilarStrength = TRUE; S->evoLimitThreeStages = TRUE; S->evoChangeImpossible = TRUE;
+    S->mechanicsGen = 1;
+    S->baseStats = 1; S->updateBaseStatsGen = 5; S->expCurve = 1; S->expCurveWho = 1;
+    S->types = 2; S->forceDualTypes = TRUE;
+    S->abilities = 1; S->combineDuplicateAbilities = TRUE; S->ensureTwoAbilities = TRUE;
+    S->evolutions = 2; S->evoNoConvergence = TRUE; S->evoForceGrowth = TRUE; S->evoMakeEasier = 40; S->evoRemoveTimeBased = TRUE;
     S->typeChart = 2;
-    S->movesets = 1; S->guaranteedLevel1On = TRUE; S->guaranteedLevel1Moves = 4; S->movesetGoodDamagingOn = TRUE;
-    S->movePower = TRUE; S->moveNames = TRUE; S->updateMovesGen = 3;
-    S->tmMoves = 1; S->tmCompat = 1;
-    S->wild = TRUE; S->wildZone = 2; S->wildMegas = TRUE; S->wildHeldItems = TRUE; S->wildLevelModOn = TRUE; S->wildLevelMod = 50;
-    S->trainers = 3; S->additionalMons[2] = 2; S->heldItemsFor[2] = TRUE; S->betterMovesets[2] = TRUE;
-    S->randomTrainerNames = TRUE; S->randomTrainerClassNames = TRUE; S->battleStyle = 2; S->battleStyleDoubles = TRUE;
+    S->movesets = 3;
+    S->moveAccuracy = TRUE; S->movePP = TRUE; S->moveType = TRUE;
+    S->tmMoves = 1; S->tmCompat = 2; S->tutorMoves = 1;
+    S->wild = TRUE; S->wildZone = 1; S->wildSplitEncounterTypes = TRUE; S->wildTypeRestriction = 1; S->wildCatchEmAll = TRUE;
+    S->wildSimilarStrength = TRUE; S->wildBalanceLowLevel = TRUE; S->wildEvoRestriction = 2;
+    S->trainers = 2; S->rivalCarriesTeam = TRUE; S->leagueUnique = 2; S->trainerLocalPokemon = TRUE; S->trainersEvolveOn = TRUE;
+    S->diverseTypes[2] = TRUE; S->heldItemsFor[2] = TRUE; S->heldSensible = TRUE; S->battleStyle = 1;
+    S->statics = 3; S->trades = 2; S->tradeNicknames = TRUE;
     S->instantText = TRUE; S->nuzlocke = TRUE; S->lowerCaseNames = FALSE;
-    S->shopSpecial = TRUE; S->fieldItems = 2;
+    S->shopSpecial = TRUE; S->fieldItems = 3; S->shopItems = 2;
+    S->playerGraphics = 1;
     CreateMon(&mon, SPECIES_BULBASAUR, 20, 0, OTID_STRUCT_PLAYER_ID);
     GiveMonInitialMoveset(&mon);
     CalculateMonStats(&mon);
@@ -154,6 +150,7 @@ void RH_TestSetup(void)
     AddBagItem(ITEM_INFINITE_CANDY, 1);
     AddBagItem(ITEM_HEALING_KIT, 1);
     AddBagItem(ITEM_HM_CUT, 1);
+    AddBagItem(ITEM_MASTER_BALL, 5);
 }
 #endif
 #endif

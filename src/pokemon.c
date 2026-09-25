@@ -5944,6 +5944,8 @@ enum Species GetFormChangeTargetSpeciesBoxMon(struct BoxPokemon *boxMon, enum Fo
 
     if (formChanges == NULL)
         return species;
+    if (boxMon->rhPermanentForm && (method == FORM_CHANGE_END_BATTLE || method == FORM_CHANGE_FAINT))
+        return species;
 
     struct FormChangeContext ctx =
     {

@@ -184,22 +184,34 @@ u16 RH_PreEvo(u16 species)
 // Older-generation data (only entries that differ from the current data are stored).
 const u8 *RH_GenBaseStats(u16 species, u32 gen)
 {
-    const struct RhGenStats *t;
+    s32 lo = 0, hi;
     if (gen < 1 || gen > 8)
         return NULL;
-    for (t = sRhGenStats[gen]; t->species != 0xFFFF; t++)
+    hi = sRhGenStatsCount[gen] - 1;
+    while (lo <= hi)
+    {
+        s32 mid = (lo + hi) / 2;
+        const struct RhGenStats *t = &sRhGenStats[gen][mid];
         if (t->species == species)
             return t->stats;
+        if (t->species < species)
+            lo = mid + 1;
+        else
+            hi = mid - 1;
+    }
     return NULL;
 }
 
 bool32 RH_GenMoveData(u16 move, u32 gen, struct RhMoveData *out)
 {
-    const struct RhGenMove *t;
+    s32 lo = 0, hi;
     if (gen < 1 || gen > 8)
         return FALSE;
-    for (t = sRhGenMoves[gen]; t->move != 0xFFFF; t++)
+    hi = sRhGenMovesCount[gen] - 1;
+    while (lo <= hi)
     {
+        s32 mid = (lo + hi) / 2;
+        const struct RhGenMove *t = &sRhGenMoves[gen][mid];
         if (t->move == move)
         {
             out->power = t->power;
@@ -209,6 +221,10 @@ bool32 RH_GenMoveData(u16 move, u32 gen, struct RhMoveData *out)
             out->category = t->category;
             return TRUE;
         }
+        if (t->move < move)
+            lo = mid + 1;
+        else
+            hi = mid - 1;
     }
     return FALSE;
 }

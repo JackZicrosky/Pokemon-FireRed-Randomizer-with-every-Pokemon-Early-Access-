@@ -1,0 +1,63 @@
+Custom player graphics come from Universal Pokemon Randomizer FVX graphics packs.
+All art belongs to the creators listed below.
+
+[Ethan]
+From=Pokémon - Generation II
+Creator=FourLeafSunny // https://www.spriters-resource.com/custom_edited/pokemongeneration2customs/asset/487434/
+
+[Kris]
+From=Pokémon - Generation II
+Creator=FourLeafSunny // https://www.spriters-resource.com/custom_edited/pokemongeneration2customs/asset/488043/
+
+[Red (FR/LG)]
+From=Pokémon - Generation III
+Creator=Gamefreak
+
+[Leaf]
+From=Pokémon - Generation III
+Creator=Gamefreak
+
+[Brendan (E)]
+From=Pokémon - Generation III
+Creator=Gamefreak
+
+[May (E)]
+From=Pokémon - Generation III
+Creator=Gamefreak
+From=Pokémon - Generation III
+Creator=Gamefreak
+Adapter=voliol
+
+[Brendan (R/S)]
+From=Pokémon - Generation III
+Creator=Gamefreak
+
+[May (R/S)]
+From=Pokémon - Generation III
+Creator=Gamefreak
+
+[Wally]
+From=Pokémon - Generation III
+Creator=Gamefreak
+Adapter=NachoPeñalva // https://www.deviantart.com/nachope126/art/Comission-To-Pokemon-Quetzal-wally-963498868
+
+[Prof. Birch]
+From=Pokémon - Generation III
+Creator=Gamefreak
+Adapter=NachoPeñalva // https://www.deviantart.com/nachope126/art/Comission-To-Pokemon-Quetzal-Prof-Birch-964603747
+
+[Cynthia]
+From=Pokémon - Generation IV
+Creator=Gamefreak
+Adapter=NachoPeñalva // https://www.deviantart.com/nachope126/art/Comission-To-Pokemon-Quetzal-Cynthia-930605682
+
+[Ghost (Snakewood)]
+From=Pokémon Snakewood
+Creator=Cutlerine
+Adapter=Voliol // The watering can, decorate, and underwater sprites needed to be custom-made. Everything else is directly from Snakewood.
+
+[Wraith (Snakewood)]
+From=Pokémon Snakewood
+Creator=Cutlerine
+Adapter=Voliol // The watering can, decorate, and underwater sprites needed to be custom-made. Everything else is directly from Snakewood.
+

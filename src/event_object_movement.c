@@ -1,4 +1,6 @@
 #include "global.h"
+#include "rh_player_palettes.h"
+const struct ObjectEventGraphicsInfo *RH_PlayerObjectGraphics(u16 graphicsId, const struct ObjectEventGraphicsInfo *vanilla);
 #include "malloc.h"
 #include "battle_anim.h"
 #include "battle_pyramid.h"
@@ -584,6 +586,7 @@ static const struct SpritePalette sObjectEventSpritePalettes[] = {
     {gObjectEventPaletteEmotes,             OBJ_EVENT_PAL_TAG_EMOTES},
     {gObjectEventPaletteNeonLight,          OBJ_EVENT_PAL_TAG_NEON_LIGHT},
 #ifdef BUGFIX
+#include "data/rh_player_palettes.h"
     {NULL,                                  OBJ_EVENT_PAL_TAG_NONE},
 #else
     {}, // BUG: FindObjectEventPaletteIndexByTag looks for OBJ_EVENT_PAL_TAG_NONE and not 0x0.
@@ -3210,6 +3213,12 @@ const struct ObjectEventGraphicsInfo *GetObjectEventGraphicsInfo(u16 graphicsId)
     if (graphicsId >= NUM_OBJ_EVENT_GFX)
         graphicsId = OBJ_EVENT_GFX_NINJA_BOY;
 
+    if (gSaveBlock3Ptr->rhSettings.playerGraphics)
+    {
+        const struct ObjectEventGraphicsInfo *custom = RH_PlayerObjectGraphics(graphicsId, gObjectEventGraphicsInfoPointers[graphicsId]);
+        if (custom != NULL)
+            return custom;
+    }
     return gObjectEventGraphicsInfoPointers[graphicsId];
 }
 

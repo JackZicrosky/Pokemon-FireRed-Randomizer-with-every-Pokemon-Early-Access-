@@ -8724,6 +8724,9 @@ static bool32 CanBattlerFormChange(enum BattlerId battler, enum FormChanges meth
         && GetConfig(B_TRANSFORM_FORM_CHANGES) >= GEN_5)
         return FALSE;
 
+    if ((method == FORM_CHANGE_END_BATTLE || method == FORM_CHANGE_FAINT) && GetBattlerMon(battler)->box.rhPermanentForm)
+        return FALSE;   // romhack: permanent wild Mega
+
     switch (method)
     {
     case FORM_CHANGE_END_BATTLE:

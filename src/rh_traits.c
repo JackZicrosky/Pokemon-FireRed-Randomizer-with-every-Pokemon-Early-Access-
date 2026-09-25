@@ -337,7 +337,7 @@ struct EvoCache
     struct Evolution evos[EVO_MAX + 1];
     struct EvolutionParam params[EVO_MAX][EVO_PARAMS];
 };
-static EWRAM_DATA struct EvoCache sEvoCache[6] = {0};
+static EWRAM_DATA struct EvoCache sEvoCache[12] = {0};
 static EWRAM_DATA u8 sEvoCacheNext = 0;
 static EWRAM_DATA u16 sEvoSource = 0;                          // species being evolved (for filter callbacks)
 static EWRAM_DATA u8 sEvoGrowth = 0;
