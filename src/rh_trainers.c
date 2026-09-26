@@ -21,9 +21,6 @@
 #include "data/rh_randomizer_tables.h"
 #include "data/rh_names.h"
 
-enum Species RH_WildSpeciesAt(u8 mapGroup, u8 mapNum, const struct WildPokemonInfo *info, u32 slot, enum WildPokemonArea area, u32 level);
-u16 RH_StarterForSlot(u32 slot);
-s32 RH_StarterFamily(u16 species, u32 *stage);
 bool32 RH_IsGoodDamagingMove(u16 move);
 bool32 RH_IsDamagingMove(u16 move);
 
@@ -57,7 +54,8 @@ static u32 TierOf(u32 trainerClass)
     switch (trainerClass)
     {
     case TRAINER_CLASS_LEADER_FRLG: case TRAINER_CLASS_ELITE_FOUR_FRLG: case TRAINER_CLASS_CHAMPION_FRLG:
-    case TRAINER_CLASS_LEADER: case TRAINER_CLASS_ELITE_FOUR: case TRAINER_CLASS_CHAMPION: case TRAINER_CLASS_BOSS_FRLG:
+    case TRAINER_CLASS_LEADER: case TRAINER_CLASS_ELITE_FOUR: case TRAINER_CLASS_CHAMPION:
+    case TRAINER_CLASS_BOSS_FRLG:
         return TIER_BOSS;
     case TRAINER_CLASS_RIVAL_EARLY_FRLG: case TRAINER_CLASS_RIVAL_LATE_FRLG:
         return TIER_IMPORTANT;
@@ -83,6 +81,11 @@ static s32 LeagueMemberOf(s32 trainerId)
 {
     u32 i;
     if (trainerId == TRAINER_CHAMPION_FIRST_BULBASAUR || trainerId == TRAINER_CHAMPION_FIRST_CHARMANDER)
+        return 4;
+    // the post-game rematches are the same people: they use their unique Pokemon too
+    if (trainerId >= TRAINER_ELITE_FOUR_LORELEI_2 && trainerId <= TRAINER_ELITE_FOUR_LANCE_2)
+        return trainerId - TRAINER_ELITE_FOUR_LORELEI_2;
+    if (trainerId >= TRAINER_CHAMPION_REMATCH_SQUIRTLE && trainerId <= TRAINER_CHAMPION_REMATCH_CHARMANDER)
         return 4;
     for (i = 0; i < ARRAY_COUNT(sLeagueMembers); i++)
         if (sLeagueMembers[i] == trainerId)
@@ -147,47 +150,23 @@ static u8 TeamTheme(const struct Trainer *trainer)
     return found;
 }
 
-// Number of allowed Pokemon of each type (cached: counting the pool is far too slow to do per Pokemon).
-struct TypeCountCache { u32 key; u16 count[18]; };
-static EWRAM_DATA struct TypeCountCache sTypeCounts = {0};
-
-static void EnsureTypeCounts(void)
-{
-    u32 i, key = S->seed ^ (S->speciesPool << 1) ^ (S->types << 4) ^ (S->forceDualTypes << 7) ^ (S->enabled << 8) ^ 0x7C;
-    if (sTypeCounts.key == key)
-        return;
-    memset(sTypeCounts.count, 0, sizeof(sTypeCounts.count));
-    for (i = 0; i < RH_PoolCount(); i++)
-    {
-        u16 sp;
-        if (!RH_PoolAllowed(i))
-            continue;
-        sp = RH_PoolSpecies(i);
-        sTypeCounts.count[RH_TypeIndexOf(GetSpeciesType(sp, 0))]++;
-        if (GetSpeciesType(sp, 1) != GetSpeciesType(sp, 0))
-            sTypeCounts.count[RH_TypeIndexOf(GetSpeciesType(sp, 1))]++;
-    }
-    sTypeCounts.key = key;
-}
-
 // A random theme type. "Weight Types by # of Pokemon": in proportion to how many Pokemon have each type.
 // Types with (almost) no Pokemon in the pool are never picked (FVX).
 static u8 RandomTheme(u32 hash)
 {
     u32 total = 0, i, r;
-    EnsureTypeCounts();
-    for (i = 0; i < 18; i++)
-        if (sTypeCounts.count[i] >= 3)
-            total += S->trainerWeightTypes ? sTypeCounts.count[i] : 1;
+        for (i = 0; i < 18; i++)
+        if (RH_TypeCount(i) >= 3)
+            total += S->trainerWeightTypes ? RH_TypeCount(i) : 1;
     if (total == 0)
         return RH_RandomMonType(hash);
     r = hash % total;
     for (i = 0; i < 18; i++)
     {
         u32 w;
-        if (sTypeCounts.count[i] < 3)
+        if (RH_TypeCount(i) < 3)
             continue;
-        w = S->trainerWeightTypes ? sTypeCounts.count[i] : 1;
+        w = S->trainerWeightTypes ? RH_TypeCount(i) : 1;
         if (r < w)
             return gRhMonTypes[i];
         r -= w;
@@ -200,8 +179,7 @@ static u8 RandomTheme(u32 hash)
 static u8 GroupTheme(u8 officialType)
 {
     u32 x = RH_Permute(SALT_TRAINER_THEME, RH_TypeIndexOf(officialType), 18), tries;
-    EnsureTypeCounts();
-    for (tries = 0; tries < 18 && sTypeCounts.count[x] < 3; tries++)
+        for (tries = 0; tries < 18 && RH_TypeCount(x) < 3; tries++)
         x = RH_Permute(SALT_TRAINER_THEME, x, 18);
     return gRhMonTypes[x];
 }
@@ -217,11 +195,15 @@ static EWRAM_DATA u8 sAvoidDupes = 0;
 static EWRAM_DATA u8 sNoWonderGuard = 0;
 static EWRAM_DATA u8 sLeagueMember = 0;                        // league member + 1 while building its team
 
+static bool32 IsOwnReservedFamily(u16 species);
+
 static bool32 TeamPredicate(u16 species)
 {
     u32 i;
     if (sLeagueMember == 0 && RH_IsLeagueReserved(species))
         return FALSE;                                        // kept for the Elite Four / Champion
+    if (sLeagueMember != 0 && sAvoidDupes && IsOwnReservedFamily(species))
+        return FALSE;                                        // their unique Pokemon are on the team already
     for (i = 0; i < sTeamCount; i++)
     {
         if (sAvoidDupes && RH_FamilyRoot(sTeam[i]) == RH_FamilyRoot(species))
@@ -315,6 +297,20 @@ static void EnsureReserved(void)
         BuildReserved();
 }
 
+// Is "species" of the same family as one of the unique Pokemon of the league member being built?
+static bool32 IsOwnReservedFamily(u16 species)
+{
+    u32 r, member = sLeagueMember - 1;
+    EnsureReserved();
+    for (r = 0; r < S->leagueUnique; r++)
+    {
+        u32 idx = member * S->leagueUnique + r;
+        if (idx < sReserved.count && RH_FamilyRoot(sReserved.species[idx]) == RH_FamilyRoot(species))
+            return TRUE;
+    }
+    return FALSE;
+}
+
 bool32 RH_IsLeagueReserved(u16 species)
 {
     u32 i;
@@ -330,6 +326,8 @@ bool32 RH_IsLeagueReserved(u16 species)
 // ---------------------------------------------------------------------------
 // Evolving trainer Pokemon to their level
 // ---------------------------------------------------------------------------
+static EWRAM_DATA u8 sEvolveKeepType = TYPE_NONE;             // type theme the evolution must keep
+
 static u16 EvolveForLevelEx(u16 species, u32 level, u32 salt, u32 *steps)
 {
     u32 i, guard;
@@ -364,6 +362,10 @@ static u16 EvolveForLevelEx(u16 species, u32 level, u32 salt, u32 *steps)
         }
         if (!ok || next == SPECIES_NONE)
             break;
+        if (sLeagueMember == 0 && RH_IsLeagueReserved(next))
+            break;                                           // the Elite Four's unique Pokemon stay theirs
+        if (sEvolveKeepType != TYPE_NONE && !RH_SpeciesHasType(next, sEvolveKeepType))
+            break;                                           // a themed trainer's Pokemon keep the theme
         species = next;
         (*steps)++;
     }
@@ -636,23 +638,7 @@ static u16 SensibleItem(const struct TrainerMon *mon, u32 hash)
 // equally often.
 static u16 PickEven(const struct RhFilter *f, u32 index)
 {
-    u32 n = RH_PoolCount(), accepted = 0, k, p;
-    for (p = 0; p < n; p++)
-        accepted += RH_FilterAccepts(f, p);
-    if (accepted == 0)
-        return SPECIES_NONE;
-    k = index % accepted;
-    for (p = 0; p < n; p++)
-    {
-        u32 x = RH_Permute(SALT_TRAINER, p, n);
-        if (RH_FilterAccepts(f, x))
-        {
-            if (k == 0)
-                return RH_PoolSpecies(x);
-            k--;
-        }
-    }
-    return SPECIES_NONE;
+    return RH_PickRanked(f, index, SALT_TRAINER);
 }
 
 // The type theme of a trainer (TYPE_NONE = none), and for "Keep Themes Or Primary" the per-Pokemon type.
@@ -685,6 +671,7 @@ static void SetupTeamFilter(struct RhFilter *f, const struct TrainerMon *mon, u3
     sDiverse = S->diverseTypes[tier] && theme == TYPE_NONE; // FVX: ignored for type-themed trainers
     sNoWonderGuard = S->noEarlyWonderGuard && mon->lvl < 20;
     f->extra = TeamPredicateWG;
+    f->noLeagueReserved = (sLeagueMember == 0);             // kept even when the other rules are relaxed
     f->type = theme;
 }
 
@@ -797,7 +784,13 @@ void RH_ModifyTrainerMon(struct TrainerMon *mon, const struct Trainer *trainer, 
         if (newSpecies == SPECIES_NONE)
             newSpecies = mon->species;
         if (S->trainersEvolveOn)
+        {
+            sEvolveKeepType = TrainerTheme(trainer, trainerId);
+            if (sEvolveKeepType == TYPE_NONE && S->trainers == 6)
+                sEvolveKeepType = gSpeciesInfo[mon->species].types[0];
             newSpecies = EvolveForLevel(newSpecies, mon->lvl, slot);
+            sEvolveKeepType = TYPE_NONE;
+        }
         changed = TRUE;
     }
     else if (!changed && S->trainersEvolveOn)

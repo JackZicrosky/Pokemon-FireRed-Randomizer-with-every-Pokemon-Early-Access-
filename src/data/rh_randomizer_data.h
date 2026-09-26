@@ -3,7 +3,7 @@
 // stage: evolution stage (1 = basic). chain: total stages in its line. bst: vanilla base stat total.
 // mega: a Mega Evolution (only used for "permanent Mega" wild encounters).
 struct RhPoolMon { u16 species; u16 bst; u8 gen:4; u8 stage:2; u8 legendary:1; u8 variant:1; u8 chain:2; u8 mega:1; u8 pad:5; };
-#define RH_POOL_COUNT 1321
+#define RH_POOL_COUNT 1322
 static const struct RhPoolMon sRhPool[RH_POOL_COUNT] = {
     {SPECIES_BULBASAUR, 318, 1, 1, 0, 0, 3, 0, 0},
     {SPECIES_IVYSAUR, 405, 1, 2, 0, 0, 3, 0, 0},
@@ -158,6 +158,7 @@ static const struct RhPoolMon sRhPool[RH_POOL_COUNT] = {
     {SPECIES_MEW, 600, 1, 1, 1, 0, 1, 0, 0},
     {SPECIES_CHIKORITA, 318, 2, 1, 0, 0, 3, 0, 0},
     {SPECIES_BAYLEEF, 405, 2, 2, 0, 0, 3, 0, 0},
+    {SPECIES_MEGANIUM, 525, 2, 3, 0, 0, 3, 0, 0},
     {SPECIES_CYNDAQUIL, 309, 2, 1, 0, 0, 3, 0, 0},
     {SPECIES_QUILAVA, 405, 2, 2, 0, 0, 3, 0, 0},
     {SPECIES_TYPHLOSION, 534, 2, 3, 0, 0, 3, 0, 0},

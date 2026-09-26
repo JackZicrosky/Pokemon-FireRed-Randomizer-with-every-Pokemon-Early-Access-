@@ -49,7 +49,7 @@ for sp, v in sorted(S.items(), key=lambda kv: kv[1]['id']):
         pool.append(dict(sp=sp, gen=gen_of(dex), leg=int(bool(legendary(v))), variant=0, mega=1, stage=stage(base),
                          chain=min(3, stage(base) + chain_len(base) - 1), bst=bst, dex=dex))
         continue
-    if any(v.get(f) for f in BAD) or any(p in sp for p in G.BAD_NAME_PARTS): continue
+    if any(v.get(f) for f in BAD) or G.bad_name(sp): continue
     reg = is_regional(v)
     base = form_base(sp) == sp
     variant = reg or sp in wild_variant_forms

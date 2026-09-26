@@ -1,5 +1,6 @@
 // Pokemon Traits: base stats, EXP curves, types, abilities, evolutions (+ catch rate).
 #include "global.h"
+#include "malloc.h"
 #include "constants/characters.h"
 #include "pokemon.h"
 #include "rh_internal.h"
@@ -386,8 +387,8 @@ static u32 Remaining(u16 species)
 // Evolutions only ever go "down" this ranking, so random evolutions can never loop (FVX never creates cycles).
 static u32 EvoRank(u16 species)
 {
-    s32 idx = RH_PoolIndexOf(species);
-    return Remaining(species) * 4096 + (idx < 0 ? 0 : RH_Permute(SALT_EVO_RANK, idx, RH_PoolCount()));
+    // stages left first, then a keyed order (a plain hash: this runs for every candidate of every pick)
+    return (Remaining(species) << 28) | ((RH_Hash(SALT_EVO_RANK, species, 0) & 0xFFFF) << 12) | (species & 0xFFF);
 }
 
 // Context of the evolution being randomized (read by the filter callbacks).
@@ -397,13 +398,15 @@ static EWRAM_DATA u32 sEvoSourceRank = 0;
 static EWRAM_DATA u16 sEvoMinBst = 0;
 static EWRAM_DATA s8 sEvoRemaining = 0;
 
+static EWRAM_DATA bool8 sEvoRelaxed = FALSE;                  // No Convergence last resort: skip typing / growth
+
 static bool32 EvoTargetOk(u16 species)
 {
     if (GetSpeciesGrowthRate(species) != sEvoGrowth)
         return FALSE;                                        // FVX: evolutions keep the EXP curve
-    if (S->evoSameTyping && !RH_SpeciesHasType(species, GetSpeciesType(sEvoSource, 0)) && !RH_SpeciesHasType(species, GetSpeciesType(sEvoSource, 1)))
+    if (!sEvoRelaxed && S->evoSameTyping && !RH_SpeciesHasType(species, GetSpeciesType(sEvoSource, 0)) && !RH_SpeciesHasType(species, GetSpeciesType(sEvoSource, 1)))
         return FALSE;
-    if (sEvoMinBst && RH_VanillaBST(species) < sEvoMinBst)
+    if (!sEvoRelaxed && sEvoMinBst && RH_VanillaBST(species) < sEvoMinBst)
         return FALSE;
     if (sEvoRemaining >= 0 && (s32)Remaining(species) != sEvoRemaining)
         return FALSE;
@@ -445,6 +448,10 @@ static bool32 IsVanillaTarget(u16 species, u16 target)
 // 0..m-1, and target number idx may only use candidate positions idx, idx+m, idx+2m... of a keyed order of the
 // group, so different original targets can never land on the same Pokemon, even when some candidates fail the
 // other rules. (Every Level: every Pokemon of the group is a source, so the map is a bijection.)
+#ifndef RELEASE
+s32 gRhDebugNoConv[4];
+#endif
+
 static bool32 InEvoGroup(u16 sp)
 {
     return GetSpeciesGrowthRate(sp) == sEvoGrowth && (sEvoRemaining < 0 || (s32)Remaining(sp) == sEvoRemaining);
@@ -460,12 +467,29 @@ static bool32 IsGroupSource(u16 sp)
         && (sEvoRemaining < 0 || (s32)Remaining(sp) == sEvoRemaining);
 }
 
+static bool32 NoConvergenceOk(u16 species, u16 target)
+{
+    if (target == SPECIES_NONE || target == species)
+        return FALSE;
+    if (S->evoForceChange && IsVanillaTarget(species, target))
+        return FALSE;
+    return EvoTargetOk(target);
+}
+
 static u16 NoConvergenceTarget(u16 species, u16 original)
 {
     struct RhFilter any = {0};
     u16 v = (S->evolutions == 2) ? species : original;
-    u32 p, n = RH_PoolCount(), m = 0, c = 0, attempt;
+    u32 p, n = RH_PoolCount(), m = 0, c = 0, attempt, pos;
     s32 idx = -1;
+    u16 *cand, result = SPECIES_NONE;
+    // Random: the new target has as many stages left as the original one. That keeps every chain going "down"
+    // (no loops without the ranking rule, which would reject half of the few positions a target may use).
+    if (S->evolutions == 1)
+        sEvoRemaining = Remaining(original);
+    cand = AllocUnchecked(n * sizeof(u16));
+    if (cand == NULL)
+        return SPECIES_NONE;
     for (p = 0; p < n; p++)
     {
         u16 sp;
@@ -477,37 +501,47 @@ static u16 NoConvergenceTarget(u16 species, u16 original)
         if (IsGroupSource(sp))
             m++;
         if (InEvoGroup(sp))
-            c++;
+            cand[c++] = sp;
     }
-    if (idx < 0 || m == 0 || c == 0)
-        return SPECIES_NONE;
-    for (attempt = 0; idx + attempt * m < c && attempt < 8; attempt++)
+#ifndef RELEASE
+    gRhDebugNoConv[0] = idx; gRhDebugNoConv[1] = m; gRhDebugNoConv[2] = c;
+#endif
+    if (S->evolutions == 2 && idx >= 0 && c > 1)
     {
-        u32 k = RH_Permute(SALT_EVO, idx + attempt * m, c);
-        u16 target = SPECIES_NONE;
-        for (p = 0; p < n; p++)
+        // Every Level: the group in a keyed order is one big cycle, each Pokemon evolving into the next one
+        // (a bijection without fixed points)
+        u32 j;
+        for (j = 0; j < c && RH_Permute(SALT_EVO, j, c) != (u32)idx; j++)
+            ;
+        for (attempt = 1; attempt < c && result == SPECIES_NONE && attempt < 4; attempt++)
         {
-            u16 sp;
-            if (!RH_FilterAccepts(&any, p))
-                continue;
-            sp = RH_PoolSpecies(p);
-            if (!InEvoGroup(sp))
-                continue;
-            if (k-- == 0)
-            {
-                target = sp;
-                break;
-            }
+            u16 t = cand[RH_Permute(SALT_EVO, (j + attempt) % c, c)];
+            if (NoConvergenceOk(species, t))
+                result = t;
         }
-        if (target == SPECIES_NONE || target == species)
-            continue;
-        if (S->evoForceChange && IsVanillaTarget(species, target))
-            continue;
-        if (!EvoTargetOk(target))
-            continue;
-        return target;
     }
-    return SPECIES_NONE;
+    else if (idx >= 0 && m != 0 && c != 0)
+    {
+        // this target's own positions: idx, idx + m, idx + 2m...
+        for (attempt = 0; idx + attempt * m < c && result == SPECIES_NONE; attempt++)
+        {
+            u16 t = cand[RH_Permute(SALT_EVO, idx + attempt * m, c)];
+            if (NoConvergenceOk(species, t))
+                result = t;
+        }
+        // none fits the other rules: spare positions (m and up are only second tries of other targets), each
+        // target starting somewhere else so they don't all take the same one
+        for (attempt = 0; c > m && attempt < min(c - m, 128u) && result == SPECIES_NONE; attempt++)
+        {
+            u16 t;
+            pos = m + (idx * 37 + attempt) % (c - m);
+            t = cand[RH_Permute(SALT_EVO, pos, c)];
+            if (NoConvergenceOk(species, t))
+                result = t;
+        }
+    }
+    Free(cand);
+    return result;
 }
 
 static u16 RandomEvoTarget(u16 species, u16 original, u32 n, const u16 *chosen, u32 chosenCount)
@@ -516,7 +550,12 @@ static u16 RandomEvoTarget(u16 species, u16 original, u32 n, const u16 *chosen, 
     u32 i;
     SetEvoContext(species, original);
     if (S->evoNoConvergence)
-        return NoConvergenceTarget(species, original);       // no fallback: a random pick could converge
+    {
+        u16 t = NoConvergenceTarget(species, original);
+        if (t != SPECIES_NONE)
+            return t;
+        SetEvoContext(species, original);                    // rare: no free position fits -> a normal pick
+    }
     f.extra = EvoTargetOk;
     RH_FilterExclude(&f, species);
     for (i = 0; i < chosenCount; i++)
@@ -528,6 +567,8 @@ static u16 RandomEvoTarget(u16 species, u16 original, u32 n, const u16 *chosen, 
         // RH_PickSpecies relaxes its rules when nothing fits; never accept a pick that could create a loop
         if (t == species || (t != SPECIES_NONE && S->evolutions == 1 && EvoRank(t) >= sEvoSourceRank))
             return SPECIES_NONE;
+        if (t != SPECIES_NONE && !EvoTargetOk(t))
+            return SPECIES_NONE;                             // the pick had to drop the rules: keep the original
         return t;
     }
 }
@@ -734,6 +775,21 @@ static void AdjustEvolution(struct Evolution *e, struct EvolutionParam *buf, con
     e->params = (n > 0) ? buf : NULL;
 }
 
+static bool32 TargetInPool(u16 species)
+{
+    s32 i = RH_PoolIndexOf(species);
+    return i >= 0 && RH_PoolAllowed(i);
+}
+
+static bool32 HasPoolSibling(const struct Evolution *vanilla, u16 target)
+{
+    u32 i;
+    for (i = 0; vanilla[i].method != EVOLUTIONS_END; i++)
+        if (vanilla[i].method != EVO_NONE && vanilla[i].targetSpecies != target && TargetInPool(vanilla[i].targetSpecies))
+            return TRUE;
+    return FALSE;
+}
+
 const struct Evolution *RH_Evolutions(enum Species species, const struct Evolution *vanilla)
 {
     u32 i, j, n, key;
@@ -771,6 +827,13 @@ const struct Evolution *RH_Evolutions(enum Species species, const struct Evoluti
         {
             c->evos[n] = vanilla[n];
             chosen[n] = SPECIES_NONE;
+            if (S->evolutions == 1 && vanilla[n].method != EVO_NONE && vanilla[n].targetSpecies != SPECIES_NONE
+             && !TargetInPool(vanilla[n].targetSpecies) && HasPoolSibling(vanilla, vanilla[n].targetSpecies))
+            {
+                c->evos[n].method = EVO_NONE;                // a form outside the pool (Alolan Raichu...): its sibling's entry stays
+                chosen[n] = SPECIES_NONE;
+                continue;
+            }
             if (S->evolutions == 1 && vanilla[n].method != EVO_NONE && vanilla[n].targetSpecies != SPECIES_NONE)
             {
                 u16 target = SPECIES_NONE;

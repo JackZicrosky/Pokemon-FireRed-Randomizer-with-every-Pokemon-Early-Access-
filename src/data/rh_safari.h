@@ -5,6 +5,7 @@ static const struct RhSafariMon sRhSafari_CENTER[] = {
     {SPECIES_EXEGGUTOR_ALOLA, 7, 9, 9},
     {SPECIES_CHIKORITA, 2, 10, 10},
     {SPECIES_BAYLEEF, 2, 9, 9},
+    {SPECIES_MEGANIUM, 2, 8, 8},
     {SPECIES_SENTRET, 2, 10, 10},
     {SPECIES_FURRET, 2, 9, 9},
     {SPECIES_LEDYBA, 2, 10, 10},

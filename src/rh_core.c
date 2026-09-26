@@ -1,5 +1,6 @@
 // Randomizer core: settings, seeded hashing, the species pool and species picking.
 #include "global.h"
+#include "main.h"
 #include "item.h"
 #include "mail.h"
 #include "pokemon.h"
@@ -61,6 +62,7 @@ void RH_SetDefaultSettings(struct RhSettings *s)
 
 void RH_ApplyPendingSettings(void)
 {
+    RH_InvalidateSettingsHash();
     gSaveBlock3Ptr->rhSettings = gRhPendingSettings;
     if (gSaveBlock3Ptr->rhSettings.version != RH_SETTINGS_VERSION)
     {
@@ -83,13 +85,28 @@ static u32 Mix(u32 h)
     return h;
 }
 
-// Hash of every setting: cache key for results that depend on many options.
+// Hash of every setting: cache key for results that depend on many options. It is looked up by hot code (filters
+// run it per candidate), so it's worked out at most once per frame; RH_InvalidateSettingsHash forces a recount.
+static EWRAM_DATA u32 sSettingsHashFrame = 0;
+static EWRAM_DATA u32 sSettingsHash = 0;
+static EWRAM_DATA bool8 sSettingsHashValid = FALSE;
+
+void RH_InvalidateSettingsHash(void)
+{
+    sSettingsHashValid = FALSE;
+}
+
 u32 RH_SettingsHash(void)
 {
     const u8 *b = (const u8 *)S;
     u32 i, h = 2166136261u;
+    if (sSettingsHashValid && sSettingsHashFrame == gMain.vblankCounter1)
+        return sSettingsHash;
     for (i = 0; i < sizeof(struct RhSettings); i++)
         h = (h ^ b[i]) * 16777619u;
+    sSettingsHash = h;
+    sSettingsHashFrame = gMain.vblankCounter1;
+    sSettingsHashValid = TRUE;
     return h;
 }
 
@@ -189,6 +206,42 @@ u16 RH_PreEvo(u16 species)
     if (species < ARRAY_COUNT(sRhPreEvo))
         return sRhPreEvo[species];
     return SPECIES_NONE;
+}
+
+// Number of allowed Pokemon with each type (current types), by type index. Cached: counting the pool is far
+// too slow to do per pick.
+struct TypeCountCache { u32 key; u16 count[18]; };
+static EWRAM_DATA struct TypeCountCache sTypeCounts = {0};
+
+u32 RH_TypeCount(u32 typeIndex)
+{
+    u32 i, key = RH_SettingsHash() | 1;
+    if (sTypeCounts.key != key)
+    {
+        memset(sTypeCounts.count, 0, sizeof(sTypeCounts.count));
+        for (i = 0; i < RH_POOL_COUNT; i++)
+        {
+            u16 sp;
+            if (!RH_PoolAllowed(i))
+                continue;
+            sp = RH_PoolSpecies(i);
+            sTypeCounts.count[RH_TypeIndexOf(GetSpeciesType(sp, 0))]++;
+            if (GetSpeciesType(sp, 1) != GetSpeciesType(sp, 0))
+                sTypeCounts.count[RH_TypeIndexOf(GetSpeciesType(sp, 1))]++;
+        }
+        sTypeCounts.key = key;
+    }
+    return typeIndex < 18 ? sTypeCounts.count[typeIndex] : 0;
+}
+
+// A random type that at least "minCount" allowed Pokemon have (any type if none does).
+u8 RH_RandomPopulatedType(u32 hash, u32 minCount)
+{
+    u32 i, start = hash % 18;
+    for (i = 0; i < 18; i++)
+        if (RH_TypeCount((start + i) % 18) >= minCount)
+            return gRhMonTypes[(start + i) % 18];
+    return gRhMonTypes[start];
 }
 
 // Older-generation data (only entries that differ from the current data are stored).
@@ -411,6 +464,8 @@ static bool32 FilterOk(const struct RhPoolMon *m, const struct RhFilter *f)
         return FALSE;
     if (f->extra != NULL && !f->extra(m->species))
         return FALSE;
+    if (f->noLeagueReserved && RH_IsLeagueReserved(m->species))
+        return FALSE;
     return TRUE;
 }
 
@@ -419,9 +474,34 @@ bool32 RH_FilterAccepts(const struct RhFilter *f, u32 poolIndex)
     return poolIndex < RH_POOL_COUNT && FilterOk(&sRhPool[poolIndex], f);
 }
 
+// One pass collects the accepted Pokemon (the filter is the expensive part); nested picks (a filter callback that
+// picks itself) fall back to counting twice.
+static EWRAM_DATA u16 sPickBuffer[RH_POOL_COUNT] = {0};
+static EWRAM_DATA u8 sPickDepth = 0;
+
 u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash)
 {
     u32 i, count = 0, target;
+    // Random candidates first: uniform among the accepted ones, and far cheaper than scanning the whole pool
+    // (each filter check costs ~20 us on the GBA). Only strict filters get to the full scan.
+    for (i = 0; i < 48; i++)
+    {
+        u32 k = RH_Hash(hash, i, 0x5EED) % RH_POOL_COUNT;
+        if (FilterOk(&sRhPool[k], f))
+            return sRhPool[k].species;
+    }
+    if (sPickDepth == 0)
+    {
+        u16 result = SPECIES_NONE;
+        sPickDepth++;
+        for (i = 0; i < RH_POOL_COUNT; i++)
+            if (FilterOk(&sRhPool[i], f))
+                sPickBuffer[count++] = i;
+        if (count != 0)
+            result = sRhPool[sPickBuffer[hash % count]].species;
+        sPickDepth--;
+        return result;
+    }
     for (i = 0; i < RH_POOL_COUNT; i++)
         if (FilterOk(&sRhPool[i], f))
             count++;
@@ -438,6 +518,35 @@ u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash)
         }
     }
     return SPECIES_NONE;
+}
+
+// The rank-th allowed Pokemon in a keyed order (a bijection on the accepted ones): different ranks give different
+// Pokemon until every accepted one has been used. Used by "even distribution" and Catch Em' All.
+u16 RH_PickRanked(const struct RhFilter *f, u32 rank, u32 salt)
+{
+    u32 i, count = 0;
+    u16 result = SPECIES_NONE;
+    if (sPickDepth != 0)
+    {
+        u32 k;
+        for (i = 0; i < RH_POOL_COUNT; i++)
+            count += FilterOk(&sRhPool[i], f);
+        if (count == 0)
+            return SPECIES_NONE;
+        k = RH_Permute(salt, rank % count, count);
+        for (i = 0; i < RH_POOL_COUNT; i++)
+            if (FilterOk(&sRhPool[i], f) && k-- == 0)
+                return sRhPool[i].species;
+        return SPECIES_NONE;
+    }
+    sPickDepth++;
+    for (i = 0; i < RH_POOL_COUNT; i++)
+        if (FilterOk(&sRhPool[i], f))
+            sPickBuffer[count++] = i;
+    if (count != 0)
+        result = sRhPool[sPickBuffer[RH_Permute(salt, rank % count, count)]].species;
+    sPickDepth--;
+    return result;
 }
 
 // Picks a species. With "similarTo", tries +-10%, 20%, 35% BST windows first. When nothing matches, relaxes the
@@ -534,6 +643,8 @@ u16 RH_FullyEvolve(u16 species)
 // ---------------------------------------------------------------------------
 bool32 RH_ItemBanned(u16 item)
 {
+    if (GetItemPocket(item) == POCKET_KEY_ITEMS)
+        return TRUE;                                         // e.g. the reusable Escape Rope: never a random item
     return item == ITEM_LUCKY_EGG && S->banLuckyEgg;
 }
 

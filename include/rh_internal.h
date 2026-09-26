@@ -38,12 +38,15 @@ u32 RH_StatsGen(void);                       // generation whose base stats are 
 u32 RH_MovesGen(void);                       // generation whose move data is used (1-9)
 bool32 RH_IsLegendary(u16 species);
 u32 RH_VanillaBST(u16 species);
-u32 RH_SettingsHash(void);
-bool32 RH_EvoItemsForSale(void);             // evolution sellers keep every evolution item                   // hash of all settings (cache key)
+u32 RH_SettingsHash(void);                   // hash of all settings (cache key)
+void RH_InvalidateSettingsHash(void);        // after changing settings within a frame
+bool32 RH_EvoItemsForSale(void);             // evolution sellers keep every evolution item
 u32 RH_SpeciesStage(u16 species);            // 1 = basic
 u32 RH_SpeciesChain(u16 species);            // stages in its vanilla line
 bool32 RH_SpeciesHasType(u16 species, u8 type);
 u8 RH_RandomMonType(u32 hash);
+u32 RH_TypeCount(u32 typeIndex);             // allowed Pokemon with that type (cached)
+u8 RH_RandomPopulatedType(u32 hash, u32 minCount);
 u32 RH_TypeIndexOf(u8 type);
 extern const u8 gRhMonTypes[18];
 
@@ -60,11 +63,13 @@ struct RhFilter
     bool8 monoType;
     bool8 megasOnly;                         // with allowMegas: only Mega Evolutions
     bool8 allowVariants;                     // regional/alternate forms even if the pool setting excludes them
+    bool8 noLeagueReserved;                  // never the Elite Four's unique Pokemon (never relaxed)
     u8 excludeCount;
     u16 exclude[RH_MAX_EXCLUDE];
     bool32 (*extra)(u16 species);            // optional extra predicate
 };
 u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash);
+u16 RH_PickRanked(const struct RhFilter *f, u32 rank, u32 salt);    // rank-th accepted in a keyed order
 bool32 RH_FilterAccepts(const struct RhFilter *f, u32 poolIndex);
 u16 RH_PickSpecies(struct RhFilter *f, u32 hash, u16 similarTo);   // relaxes constraints when nothing fits
 u16 RH_PickSpeciesNearBst(struct RhFilter *f, u32 hash, u32 bst);  // same, around a base stat total (0 = any)
@@ -76,6 +81,15 @@ u16 RH_FullyEvolve(u16 species);
 s32 RH_ApplyPercent(s32 value, s16 percent);   // value * (100 + percent) / 100, min 1
 
 bool32 RH_IsLeagueReserved(u16 species);
+enum Species RH_WildSpeciesAt(u8 mapGroup, u8 mapNum, const struct WildPokemonInfo *info, u32 slot, enum WildPokemonArea area, u32 level);
+u16 RH_StarterForSlot(u32 slot);
+s32 RH_StarterFamily(u16 species, u32 *stage);
+u32 RH_BuildSpecialShop(u32 list, u16 *out, u32 max);   // stock of a special shop (RH_SPECIAL_*), returns count
+#ifndef RELEASE
+u32 RH_DebugStaticCount(void);
+u16 RH_DebugStaticOriginal(u32 i);
+u16 RH_DebugStaticResult(u32 i);
+#endif
 u32 RH_InGameTradeCount(void);
 void RH_InGameTradeSpecies(u32 id, u16 *given, u16 *requested);     // "Pokemon League Has Unique Pokemon"
 

@@ -26,6 +26,9 @@ def regional_gen(v):
     if v['isPaldeanForm']: return 9
 BAD_FLAGS = ['isMegaEvolution', 'isGigantamax', 'isTotem', 'isPrimalReversion', 'isUltraBurst', 'isTeraForm']
 BAD_NAME_PARTS = ['_ZEN', '_STARTER', '_SHADOW', '_GMAX', '_MEGA', '_TOTEM']
+def bad_name(sp):
+    # whole name parts only (SPECIES_MEGANIUM is not a Mega Evolution)
+    return any(sp.endswith(p) or (p + '_') in sp for p in BAD_NAME_PARTS)
 
 # Cosmetic / wild variant forms: the pool holds the base species, and an encounter picks one of these at random.
 FORM_GROUPS = {
@@ -106,7 +109,7 @@ seen_forms = set()
 for sp, v in sorted(S.items(), key=lambda kv: (kv[1]['natDexNum'], kv[1]['id'])):
     dex = v['natDexNum']
     if not (1 <= dex <= 1025) or sp in ('SPECIES_NONE', 'SPECIES_EGG'): continue
-    if any(v.get(f) for f in BAD_FLAGS) or any(p in sp for p in BAD_NAME_PARTS): continue
+    if any(v.get(f) for f in BAD_FLAGS) or bad_name(sp): continue
     short = sp[8:]
     reg = is_regional(v)
     if not reg and base_name(sp, v) != sp: continue          # alternate (non-regional) forms: only via FORM_GROUPS

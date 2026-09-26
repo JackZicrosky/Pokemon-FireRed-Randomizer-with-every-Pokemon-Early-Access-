@@ -385,6 +385,12 @@ static u16 StaticResult(u32 index)
     return sStatics.result[index];
 }
 
+#ifndef RELEASE
+u32 RH_DebugStaticCount(void) { return RH_STATIC_ENCOUNTER_COUNT; }
+u16 RH_DebugStaticOriginal(u32 i) { return sRhStaticEncounters[i].species; }
+u16 RH_DebugStaticResult(u32 i) { return StaticResult(i); }
+#endif
+
 static bool32 StaticsActive(void)
 {
     return S->enabled && S->statics != 0;
@@ -716,22 +722,7 @@ static bool32 ChainLongEnough(u16 species)
 // ranks never share a Pokemon until every allowed Pokemon has been used once.
 static u16 CatchAllPick(u32 rank, const struct RhFilter *f)
 {
-    u32 n = RH_PoolCount(), accepted = 0, k, p;
-    for (p = 0; p < n; p++)
-        accepted += RH_FilterAccepts(f, p);
-    if (accepted == 0)
-        return SPECIES_NONE;
-    k = RH_Permute(SALT_CATCH_ALL, rank % accepted, accepted);
-    for (p = 0; p < n; p++)
-    {
-        if (RH_FilterAccepts(f, p))
-        {
-            if (k == 0)
-                return RH_PoolSpecies(p);
-            k--;
-        }
-    }
-    return SPECIES_NONE;
+    return RH_PickRanked(f, rank, SALT_CATCH_ALL);
 }
 
 static u32 CatchAllRankMode(void)
@@ -787,7 +778,7 @@ static enum Species PickWild(u16 mapKey, u32 mapsec, s32 pair, const struct Wild
         switch (S->wildTypeRestriction)
         {
         case 1:
-            f.type = RH_RandomMonType(RH_Hash(SALT_WILD_THEME, themeZone, 0));
+            f.type = RH_RandomPopulatedType(RH_Hash(SALT_WILD_THEME, themeZone, 0), 3);   // FVX: only types that exist
             break;
         case 2:
             f.primaryType = gSpeciesInfo[species].types[0];

@@ -1,5 +1,6 @@
 // Items: field items, shops (regular + the romhack's special shops), pickup, prices.
 #include "global.h"
+#include "malloc.h"
 #include "event_data.h"
 #include "event_object_movement.h"
 #include "item.h"
@@ -96,15 +97,14 @@ static s32 RankedFieldEntry(u32 k, bool32 tms)
     }
     if (accepted == 0)
         return -1;
-    k %= accepted;
+    k = RH_Permute(SALT_FIELD_ITEM, k % accepted, accepted);
     for (p = 0; p < n; p++)
     {
-        u32 x = RH_Permute(SALT_FIELD_ITEM, p, n);
-        u16 it = sRhFieldItems[x].item;
+        u16 it = sRhFieldItems[p].item;
         if (tms ? (GetItemTMHMIndex(it) != 0 && !ItemIsProtected(it)) : FieldPoolItemOk(it))
         {
             if (count == k)
-                return x;
+                return p;
             count++;
         }
     }
@@ -279,10 +279,10 @@ static bool32 IsKeptSpecialItem(u16 item)
     return FALSE;
 }
 
-// VAR_0x8004 = RH_SPECIAL_* shop id. Opens the shop; the script waits via waitstate.
-void RH_OpenSpecialShop(void)
+// Stock of special shop "list" (RH_SPECIAL_*) into out (ITEM_NONE-terminated); returns the item count.
+u32 RH_BuildSpecialShop(u32 list, u16 *out, u32 max)
 {
-    u32 list = gSpecialVar_0x8004, i, n = 0, offset = 0, l;
+    u32 i, n = 0, offset = 0, l;
     const u16 *items;
     if (list >= ARRAY_COUNT(sSpecialLists))
         list = 0;
@@ -292,32 +292,58 @@ void RH_OpenSpecialShop(void)
             offset++;
     if (S->enabled && S->shopSpecial && !SpecialListKept(list))
     {
-        // Global slot j gets the j-th allowed item of a keyed order of the item pool, so no item is ever sold by
-        // two special shops (FVX-style no-duplicates).
-        u32 len, accepted = 0, rank = 0, p;
-        for (len = 0; items[len] != ITEM_NONE && len < SPECIAL_MAX_ITEMS; len++)
+        // Global slot j gets accepted item number perm(j) (a keyed bijection), so no item is ever sold by two
+        // special shops (FVX-style no-duplicates).
+        u32 len, accepted = 0, p, j;
+        u16 *acc = AllocUnchecked(RH_ITEM_COUNT * sizeof(u16));
+        for (len = 0; items[len] != ITEM_NONE && len < max - 1; len++)
             ;
         for (p = 0; p < RH_ITEM_COUNT; p++)
-            accepted += SpecialItemOk(sRhItems[p].item) && !IsKeptSpecialItem(sRhItems[p].item);
-        if (accepted != 0)
         {
-            offset %= accepted;
-            for (p = 0; p < RH_ITEM_COUNT * 2 && n < len; p++)
+            u16 it = sRhItems[p].item;
+            if (SpecialItemOk(it) && !IsKeptSpecialItem(it))
             {
-                u16 it = sRhItems[RH_Permute(SALT_SPECIAL_SHOP, p % RH_ITEM_COUNT, RH_ITEM_COUNT)].item;
-                if (!SpecialItemOk(it) || IsKeptSpecialItem(it))
-                    continue;
-                if (rank++ >= offset)
-                    sSpecialBuffer[n++] = it;
+                if (acc != NULL)
+                    acc[accepted] = it;
+                accepted++;
             }
         }
+        for (j = 0; j < len && accepted != 0; j++)
+        {
+            u32 k = RH_Permute(SALT_SPECIAL_SHOP, (offset + j) % accepted, accepted);
+            if (acc != NULL)
+            {
+                out[n++] = acc[k];
+            }
+            else
+            {
+                for (p = 0; p < RH_ITEM_COUNT; p++)          // no memory: find it the slow way
+                {
+                    u16 it = sRhItems[p].item;
+                    if (SpecialItemOk(it) && !IsKeptSpecialItem(it) && k-- == 0)
+                    {
+                        out[n++] = it;
+                        break;
+                    }
+                }
+            }
+        }
+        if (acc != NULL)
+            Free(acc);
     }
     else
     {
-        for (i = 0; items[i] != ITEM_NONE && n < SPECIAL_MAX_ITEMS; i++)
-            sSpecialBuffer[n++] = items[i];
+        for (i = 0; items[i] != ITEM_NONE && n < max - 1; i++)
+            out[n++] = items[i];
     }
-    sSpecialBuffer[n] = ITEM_NONE;
+    out[n] = ITEM_NONE;
+    return n;
+}
+
+// VAR_0x8004 = RH_SPECIAL_* shop id. Opens the shop; the script waits via waitstate.
+void RH_OpenSpecialShop(void)
+{
+    RH_BuildSpecialShop(gSpecialVar_0x8004, sSpecialBuffer, SPECIAL_MAX_ITEMS + 1);
     CreatePokemartMenu(sSpecialBuffer);
 }
 

@@ -179,6 +179,8 @@ struct MoveCache
     u32 key;
     u8 type[RH_MOVE_COUNT];
     u8 flags[RH_MOVE_COUNT];
+    u16 byType[RH_MOVE_COUNT];               // pool indexes grouped by current type
+    u16 typeStart[NUMBER_OF_MON_TYPES + 1];
 };
 static EWRAM_DATA struct MoveCache sMoveCache = {0};
 
@@ -219,6 +221,20 @@ static void EnsureMoveCache(void)
             f |= MF_HM;
         sMoveCache.flags[i] = f;
     }
+    // counting sort by type, so a same-type pick only looks at that type's moves
+    memset(sMoveCache.typeStart, 0, sizeof(sMoveCache.typeStart));
+    for (i = 0; i < RH_MOVE_COUNT; i++)
+        if (sMoveCache.type[i] < NUMBER_OF_MON_TYPES)
+            sMoveCache.typeStart[sMoveCache.type[i] + 1]++;
+    for (i = 1; i <= NUMBER_OF_MON_TYPES; i++)
+        sMoveCache.typeStart[i] += sMoveCache.typeStart[i - 1];
+    {
+        u16 fill[NUMBER_OF_MON_TYPES];
+        memcpy(fill, sMoveCache.typeStart, sizeof(fill));
+        for (i = 0; i < RH_MOVE_COUNT; i++)
+            if (sMoveCache.type[i] < NUMBER_OF_MON_TYPES)
+                sMoveCache.byType[fill[sMoveCache.type[i]]++] = i;
+    }
     sMoveCache.key = key;
 }
 
@@ -248,6 +264,28 @@ static u16 PickMove(u32 hash, u8 type, u32 need, bool32 noBreaking, bool32 noHM)
 {
     u32 i, count = 0, target;
     EnsureMoveCache();
+    if (type < NUMBER_OF_MON_TYPES && type != TYPE_NONE)
+    {
+        // only this type's moves
+        u32 lo = sMoveCache.typeStart[type], hi = sMoveCache.typeStart[type + 1];
+        for (i = lo; i < hi; i++)
+            count += MoveOk(sMoveCache.byType[i], type, need, noBreaking, noHM);
+        if (count != 0)
+        {
+            target = hash % count;
+            for (i = lo; i < hi; i++)
+                if (MoveOk(sMoveCache.byType[i], type, need, noBreaking, noHM) && target-- == 0)
+                    return sRhMoves[sMoveCache.byType[i]].move;
+        }
+        type = TYPE_NONE;
+    }
+    // any type: random tries first (most moves qualify), a full count only when unlucky
+    for (i = 0; i < 48; i++)
+    {
+        u32 k = RH_Hash(SALT_LEARNSET, hash, 1000 + i) % RH_MOVE_COUNT;
+        if (MoveOk(k, TYPE_NONE, need, noBreaking, noHM))
+            return sRhMoves[k].move;
+    }
     for (i = 0; i < RH_MOVE_COUNT; i++)
         if (MoveOk(i, type, need, noBreaking, noHM))
             count++;
