@@ -46,7 +46,7 @@ static u32 Total(const u8 *v)
     return t;
 }
 
-// Splits "amount" over the stats with random weights; stats in "fixed" are skipped.
+// Splits "amount" over the stats with random weights on top of "add"; stats in "fixed" are skipped.
 static void Distribute(u32 amount, u32 key, u32 salt2, u8 *out, const u8 *add, u32 fixedMask)
 {
     u32 w[NUM_STATS], total = 0, given = 0, i;
@@ -61,8 +61,6 @@ static void Distribute(u32 amount, u32 key, u32 salt2, u8 *out, const u8 *add, u
         u32 val = (add ? add[i] : 0) + share;
         given += share;
         out[i] = min(val, 255);
-        if (!(fixedMask & (1u << i)) && out[i] < 5)
-            out[i] = 5;
     }
     // hand out the rounding remainder
     for (i = 0; given < amount && i < NUM_STATS * 4; i++)
@@ -85,7 +83,7 @@ static void ComputeStats(u16 species, u8 *out, u32 depth)
         return;
     if (base[STAT_HP] == 1)
         fixed = 1u << STAT_HP;                               // Shedinja keeps 1 HP
-    key = S->baseStatsFollowEvos ? RH_FamilyRoot(species) : species;
+    key = S->baseStatsFollowEvos ? RH_TraitRoot(species) : species;
     if (S->baseStats == 1)
     {
         u8 perm[NUM_STATS] = {0, 1, 2, 3, 4, 5};
@@ -126,13 +124,20 @@ static void ComputeStats(u16 species, u8 *out, u32 depth)
             return;
         }
     }
-    if (fixed)
+    // FVX: HP at least 20, other stats at least 10, the rest of the total split randomly.
     {
-        Distribute(Total(base) - 1, key, 0, out, NULL, fixed);
-        out[STAT_HP] = 1;
-        return;
+        static const u8 sFloor[NUM_STATS] = { 20, 10, 10, 10, 10, 10 };
+        u8 floor[NUM_STATS];
+        u32 reserved = 0, total = Total(base);
+        memcpy(floor, sFloor, NUM_STATS);
+        if (fixed)
+            floor[STAT_HP] = 1;
+        for (i = 0; i < NUM_STATS; i++)
+            reserved += floor[i];
+        Distribute(total > reserved ? total - reserved : 0, key, 0, out, floor, fixed);
+        if (fixed)
+            out[STAT_HP] = 1;
     }
-    Distribute(Total(base), key, 0, out, NULL, 0);
 }
 
 u32 RH_SpeciesBaseStat(enum Species species, u32 stat, u32 vanilla)
@@ -158,6 +163,19 @@ u32 RH_SpeciesBaseStat(enum Species species, u32 stat, u32 vanilla)
 // ---------------------------------------------------------------------------
 // EXP curves
 // ---------------------------------------------------------------------------
+static u16 FinalStage(u16 species)
+{
+    u32 g;
+    for (g = 0; g < 3; g++)
+    {
+        const struct Evolution *e = GetSpeciesEvolutionsVanilla(species);
+        if (e == NULL || e[0].method == EVOLUTIONS_END || e[0].targetSpecies == SPECIES_NONE)
+            break;
+        species = e[0].targetSpecies;
+    }
+    return species;
+}
+
 static const u8 sCurveOfSetting[] = { 0, GROWTH_MEDIUM_FAST, GROWTH_MEDIUM_SLOW, GROWTH_FAST, GROWTH_SLOW, GROWTH_ERRATIC, GROWTH_FLUCTUATING };
 
 enum GrowthRate RH_SpeciesGrowthRate(enum Species species, enum GrowthRate vanilla)
@@ -171,8 +189,8 @@ enum GrowthRate RH_SpeciesGrowthRate(enum Species species, enum GrowthRate vanil
             return GROWTH_SLOW;
         break;
     case 1:
-        if (RH_IsLegendary(species) && RH_VanillaBST(species) > 600)
-            return GROWTH_SLOW;
+        if (RH_IsLegendary(species) && RH_VanillaBST(FinalStage(species)) > 600)
+            return GROWTH_SLOW;                              // judged by the final stage (Cosmog -> Solgaleo)
         break;
     }
     return sCurveOfSetting[S->expCurve];
@@ -194,7 +212,7 @@ enum Type RH_SpeciesType(enum Species species, u32 slot, enum Type vanilla)
     {
         // Follow evolutions: the family shares its first type; evolutions that gain a second type in the base game
         // gain a (family-wide) random second type.
-        key = RH_FamilyRoot(species);
+        key = RH_TraitRoot(species);
     }
     else
     {
@@ -229,6 +247,8 @@ static const u16 sDuplicateGroups[][4] = {
     { ABILITY_GOOEY, ABILITY_TANGLING_HAIR },
     { ABILITY_RECEIVER, ABILITY_POWER_OF_ALCHEMY },
     { ABILITY_MULTISCALE, ABILITY_SHADOW_SHIELD },
+    { ABILITY_PROTEAN, ABILITY_LIBERO },
+    { ABILITY_PROPELLER_TAIL, ABILITY_STALWART },
 };
 
 static bool32 IsNonFirstDuplicate(u32 ability)
@@ -309,18 +329,25 @@ enum Ability RH_SpeciesAbility(enum Species species, u32 slot, enum Ability vani
         return vanilla;                                      // Shedinja keeps Wonder Guard (FVX)
     if (vanilla == ABILITY_NONE && !(slot == 1 && S->ensureTwoAbilities))
         return ABILITY_NONE;
-    key = S->abilitiesFollowEvos ? RH_FamilyRoot(species) : species;
-    a = RandomAbility(key, slot);
-    // keep the slots different from each other
-    for (other = 0; other < 3; other++)
+    key = S->abilitiesFollowEvos ? RH_TraitRoot(species) : species;
     {
-        u32 tries = 0;
-        if (other == slot)
-            continue;
-        if (other > slot)
-            break;
-        while (tries++ < 8 && a == RandomAbility(key, other))
-            a = RandomAbility(key, slot + 3 * tries);
+        // all three slots are rolled together so they always differ from each other
+        u16 abil[3];
+        u32 s, t;
+        for (s = 0; s <= slot; s++)
+        {
+            abil[s] = RandomAbility(key, s);
+            for (t = 1; t < 12; t++)
+            {
+                bool32 clash = FALSE;
+                for (other = 0; other < s; other++)
+                    clash |= (abil[s] == abil[other]);
+                if (!clash)
+                    break;
+                abil[s] = RandomAbility(key, s + 3 * t);
+            }
+        }
+        a = abil[slot];
     }
     return a;
 }
@@ -339,15 +366,10 @@ struct EvoCache
 };
 static EWRAM_DATA struct EvoCache sEvoCache[12] = {0};
 static EWRAM_DATA u8 sEvoCacheNext = 0;
-static EWRAM_DATA u16 sEvoSource = 0;                          // species being evolved (for filter callbacks)
-static EWRAM_DATA u8 sEvoGrowth = 0;
 
 static u32 SettingsKeyEvos(void)
 {
-    return S->seed ^ (S->evolutions << 1) ^ (S->evoSimilarStrength << 3) ^ (S->evoSameTyping << 4) ^ (S->evoLimitThreeStages << 5)
-         ^ (S->evoNoConvergence << 6) ^ (S->evoForceChange << 7) ^ (S->evoForceGrowth << 8) ^ (S->evoChangeImpossible << 9)
-         ^ (S->evoMakeEasier << 10) ^ (S->evoEstimatedLevels << 17) ^ (S->evoRemoveTimeBased << 18) ^ (S->types << 19)
-         ^ (S->expCurve << 21) ^ (S->movesets << 24) ^ (S->speciesPool << 26) ^ (S->enabled << 29);
+    return RH_SettingsHash() | 1;
 }
 
 static bool32 EvosActive(void)
@@ -361,51 +383,129 @@ static u32 Remaining(u16 species)
     return ch > st ? ch - st : 0;
 }
 
-static bool32 SameGrowth(u16 species)
+// Evolutions only ever go "down" this ranking, so random evolutions can never loop (FVX never creates cycles).
+static u32 EvoRank(u16 species)
 {
-    return GetSpeciesGrowthRate(species) == sEvoGrowth;
+    s32 idx = RH_PoolIndexOf(species);
+    return Remaining(species) * 4096 + (idx < 0 ? 0 : RH_Permute(SALT_EVO_RANK, idx, RH_PoolCount()));
 }
+
+// Context of the evolution being randomized (read by the filter callbacks).
+static EWRAM_DATA u16 sEvoSource = 0;
+static EWRAM_DATA u8 sEvoGrowth = 0;
+static EWRAM_DATA u32 sEvoSourceRank = 0;
+static EWRAM_DATA u16 sEvoMinBst = 0;
+static EWRAM_DATA s8 sEvoRemaining = 0;
 
 static bool32 EvoTargetOk(u16 species)
 {
-    if (!SameGrowth(species))
-        return FALSE;
+    if (GetSpeciesGrowthRate(species) != sEvoGrowth)
+        return FALSE;                                        // FVX: evolutions keep the EXP curve
     if (S->evoSameTyping && !RH_SpeciesHasType(species, GetSpeciesType(sEvoSource, 0)) && !RH_SpeciesHasType(species, GetSpeciesType(sEvoSource, 1)))
+        return FALSE;
+    if (sEvoMinBst && RH_VanillaBST(species) < sEvoMinBst)
+        return FALSE;
+    if (sEvoRemaining >= 0 && (s32)Remaining(species) != sEvoRemaining)
+        return FALSE;
+    if (S->evolutions == 1 && EvoRank(species) >= sEvoSourceRank)
         return FALSE;
     return TRUE;
 }
 
-// Class used by "No Convergence": a keyed bijection within each class keeps every target unique.
-static u32 ConvergenceClass(u16 species)
+static void SetEvoContext(u16 species, u16 original)
 {
-    u32 c = GetSpeciesGrowthRate(species);
-    if (S->evoLimitThreeStages)
-        c |= Remaining(species) << 4;
-    c |= RH_IsLegendary(species) << 6;
-    if (S->evoSimilarStrength || S->evoForceGrowth)
-        c |= (RH_VanillaBST(species) / 75) << 8;
-    if (S->evoSameTyping)
-        c |= GetSpeciesType(species, 0) << 16;
-    return c;
+    sEvoSource = species;
+    sEvoGrowth = GetSpeciesGrowthRate(species);
+    sEvoSourceRank = EvoRank(species);
+    // Similar Strength / Limit to Three Stages / Force Growth only apply to "Random" (not "Every Level"), as in FVX
+    sEvoMinBst = (S->evoForceGrowth && S->evolutions == 1) ? RH_VanillaBST(species) + 1 : 0;
+    sEvoRemaining = (S->evoLimitThreeStages && S->evolutions == 1 && original != SPECIES_NONE) ? (s8)Remaining(original) : -1;
 }
 
-static u16 NoConvergenceTarget(u16 original)
+static void ExcludeVanillaTargets(struct RhFilter *f, u16 species)
 {
-    s32 x = RH_PoolIndexOf(original);
-    u32 cls, guard;
-    if (x < 0)
-        return SPECIES_NONE;
-    cls = ConvergenceClass(original);
-    for (guard = 0; guard < 4096; guard++)
+    const struct Evolution *v = GetSpeciesEvolutionsVanilla(species);
+    u32 i;
+    for (i = 0; v != NULL && v[i].method != EVOLUTIONS_END; i++)
+        RH_FilterExclude(f, v[i].targetSpecies);
+}
+
+static bool32 IsVanillaTarget(u16 species, u16 target)
+{
+    const struct Evolution *v = GetSpeciesEvolutionsVanilla(species);
+    u32 i;
+    for (i = 0; v != NULL && v[i].method != EVOLUTIONS_END; i++)
+        if (v[i].targetSpecies == target)
+            return TRUE;
+    return FALSE;
+}
+
+// "No Convergence": no two evolutions share a target. Candidates are grouped by what doesn't depend on the source
+// (EXP curve, and the stages left with "Limit to Three Stages"). The original targets of a group are numbered
+// 0..m-1, and target number idx may only use candidate positions idx, idx+m, idx+2m... of a keyed order of the
+// group, so different original targets can never land on the same Pokemon, even when some candidates fail the
+// other rules. (Every Level: every Pokemon of the group is a source, so the map is a bijection.)
+static bool32 InEvoGroup(u16 sp)
+{
+    return GetSpeciesGrowthRate(sp) == sEvoGrowth && (sEvoRemaining < 0 || (s32)Remaining(sp) == sEvoRemaining);
+}
+
+static bool32 IsGroupSource(u16 sp)
+{
+    u16 pre;
+    if (S->evolutions == 2)
+        return InEvoGroup(sp);
+    pre = RH_PreEvo(sp);                                     // an original evolution target of this group
+    return pre != SPECIES_NONE && GetSpeciesGrowthRate(pre) == sEvoGrowth
+        && (sEvoRemaining < 0 || (s32)Remaining(sp) == sEvoRemaining);
+}
+
+static u16 NoConvergenceTarget(u16 species, u16 original)
+{
+    struct RhFilter any = {0};
+    u16 v = (S->evolutions == 2) ? species : original;
+    u32 p, n = RH_PoolCount(), m = 0, c = 0, attempt;
+    s32 idx = -1;
+    for (p = 0; p < n; p++)
     {
-        x = RH_Permute(SALT_EVO, x, RH_PoolCount());
-        if (RH_PoolAllowed(x) && ConvergenceClass(RH_PoolSpecies(x)) == cls)
+        u16 sp;
+        if (!RH_FilterAccepts(&any, p))
+            continue;
+        sp = RH_PoolSpecies(p);
+        if (sp == v)
+            idx = m;
+        if (IsGroupSource(sp))
+            m++;
+        if (InEvoGroup(sp))
+            c++;
+    }
+    if (idx < 0 || m == 0 || c == 0)
+        return SPECIES_NONE;
+    for (attempt = 0; idx + attempt * m < c && attempt < 8; attempt++)
+    {
+        u32 k = RH_Permute(SALT_EVO, idx + attempt * m, c);
+        u16 target = SPECIES_NONE;
+        for (p = 0; p < n; p++)
         {
-            u16 target = RH_PoolSpecies(x);
-            if (target == original && S->evoForceChange)
+            u16 sp;
+            if (!RH_FilterAccepts(&any, p))
                 continue;
-            return target;
+            sp = RH_PoolSpecies(p);
+            if (!InEvoGroup(sp))
+                continue;
+            if (k-- == 0)
+            {
+                target = sp;
+                break;
+            }
         }
+        if (target == SPECIES_NONE || target == species)
+            continue;
+        if (S->evoForceChange && IsVanillaTarget(species, target))
+            continue;
+        if (!EvoTargetOk(target))
+            continue;
+        return target;
     }
     return SPECIES_NONE;
 }
@@ -414,54 +514,22 @@ static u16 RandomEvoTarget(u16 species, u16 original, u32 n, const u16 *chosen, 
 {
     struct RhFilter f = {0};
     u32 i;
-    if (S->evoNoConvergence && original != SPECIES_NONE)
-    {
-        u16 t = NoConvergenceTarget(original);
-        if (t != SPECIES_NONE)
-            return t;
-    }
-    sEvoSource = species;
-    sEvoGrowth = GetSpeciesGrowthRate(species);
+    SetEvoContext(species, original);
+    if (S->evoNoConvergence)
+        return NoConvergenceTarget(species, original);       // no fallback: a random pick could converge
     f.extra = EvoTargetOk;
-    f.legend = (RH_IsLegendary(species) || (original && RH_IsLegendary(original))) ? 0 : 1;
-    RH_FilterExclude(&f, species);
-    for (i = 0; i < chosenCount; i++)
-        RH_FilterExclude(&f, chosen[i]);
-    if (S->evoForceChange && original != SPECIES_NONE)
-        RH_FilterExclude(&f, original);
-    if (S->evoForceGrowth)
-        f.minBst = RH_VanillaBST(species) + 1;
-    return RH_PickSpecies(&f, RH_Hash(SALT_EVO, species, n), S->evoSimilarStrength ? (original ? original : species) : SPECIES_NONE);
-}
-
-// "Limit to three stages" needs the remaining-stage count of the candidate; checked via a second predicate.
-static EWRAM_DATA u8 sEvoRemaining = 0;
-static bool32 EvoTargetOkRemaining(u16 species)
-{
-    return EvoTargetOk(species) && Remaining(species) == sEvoRemaining;
-}
-
-static u16 RandomEvoTargetLimited(u16 species, u16 original, u32 n, const u16 *chosen, u32 chosenCount)
-{
-    struct RhFilter f = {0};
-    u32 i;
-    u16 result;
-    if (!S->evoLimitThreeStages || S->evoNoConvergence || original == SPECIES_NONE)
-        return RandomEvoTarget(species, original, n, chosen, chosenCount);
-    sEvoSource = species;
-    sEvoGrowth = GetSpeciesGrowthRate(species);
-    sEvoRemaining = Remaining(original);
-    f.extra = EvoTargetOkRemaining;
-    f.legend = (RH_IsLegendary(species) || RH_IsLegendary(original)) ? 0 : 1;
     RH_FilterExclude(&f, species);
     for (i = 0; i < chosenCount; i++)
         RH_FilterExclude(&f, chosen[i]);
     if (S->evoForceChange)
-        RH_FilterExclude(&f, original);
-    if (S->evoForceGrowth)
-        f.minBst = RH_VanillaBST(species) + 1;
-    result = RH_PickSpecies(&f, RH_Hash(SALT_EVO, species, n), S->evoSimilarStrength ? original : SPECIES_NONE);
-    return result;
+        ExcludeVanillaTargets(&f, species);
+    {
+        u16 t = RH_PickSpecies(&f, RH_Hash(SALT_EVO, species, n), (S->evoSimilarStrength && S->evolutions == 1 && original) ? original : SPECIES_NONE);
+        // RH_PickSpecies relaxes its rules when nothing fits; never accept a pick that could create a loop
+        if (t == species || (t != SPECIES_NONE && S->evolutions == 1 && EvoRank(t) >= sEvoSourceRank))
+            return SPECIES_NONE;
+        return t;
+    }
 }
 
 static u32 EstimatedLevel(u16 target)
@@ -483,8 +551,7 @@ static bool32 ConditionImpossible(const struct EvolutionParam *p)
     switch (p->condition)
     {
     case IF_IN_MAP: case IF_IN_MAPSEC: case IF_MIN_BEAUTY: case IF_MIN_COOLNESS: case IF_MIN_SMARTNESS:
-    case IF_MIN_TOUGHNESS: case IF_MIN_CUTENESS: case IF_TRADE_PARTNER_SPECIES: case IF_BAG_ITEM_COUNT:
-    case IF_DEFEAT_X_WITH_ITEMS:
+    case IF_MIN_TOUGHNESS: case IF_MIN_CUTENESS: case IF_TRADE_PARTNER_SPECIES: case IF_DEFEAT_X_WITH_ITEMS:
         return TRUE;
     case IF_KNOWS_MOVE: case IF_KNOWS_MOVE_TYPE:
         return S->movesets != 0;                             // the move may never be learned
@@ -493,52 +560,91 @@ static bool32 ConditionImpossible(const struct EvolutionParam *p)
     }
 }
 
-static bool32 IsTimeCondition(u16 c)
+static bool32 HasImpossibleCondition(const struct Evolution *e)
 {
-    return c == IF_TIME || c == IF_NOT_TIME;
+    u32 i;
+    for (i = 0; e->params != NULL && e->params[i].condition != CONDITIONS_END && i < EVO_PARAMS; i++)
+        if (ConditionImpossible(&e->params[i]))
+            return TRUE;
+    return e->method == EVO_TRADE || e->method == EVO_SCRIPT_TRIGGER || e->method == EVO_SPIN;
 }
 
-static u16 StoneForTime(const struct EvolutionParam *params)
+enum { TIME_KIND_NONE, TIME_KIND_DAY, TIME_KIND_NIGHT, TIME_KIND_DUSK };
+
+static u32 TimeKind(const struct EvolutionParam *params)
 {
     u32 i;
     for (i = 0; params != NULL && params[i].condition != CONDITIONS_END && i < EVO_PARAMS; i++)
     {
         if (params[i].condition == IF_TIME)
         {
-            switch (params[i].arg1)
-            {
-            case TIME_NIGHT:   return ITEM_MOON_STONE;
-            case TIME_EVENING: return ITEM_DUSK_STONE;
-            default:           return ITEM_SUN_STONE;
-            }
+            if (params[i].arg1 == TIME_EVENING)
+                return TIME_KIND_DUSK;
+            return params[i].arg1 == TIME_NIGHT ? TIME_KIND_NIGHT : TIME_KIND_DAY;
         }
         if (params[i].condition == IF_NOT_TIME)
-            return ITEM_MOON_STONE;
+            return params[i].arg1 == TIME_NIGHT ? TIME_KIND_DAY : TIME_KIND_NIGHT;
     }
-    return ITEM_SUN_STONE;
+    return TIME_KIND_NONE;
 }
 
-static bool32 HasTimeCondition(const struct EvolutionParam *params)
+static bool32 IsTimeCondition(u16 c)
 {
-    u32 i;
-    for (i = 0; params != NULL && params[i].condition != CONDITIONS_END && i < EVO_PARAMS; i++)
-        if (IsTimeCondition(params[i].condition))
-            return TRUE;
-    return FALSE;
+    return c == IF_TIME || c == IF_NOT_TIME;
 }
 
 // Rewrites one evolution entry for "Change Impossible Evolutions", "Make Evolutions Easier" and
-// "Remove Time-Based Evolutions". *timeSplitSeen tracks split time evolutions (Eevee, Rockruff...).
-static void AdjustEvolution(u16 species, struct Evolution *e, struct EvolutionParam *buf, u32 *timeSplitSeen)
+// "Remove Time-Based Evolutions" (FVX rules). "all" is the species' vanilla evolution list, k this entry's index.
+static void AdjustEvolution(struct Evolution *e, struct EvolutionParam *buf, const struct Evolution *all, u32 k)
 {
-    const struct EvolutionParam *src = e->params;
-    u32 i, n = 0;
-    bool32 toLevel = FALSE;
+    const struct EvolutionParam *src = all[k].params;
+    u32 i, n = 0, timeKind = TimeKind(src);
+    bool32 toLevel = FALSE, toStone = FALSE;
     u16 toItem = ITEM_NONE;
 
     if (e->method == EVO_NONE || e->targetSpecies == SPECIES_NONE)
         return;
-    for (i = 0; src != NULL && src[i].condition != CONDITIONS_END && n < EVO_PARAMS - 1; i++)
+
+    if (S->evoChangeImpossible && HasImpossibleCondition(&all[k]))
+    {
+        // Another, possible entry already leads to the same Pokemon (Eevee's Leafeon/Glaceon stones,
+        // Magnezone's Thunder Stone...): just drop this one.
+        for (i = 0; all[i].method != EVOLUTIONS_END; i++)
+        {
+            if (i != k && all[i].targetSpecies == all[k].targetSpecies && !HasImpossibleCondition(&all[i]))
+            {
+                e->method = EVO_NONE;
+                return;
+            }
+        }
+    }
+
+    // Time-based: dusk -> Dusk Stone; a day/night pair (Espeon/Umbreon...) -> Sun/Moon Stone; otherwise the time
+    // condition is simply dropped.
+    if (S->evoRemoveTimeBased && timeKind != TIME_KIND_NONE)
+    {
+        if (timeKind == TIME_KIND_DUSK)
+        {
+            toStone = TRUE;
+            toItem = ITEM_DUSK_STONE;
+        }
+        else
+        {
+            for (i = 0; all[i].method != EVOLUTIONS_END; i++)
+            {
+                u32 other = TimeKind(all[i].params);
+                if (i != k && all[i].targetSpecies != all[k].targetSpecies
+                 && ((timeKind == TIME_KIND_DAY && other == TIME_KIND_NIGHT) || (timeKind == TIME_KIND_NIGHT && other == TIME_KIND_DAY)))
+                {
+                    toStone = TRUE;
+                    toItem = (timeKind == TIME_KIND_DAY) ? ITEM_SUN_STONE : ITEM_MOON_STONE;
+                    break;
+                }
+            }
+        }
+    }
+
+    for (i = 0; !toStone && src != NULL && src[i].condition != CONDITIONS_END && n < EVO_PARAMS - 1; i++)
     {
         struct EvolutionParam p = src[i];
         if (S->evoChangeImpossible && ConditionImpossible(&p))
@@ -550,54 +656,66 @@ static void AdjustEvolution(u16 species, struct Evolution *e, struct EvolutionPa
         {
             if (p.condition == IF_MIN_FRIENDSHIP && p.arg1 > 160)
                 p.arg1 = 160;
-            if (p.condition == IF_SPECIES_IN_PARTY || p.condition == IF_TYPE_IN_PARTY)
+            if (p.condition == IF_SPECIES_IN_PARTY)
             {
-                e->method = EVO_LEVEL;
-                e->param = 35;
+                toLevel = TRUE;                              // Mantyke: needs a Remoraid in the party
                 continue;
             }
+            if (p.condition == IF_TYPE_IN_PARTY)
+                continue;                                    // Pancham: just drop the party condition
         }
         if (S->evoRemoveTimeBased && IsTimeCondition(p.condition))
             continue;
         if (S->evoChangeImpossible && e->method == EVO_TRADE && p.condition == IF_HOLD_ITEM)
         {
-            toItem = p.arg1;                                 // trade holding X -> use X like a stone
+            toItem = p.arg1;                                 // trade holding X -> use X from the bag like a stone
             continue;
         }
         buf[n++] = p;
     }
     buf[n].condition = CONDITIONS_END;
 
-    if (S->evoRemoveTimeBased && HasTimeCondition(src))
+    if (toStone)
     {
-        // the first time-based evolution keeps its method, later split ones become stone evolutions
-        if ((*timeSplitSeen)++ > 0)
-        {
-            e->method = EVO_ITEM;
-            e->param = StoneForTime(src);
-            n = 0;
-            buf[0].condition = CONDITIONS_END;
-        }
+        e->method = EVO_ITEM;
+        e->param = toItem;
+        n = 0;
     }
-    if (S->evoChangeImpossible)
+    else if (S->evoChangeImpossible || S->evoMakeEasier)
     {
-        switch (e->method)
+        if (S->evoChangeImpossible)
         {
-        case EVO_TRADE:
-            if (toItem != ITEM_NONE)
+            switch (e->method)
             {
-                e->method = EVO_ITEM;
-                e->param = toItem;
-            }
-            else
-            {
+            case EVO_TRADE:
+                if (toItem != ITEM_NONE && RH_EvoItemsForSale())
+                {
+                    e->method = EVO_ITEM;                    // the item is sold by the evolution sellers
+                    e->param = toItem;
+                    toLevel = FALSE;
+                }
+                else if (toItem == ITEM_KINGS_ROCK && all[k].targetSpecies == SPECIES_SLOWKING)
+                {
+                    e->method = EVO_ITEM;                    // FVX (Gen 3): Water Stone
+                    e->param = ITEM_WATER_STONE;
+                    toLevel = FALSE;
+                }
+                else if (toItem == ITEM_DEEP_SEA_SCALE)
+                {
+                    e->method = EVO_ITEM;                    // FVX (Gen 3): Gorebyss by Water Stone
+                    e->param = ITEM_WATER_STONE;
+                    toLevel = FALSE;
+                }
+                else
+                {
+                    toLevel = TRUE;
+                }
+                break;
+            case EVO_SCRIPT_TRIGGER:
+            case EVO_SPIN:
                 toLevel = TRUE;
+                break;
             }
-            break;
-        case EVO_SCRIPT_TRIGGER:
-        case EVO_SPIN:
-            toLevel = TRUE;
-            break;
         }
         if (toLevel)
         {
@@ -618,7 +736,7 @@ static void AdjustEvolution(u16 species, struct Evolution *e, struct EvolutionPa
 
 const struct Evolution *RH_Evolutions(enum Species species, const struct Evolution *vanilla)
 {
-    u32 i, n, key, timeSplit = 0;
+    u32 i, j, n, key;
     struct EvoCache *c;
     u16 chosen[EVO_MAX];
     if (!EvosActive() || species == SPECIES_NONE || species >= NUM_SPECIES)
@@ -655,12 +773,29 @@ const struct Evolution *RH_Evolutions(enum Species species, const struct Evoluti
             chosen[n] = SPECIES_NONE;
             if (S->evolutions == 1 && vanilla[n].method != EVO_NONE && vanilla[n].targetSpecies != SPECIES_NONE)
             {
-                u16 target = RandomEvoTargetLimited(species, vanilla[n].targetSpecies, n, chosen, n);
+                u16 target = SPECIES_NONE;
+                // entries that lead to the same Pokemon (Feebas, Magneton...) keep sharing one target
+                for (j = 0; j < n; j++)
+                    if (vanilla[j].targetSpecies == vanilla[n].targetSpecies && chosen[j] != SPECIES_NONE)
+                        target = chosen[j];
+                if (target == SPECIES_NONE)
+                    target = RandomEvoTarget(species, vanilla[n].targetSpecies, n, chosen, n);
                 if (target != SPECIES_NONE)
                     c->evos[n].targetSpecies = target;
+                else if (EvoRank(vanilla[n].targetSpecies) >= EvoRank(species))
+                    c->evos[n].method = EVO_NONE;            // keeping the original could create a loop
                 chosen[n] = c->evos[n].targetSpecies;
             }
-            AdjustEvolution(species, &c->evos[n], c->params[n], &timeSplit);
+            AdjustEvolution(&c->evos[n], c->params[n], vanilla, n);
+        }
+        // Shedinja-style entries name the Pokemon they split from: follow its new target.
+        for (i = 0; i < n; i++)
+        {
+            if (c->evos[i].method != EVO_SPLIT_FROM_EVO)
+                continue;
+            for (j = 0; j < n; j++)
+                if (j != i && vanilla[j].targetSpecies == vanilla[i].param)
+                    c->evos[i].param = c->evos[j].targetSpecies;
         }
     }
     c->evos[n].method = EVOLUTIONS_END;
@@ -680,7 +815,7 @@ u8 RH_CatchRate(enum Species species, u8 vanilla)
     static const u8 sNormal[] = { 0, 75, 128, 200, 255, 255 };
     static const u8 sLegend[] = { 0, 37, 64, 100, 255, 255 };
     u32 level;
-    if (!S->wildCatchRateOn)
+    if (!S->enabled || !S->wildCatchRateOn)
         return vanilla;
     level = min(S->wildCatchRate, 5);
     return max(vanilla, RH_IsLegendary(species) ? sLegend[level] : sNormal[level]);
@@ -688,5 +823,5 @@ u8 RH_CatchRate(enum Species species, u8 vanilla)
 
 bool32 RH_GuaranteedCatch(void)
 {
-    return S->wildCatchRateOn && S->wildCatchRate >= 5;
+    return S->enabled && S->wildCatchRateOn && S->wildCatchRate >= 5;
 }

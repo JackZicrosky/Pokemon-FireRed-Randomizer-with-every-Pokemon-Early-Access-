@@ -118,6 +118,7 @@ SilphCo_7F_EventScript_LaprasGuy::
 	goto_if_set FLAG_GOT_LAPRAS_FROM_SILPH, SilphCo_7F_EventScript_AlreadyGotLapras
 	msgbox SilphCo_7F_Text_HaveMonForSavingUs
 	setvar VAR_TEMP_1, SPECIES_LAPRAS
+	special RH_BufferStaticSpecies
 	givemon SPECIES_LAPRAS, 25
 	goto_if_eq VAR_RESULT, 0, SilphCo_7F_EventScript_ReceiveLaprasParty
 	goto_if_eq VAR_RESULT, 1, SilphCo_7F_EventScript_ReceiveLaprasPC
@@ -131,7 +132,7 @@ SilphCo_7F_EventScript_ReceiveLaprasParty::
 	message SilphCo_7F_Text_ObtainedLaprasFromEmployee
 	waitmessage
 	waitfanfare
-	bufferspeciesname STR_VAR_1, SPECIES_LAPRAS
+	special RH_BufferStaticSpecies
 	msgbox gText_NicknameThisPokemon, MSGBOX_YESNO
 	goto_if_eq VAR_RESULT, NO, SilphCo_7F_EventScript_EndReceiveLapras
 	call Common_EventScript_GetGiftMonPartySlot
@@ -145,7 +146,7 @@ SilphCo_7F_EventScript_ReceiveLaprasPC::
 	message SilphCo_7F_Text_ObtainedLaprasFromEmployee
 	waitmessage
 	waitfanfare
-	bufferspeciesname STR_VAR_1, SPECIES_LAPRAS
+	special RH_BufferStaticSpecies
 	msgbox gText_NicknameThisPokemon, MSGBOX_YESNO
 	goto_if_eq VAR_RESULT, NO, SilphCo_7F_EventScript_LaprasTransferredToPC
 	call Common_EventScript_NameReceivedBoxMon
@@ -159,6 +160,8 @@ SilphCo_7F_EventScript_LaprasTransferredToPC::
 
 SilphCo_7F_EventScript_EndReceiveLapras::
 	textcolor NPC_TEXT_COLOR_MALE
+	setvar VAR_TEMP_1, SPECIES_LAPRAS
+	special RH_BufferStaticSpecies
 	msgbox SilphCo_7F_Text_ExplainLapras
 	setflag FLAG_GOT_LAPRAS_FROM_SILPH
 	release
@@ -240,16 +243,16 @@ SilphCo_7F_Text_HaveMonForSavingUs::
 	.string "for saving us.$"
 
 SilphCo_7F_Text_ObtainedLaprasFromEmployee::
-	.string "{PLAYER} obtained a LAPRAS from\n"
+	.string "{PLAYER} obtained {STR_VAR_1} from\n"
 	.string "the SILPH employee!$"
 
 SilphCo_7F_Text_ExplainLapras::
-	.string "It's a LAPRAS.\n"
+	.string "It's {STR_VAR_1}.\n"
 	.string "It's a very intelligent POKéMON.\p"
 	.string "We kept it in our lab, but it will\n"
 	.string "be much better off with you.\p"
 	.string "I think you will be a good TRAINER\n"
-	.string "for LAPRAS!\p"
+	.string "for {STR_VAR_1}!\p"
 	.string "It's a good swimmer.\n"
 	.string "It'll give you a lift across water!$"
 

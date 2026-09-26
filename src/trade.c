@@ -5118,3 +5118,15 @@ static void CB2_SaveAndEndWirelessTrade(void)
     BuildOamBuffer();
     UpdatePaletteFade();
 }
+
+// Romhack randomizer access to the in-game trade table.
+u32 RH_InGameTradeCount(void)
+{
+    return ARRAY_COUNT(sIngameTrades);
+}
+
+void RH_InGameTradeSpecies(u32 id, u16 *given, u16 *requested)
+{
+    *given = sIngameTrades[id].species;
+    *requested = sIngameTrades[id].requestedSpecies;
+}

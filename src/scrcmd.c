@@ -2319,9 +2319,16 @@ bool8 ScrCmd_checkfieldmove(struct ScriptContext *ctx)
     }
     if (gSpecialVar_Result == PARTY_SIZE && RH_HMKitCovers(fieldMove))
     {
-        // HM Kit: the lead Pokemon "uses" the move
-        gSpecialVar_Result = 0;
-        gSpecialVar_0x8004 = GetMonData(&gParties[B_TRAINER_PLAYER][0], MON_DATA_SPECIES);
+        // HM Kit: the first Pokemon that isn't an Egg "uses" the move
+        u32 slot;
+        for (slot = 0; slot < PARTY_SIZE; slot++)
+            if (GetMonData(&gParties[B_TRAINER_PLAYER][slot], MON_DATA_SPECIES) != SPECIES_NONE
+             && !GetMonData(&gParties[B_TRAINER_PLAYER][slot], MON_DATA_IS_EGG))
+                break;
+        if (slot == PARTY_SIZE)
+            slot = 0;
+        gSpecialVar_Result = slot;
+        gSpecialVar_0x8004 = GetMonData(&gParties[B_TRAINER_PLAYER][slot], MON_DATA_SPECIES);
     }
 
     return FALSE;

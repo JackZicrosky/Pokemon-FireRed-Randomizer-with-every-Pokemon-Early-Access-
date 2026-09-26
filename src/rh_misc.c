@@ -44,7 +44,7 @@ u16 RH_CatchTutorialSpecies(u16 vanilla)
 {
     struct RhFilter f = {0};
     u16 sp;
-    if (!S->randomCatchTutorial)
+    if (!S->enabled || !S->randomCatchTutorial)
         return vanilla;
     f.legend = 1;
     f.stage = 1;
@@ -94,7 +94,7 @@ void RH_OnNewGame(void)
     }
     if (S->nationalDexAtStart)
         EnableNationalPokedex();
-    if (S->randomPcPotion)
+    if (S->enabled && S->randomPcPotion)
     {
         u32 tries;
         u16 item = ITEM_POTION;
@@ -154,3 +154,10 @@ void RH_TestSetup(void)
 }
 #endif
 #endif
+
+// FRLG scripts treat "has the National Dex" as "post-game" (Indigo Plateau door guard, Celio, Dunsparce Tunnel).
+// With "National Dex at Start" that only becomes true once the game is cleared.
+bool8 RH_IsPostgameNationalDex(void)
+{
+    return IsNationalPokedexEnabled() && (!gSaveBlock3Ptr->rhSettings.nationalDexAtStart || FlagGet(FLAG_SYS_GAME_CLEAR));
+}

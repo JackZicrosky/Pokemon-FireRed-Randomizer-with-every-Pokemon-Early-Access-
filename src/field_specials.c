@@ -4668,7 +4668,7 @@ bool8 CapeBrinkGetMoveToTeachLeadPokemon(void)
         return FALSE;
     }
 
-    StringCopy(gStringVar2, gMovesInfo[moveId].name);
+    StringCopy(gStringVar2, GetMoveName(moveId));
     if (FlagGet(tutorFlag) == TRUE)
         return FALSE;
 

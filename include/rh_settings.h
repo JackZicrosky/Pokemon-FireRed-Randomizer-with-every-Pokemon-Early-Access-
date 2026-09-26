@@ -153,6 +153,16 @@ struct RhSettings
        randomCatchTutorial, banLuckyEgg, balanceStaticLevels, runWithoutShoes, reusableTMs, forgettableTMs, noEVs;
 
     u8 padding[8];
+
+    // ---- Added in v0.3 (appended so v0.2 saves keep working; they read as 0 = off) ----
+    u8 playerGraphicsReplace;     // 0 = auto (the character picked in the intro), 1 = boy, 2 = girl
+    u8 moveCategory;              // randomize physical / special of damaging moves
+    u8 tutorLevelupSanity, tutorCompatFollowEvos;
+    u8 evolutionMovesForAll;      // every evolved Pokemon learns a move when it evolves
+    u8 starterAllowAltFormes, staticAllowAltFormes, wildAllowAltFormes, trainerAllowAltFormes;
+    u8 trainerRandomShiny;        // 1/256 shiny trainer Pokemon
+    u8 shopAddCheapRareCandy;     // FVX "Add Cheap Rare Candies"
+    u8 reserved[21];
 };
 
 #define RH_SETTINGS_VERSION 2

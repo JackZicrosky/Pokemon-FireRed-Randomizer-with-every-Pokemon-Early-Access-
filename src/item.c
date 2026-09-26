@@ -869,8 +869,6 @@ const u8 *GetItemDescription(enum Item itemId)
 
 u8 GetItemImportance(enum Item itemId)
 {
-    if (gSaveBlock3Ptr->rhSettings.reusableTMs && GetItemTMHMIndex(itemId) != 0)
-        return TRUE;                                  // Misc. tweak "Infinitely Reusable TMs"
     return gItemsInfo[SanitizeItemId(itemId)].importance;
 }
 

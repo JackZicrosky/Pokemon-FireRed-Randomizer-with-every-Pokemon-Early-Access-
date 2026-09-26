@@ -324,13 +324,16 @@ static void SetFontsPointer(const struct FontInfo *fonts)
 
 u32 GetPlayerTextSpeed(void)
 {
+    if (gSaveBlock3Ptr->rhSettings.instantText)
+        return OPTIONS_TEXT_SPEED_INSTANT;
+
     if (gTextFlags.forceMidTextSpeed)
         return OPTIONS_TEXT_SPEED_MID;
 
     if (gSaveBlock2Ptr->optionsTextSpeed > OPTIONS_TEXT_SPEED_INSTANT)
         gSaveBlock2Ptr->optionsTextSpeed = OPTIONS_TEXT_SPEED_FAST;
 
-    if (FlagGet(FLAG_TEXT_SPEED_INSTANT) || TEXT_SPEED_INSTANT || gSaveBlock3Ptr->rhSettings.instantText)
+    if (FlagGet(FLAG_TEXT_SPEED_INSTANT) || TEXT_SPEED_INSTANT)
         return OPTIONS_TEXT_SPEED_INSTANT;
 
     return gSaveBlock2Ptr->optionsTextSpeed;
@@ -549,7 +552,8 @@ void RunTextPrinters(void)
         {
             if (currentPrinter->active)
             {
-                for (u32 repeat = 0; repeat < textRepeats || isInstantText; repeat++)
+                bool32 keepGoing = isInstantText;   // per printer: another printer waiting for input must not slow this one
+                for (u32 repeat = 0; repeat < textRepeats || keepGoing; repeat++)
                 {
                     u32 renderState = RenderFont(currentPrinter);
                     switch (renderState)
@@ -569,12 +573,12 @@ void RunTextPrinters(void)
                     case RENDER_UPDATE:
                         if (currentPrinter->callback != NULL)
                             currentPrinter->callback(&currentPrinter->printerTemplate, renderState);
-                        isInstantText = FALSE;
+                        keepGoing = FALSE;
                         break;
                     case RENDER_FINISH:
                         currentPrinter->active = FALSE;
                         currentPrinter->isInUse = FALSE;
-                        isInstantText = FALSE;
+                        keepGoing = FALSE;
                         break;
                     }
 
@@ -594,7 +598,7 @@ void RunTextPrinters(void)
             FreeFinishedTextPrinters();
             return;
         }
-    } while (isInstantText);
+    } while (0);
     FreeFinishedTextPrinters();
 }
 
@@ -1684,7 +1688,7 @@ static u16 RenderText(struct TextPrinter *textPrinter)
             textPrinter->state = RENDER_STATE_HANDLE_CHAR;
         return RENDER_UPDATE;
     case RENDER_STATE_PAUSE:
-        if (textPrinter->delayCounter != 0)
+        if (textPrinter->delayCounter != 0 && !IsPlayerTextSpeedInstant())
             textPrinter->delayCounter--;
         else
             textPrinter->state = RENDER_STATE_HANDLE_CHAR;

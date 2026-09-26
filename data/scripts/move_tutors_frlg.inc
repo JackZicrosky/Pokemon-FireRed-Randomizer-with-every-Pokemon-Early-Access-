@@ -428,6 +428,8 @@ EventScript_MetronomeTaught::
 	end
 
 EventScript_MimicTutor::
+	setvar VAR_0x8005, MOVE_MIMIC
+	special RH_RemapTutorMove
 .if I_REUSABLE_TMS == FALSE
 	goto_if_set FLAG_TUTOR_MIMIC, EventScript_MimicTaught
 .endif

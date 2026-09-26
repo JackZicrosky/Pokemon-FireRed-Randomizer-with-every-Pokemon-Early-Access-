@@ -24,6 +24,8 @@ Route4_PokemonCenter_1F_EventScript_MagikarpSalesman::
 	lock
 	faceplayer
 	goto_if_set FLAG_BOUGHT_MAGIKARP, Route4_PokemonCenter_1F_EventScript_AlreadyBoughtMagikarp
+	setvar VAR_TEMP_1, SPECIES_MAGIKARP
+	special RH_BufferStaticSpecies
 	showmoneybox 0, 0
 	checkplayergender
 	goto_if_eq VAR_RESULT, MALE, Route4_PokemonCenter_1F_EventScript_AskBuyMagikarpMale
@@ -98,11 +100,13 @@ Route4_PokemonCenter_1F_EventScript_BoughtMagikarp::
 Route4_PokemonCenter_1F_EventScript_PayForMagikarp::
 	removemoney MAGIKARP_PRICE
 	updatemoneybox
+	setvar VAR_TEMP_1, SPECIES_MAGIKARP
+	special RH_BufferStaticSpecies
 	playfanfare MUS_LEVEL_UP
 	message Route4_PokemonCenter_1F_Text_PaidOutrageouslyForMagikarp
 	waitmessage
 	waitfanfare
-	bufferspeciesname STR_VAR_1, SPECIES_MAGIKARP
+	special RH_BufferStaticSpecies
 	return
 
 Route4_PokemonCenter_1F_EventScript_DeclineMagikarp::
@@ -162,19 +166,19 @@ Route4_PokemonCenter_1F_Text_LaddieBuyMagikarpForJust500::
 	.string "MAN: Hello there, laddie!\n"
 	.string "Have I got a deal just for you!\p"
 	.string "I'll let you have a secret POKéMON\n"
-	.string "- a MAGIKARP - for just ¥500!\p"
+	.string "- {STR_VAR_1} - for just ¥500!\p"
 	.string "So, you'll buy it, am I right?$"
 
 Route4_PokemonCenter_1F_Text_SweetieBuyMagikarpForJust500::
 	.string "MAN: Hello there, sweetie pie!\n"
 	.string "Have I got a deal just for you!\p"
 	.string "I'll let you have a secret POKéMON\n"
-	.string "- a MAGIKARP - for just ¥500!\p"
+	.string "- {STR_VAR_1} - for just ¥500!\p"
 	.string "So, you'll buy it, am I right?$"
 
 Route4_PokemonCenter_1F_Text_PaidOutrageouslyForMagikarp::
 	.string "{PLAYER} paid an outrageous ¥500\n"
-	.string "and bought the MAGIKARP…$"
+	.string "and bought the {STR_VAR_1}…$"
 
 Route4_PokemonCenter_1F_Text_OnlyDoingThisAsFavorToYou::
 	.string "No? You say no? I'm only doing this\n"

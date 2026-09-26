@@ -203,6 +203,25 @@ def save_indexed(frames, pal, path, horizontal=True):
     out.save(path)
 
 
+def save_oak_pic(front_path, out_path):
+    # Oak's intro draws the player on an 8bpp BG (64x96, palette slot 4 = colours 64..79):
+    # the 64x64 front pic sits at the bottom, colour i -> index 64+i, transparent stays 0.
+    front = Image.open(front_path)
+    src = front.load()
+    oak = Image.new('P', (64, 96), 0)
+    pal = [0] * 768
+    fp = front.getpalette()
+    for i in range(16):
+        pal[(64 + i) * 3:(64 + i) * 3 + 3] = fp[i * 3:i * 3 + 3]
+    oak.putpalette(pal)
+    dst = oak.load()
+    for y in range(64):
+        for x in range(64):
+            c = src[x, y]
+            dst[x, y + 32] = 0 if c == 0 else 64 + c
+    oak.save(out_path)
+
+
 def main():
     if os.path.exists(OUT):
         shutil.rmtree(OUT)
@@ -221,6 +240,7 @@ def main():
             save_indexed(pk[k], pal, d + k + '.png')
         save_indexed([pk['front']], build_palette([pk['front']]), d + 'front.png')
         save_indexed(pk['back'], build_palette(pk['back']), d + 'back.png', horizontal=False)
+        save_oak_pic(d + 'front.png', d + 'oak.png')
         ini = open(FVX + folder + '/info.ini', encoding='utf-8').read()
         credits += f'[{name}]\n' + ''.join(l + '\n' for l in ini.splitlines() if l.split('=')[0] in ('Creator', 'Adapter', 'From')) + '\n'
         p = f'"graphics/rh_player/{folder}/'
@@ -234,6 +254,7 @@ def main():
         h += f'const u16 gRhPlayerPal{idx}[] = INCGFX_U16({p}normal.png", ".gbapal");\n'
         h += f'static const u32 {n}_Front[] = INCGFX_U32({p}front.png", ".4bpp.smol");\n'
         h += f'static const u16 {n}_FrontPal[] = INCGFX_U16({p}front.png", ".gbapal");\n'
+        h += f'static const u32 {n}_Oak[] = INCGFX_U32({p}oak.png", ".8bpp.smol");\n'
         h += f'static const u8 {n}_Back[] = INCGFX_U8({p}back.png", ".4bpp");\n'
         h += f'static const u16 {n}_BackPal[] = INCGFX_U16({p}back.png", ".gbapal");\n'
         # pic tables in FireRed's frame layouts
@@ -253,7 +274,7 @@ def main():
     h += 'static const struct RhPlayerPack sRhPlayerPacks[] = {\n'
     for i, (n, name) in enumerate(names):
         h += (f'    {{ .normal = {n}_PicNormal, .surf = {n}_PicSurf, .bike = {n}_PicBike, .fish = {n}_PicFish, '
-              f'.item = {n}_PicItem, .itemBike = {n}_PicItemBike, .front = {n}_Front, .frontPal = {n}_FrontPal, '
+              f'.item = {n}_PicItem, .itemBike = {n}_PicItemBike, .front = {n}_Front, .frontPal = {n}_FrontPal, .oak = {n}_Oak, '
               f'.back = {n}_Back, .backPal = {n}_BackPal }},\n')
     h += '};\n'
     h += 'const u8 *const gRhPlayerGraphicsNames[] = {\n    COMPOUND_STRING("Default"),\n'

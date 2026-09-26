@@ -641,6 +641,10 @@ gSpecials::
 	def_special RH_OpenMart, waitstate=1
 	def_special RH_OpenSpecialShop, waitstate=1
 	def_special RH_RemapTutorMove
+	def_special RH_BufferTMMoveFromItem
+	def_special RH_BufferStaticSpecies
+	def_special RH_IsPostgameNationalDex
+	def_special RH_OpenRandomizedPokemart, waitstate=1
 	def_special RH_BufferSafariGenName
 	def_special RH_RemapStarterVars
 	def_special RH_StartersRandomized

@@ -90,7 +90,7 @@ LIST(sTypesC, CS("Unchanged"), CS("Random (follow evos)"), CS("Random (completel
 LIST(sUR, CS("Unchanged"), CS("Random"));
 LIST(sEvosC, CS("Unchanged"), CS("Random"), CS("Random Every Level"));
 LIST(sTypeChart, CS("Unchanged"), CS("Random"), CS("Random (balanced)"), CS("Keep Type Identities"), CS("Inverse"));
-LIST(sStarters, CS("Unchanged"), CS("Custom"), CS("Random (completely)"), CS("Random (2 evolutions)"), CS("Random (incl. regional)"));
+LIST(sStarters, CS("Unchanged"), CS("Custom"), CS("Random (completely)"), CS("Random (2 evolutions)"), CS("Random (basic)"));
 LIST(sStarterTypes, CS("None"), CS("Fire, Water, Grass"), CS("Any Type Triangle"), CS("Unique"), CS("Single Type"));
 LIST(sStatics, CS("Unchanged"), CS("Swap Legends & Standards"), CS("Random (completely)"), CS("Random (similar str.)"));
 LIST(sTrades, CS("Unchanged"), CS("Given Pokémon Only"), CS("Requested & Given"));
@@ -100,7 +100,7 @@ LIST(sTrainers, CS("Unchanged"), CS("Random"), CS("Random (even)"), CS("Type The
 LIST(sBattleStyle, CS("Unchanged"), CS("Random"), CS("Single Style"));
 LIST(sSinglesDoubles, CS("Single Battles"), CS("Double Battles"));
 LIST(sWildZone, CS("1 In Whole Game"), CS("1 Per Named Location"), CS("1 Per Encounter Set"), CS("Maximum Possible"),
-     CS("Completely Random Always"));
+     CS("Completely Random Always"), CS("1 Per Map"));
 LIST(sWildType, CS("None"), CS("Randomize Zone Themes"), CS("Keep Primary Type"));
 LIST(sWildEvo, CS("None"), CS("Only Basic Pokémon"), CS("Same Evolution Stage"));
 LIST(sCompat, CS("Unchanged"), CS("Random (same type)"), CS("Random (completely)"), CS("Full Compatibility"));
@@ -108,6 +108,7 @@ LIST(sFieldItems, CS("Unchanged"), CS("Shuffle"), CS("Random"), CS("Random (even
 LIST(sShopItems, CS("Unchanged"), CS("Shuffle"), CS("Random"));
 
 // Player graphics pack names (index 0 = default). Kept in sync with src/data/rh_player_graphics.h.
+static const u8 *const sBoyGirl[] = { CS("Auto"), CS("Boy"), CS("Girl") };
 extern const u8 *const gRhPlayerGraphicsNames[];
 extern const u8 gRhPlayerGraphicsCount;
 
@@ -115,11 +116,15 @@ extern const u8 gRhPlayerGraphicsCount;
 // Visibility rules
 // ---------------------------------------------------------------------------
 #define VIS(name, expr) static bool32 name(const struct RhSettings *s) { return (expr); }
+VIS(visPlayerGraphics, s->playerGraphics != 0)
 VIS(visStatsRandomized, s->baseStats != 0)
 VIS(visExpCurve, s->expCurve != 0)
 VIS(visTypesRandom, s->types != 0)
 VIS(visAbilities, s->abilities != 0)
 VIS(visEvos, s->evolutions != 0)
+VIS(visEvosRandom, s->evolutions == 1)
+VIS(visStatsAdded, s->baseStats == 2 && s->baseStatsFollowEvos)
+VIS(visEstLevels, s->evoChangeImpossible || s->evoMakeEasier)
 VIS(visInverse, s->typeChart == 4)
 VIS(visCustomStarters, s->starters == 1)
 VIS(visRandomStarters, s->starters >= 2)
@@ -128,7 +133,8 @@ VIS(visBstMin, s->starters >= 2 && s->starterBstMinOn)
 VIS(visBstMax, s->starters >= 2 && s->starterBstMaxOn)
 VIS(visSingleType, s->starters >= 2 && s->starterTypes == 4)
 VIS(visStatics, s->statics != 0)
-VIS(visStaticLevel, s->statics != 0 && s->staticLevelModOn)
+VIS(visStaticLevel, s->staticLevelModOn)
+VIS(visStaticsSimilar, s->statics == 3)
 VIS(visTrades, s->trades != 0)
 VIS(visMovesets, s->movesets != 0 && s->movesets != 3)
 VIS(visLevel1, s->movesets != 0 && s->movesets != 3 && s->guaranteedLevel1On)
@@ -137,20 +143,25 @@ VIS(visSingleStyle, s->battleStyle == 2)
 VIS(visTrainerEvolve, s->trainersEvolveOn)
 VIS(visTrainerLevel, s->trainerLevelModOn)
 VIS(visWild, s->wild)
-VIS(visWildSplit, s->wild && s->wildZone == 1)
-VIS(visWildKeepThemes, s->wild && s->wildTypeRestriction == 0)
-VIS(visWildKeepRelations, s->wild && s->wildEvoRestriction == 0)
-VIS(visWildCatch, s->wild && s->wildCatchRateOn)
-VIS(visWildHeldBan, s->wild && s->wildHeldItems)
+VIS(visWildSplit, s->wild && (s->wildZone == 0 || s->wildZone == 1 || s->wildZone == 5))
+VIS(visWildKeepThemes, s->wild)
+VIS(visWildKeepRelations, s->wild && s->wildEvoRestriction != 2 && s->wildZone != 3 && s->wildZone != 4)
+VIS(visWildCatch, s->wildCatchRateOn)
+VIS(visWildHeldBan, s->wildHeldItems)
 VIS(visWildBalance, s->wild && s->wildSimilarStrength)
-VIS(visWildLevel, s->wild && s->wildLevelModOn)
-VIS(visTmMoves, s->tmMoves != 0)
-VIS(visTmDamaging, s->tmMoves != 0 && s->tmGoodDamagingOn)
-VIS(visTmCompat, s->tmCompat != 0)
-VIS(visTutorMoves, s->tutorMoves != 0)
-VIS(visTutorDamaging, s->tutorMoves != 0 && s->tutorGoodDamagingOn)
+VIS(visWildLevel, s->wildLevelModOn)
+VIS(visTmMoves, s->tmMoves != 0 && s->movesets != 3)
+VIS(visTmDamaging, s->tmMoves != 0 && s->movesets != 3 && s->tmGoodDamagingOn)
+VIS(visTmCompatRandom, s->tmCompat == 1 || s->tmCompat == 2)
+VIS(visNotFullTm, s->tmCompat != 3)
+VIS(visTutorCompatRandom, s->tutorCompat == 1 || s->tutorCompat == 2)
+VIS(visNotMetronome, s->movesets != 3)
+VIS(visTutorMoves, s->tutorMoves != 0 && s->movesets != 3)
+VIS(visTutorDamaging, s->tutorMoves != 0 && s->movesets != 3 && s->tutorGoodDamagingOn)
 VIS(visFieldItems, s->fieldItems != 0)
-VIS(visShopItems, s->shopItems != 0)
+VIS(visShopFilters, s->shopItems != 0 || s->shopSpecial)
+VIS(visTrainersRandom, s->trainers != 0)
+VIS(visTrainerWeight, s->trainers == 3)
 VIS(visPickup, s->pickupItems != 0)
 
 // ---------------------------------------------------------------------------
@@ -170,7 +181,7 @@ static const struct RhRow sRows[] =
 {
     // ---------------- General ----------------
     CHOICE(SEC_GENERAL, 0, mechanicsGen, sMechGen, "Battle Mechanics", "Which generation's battle rules to use.\nPhys./Special split + Fairy always on.", NULL),
-    TOGGLE(SEC_GENERAL, 0, enabled, "Randomizer", "Master switch. Off = the options below\nare ignored and the game is not randomized.", NULL),
+    TOGGLE(SEC_GENERAL, 0, enabled, "Randomizer", "Master switch. Off = nothing is\nrandomized (Misc. Tweaks still apply).", NULL),
     CHOICE(SEC_GENERAL, 0, speciesPool, sPool, "Pokémon Pool", "Which Pokémon the randomizer may use.\n+ Forms adds regional & alternate forms.", NULL),
     TEXT(SEC_GENERAL, 0, TF_SEED, "Seed", "Type any text. Same seed + same options\n= the exact same randomized game.", NULL),
     TOGGLE(SEC_GENERAL, 0, nuzlocke, "Nuzlocke Mode", "Adds two key items. One is an infinite\nRare Candy, one heals your whole party.", NULL),
@@ -178,203 +189,213 @@ static const struct RhRow sRows[] =
     // ---------------- Pokemon Traits ----------------
     HDR(SEC_TRAITS, "Pokémon Base Statistics"),
     CHOICE(SEC_TRAITS, 1, baseStats, sUSR, "Base Stats", "Shuffle: stats swap around.\nRandom: the total is redistributed.", NULL),
-    TOGGLE(SEC_TRAITS, 2, baseStatsFollowEvos, "Follow Evolutions", "Evolutions use the same shuffle / the\nsame stat proportions as their family.", visStatsRandomized),
-    TOGGLE(SEC_TRAITS, 2, baseStatsRandomAdded, "Rand. Added Stats on Evo", "The stats a Pokémon gains when it\nevolves are distributed randomly.", visStatsRandomized),
+    TOGGLE(SEC_TRAITS, 2, baseStatsFollowEvos, "Follow Evolutions", "Evolutions keep the same shuffle / stat\nproportions (split evos roll their own).", visStatsRandomized),
+    TOGGLE(SEC_TRAITS, 2, baseStatsRandomAdded, "Rand. Added Stats on Evo", "The stats a Pokémon gains when it\nevolves are distributed randomly.", visStatsAdded),
     CHOICE(SEC_TRAITS, 1, updateBaseStatsGen, sMechGen, "Update Base Stats to Gen", "Use base stats from this generation.\nOff = same as Battle Mechanics.", NULL),
     CHOICE(SEC_TRAITS, 1, expCurve, sExpCurves, "Standardize EXP Curves", "Give every Pokémon the same EXP\ncurve (Off = unchanged).", NULL),
-    CHOICE(SEC_TRAITS, 2, expCurveWho, sExpWho, "Applies To", "Legendaries: Slow keeps legendaries on\nthe Slow curve, everyone else standard.", visExpCurve),
+    CHOICE(SEC_TRAITS, 2, expCurveWho, sExpWho, "Applies To", "Legendaries (or only >600 BST ones)\nget Slow instead; All = no exception.", visExpCurve),
     HDR(SEC_TRAITS, "Pokémon Types"),
-    CHOICE(SEC_TRAITS, 1, types, sTypesC, "Types", "Follow evos keeps a family's types\nconsistent as it evolves.", NULL),
+    CHOICE(SEC_TRAITS, 1, types, sTypesC, "Types", "Follow evos: evolutions keep the base\ntypes (may add a 2nd). Completely: new.", NULL),
     TOGGLE(SEC_TRAITS, 2, forceDualTypes, "Force Dual Types", "Every Pokémon gets two types.", visTypesRandom),
     HDR(SEC_TRAITS, "Pokémon Abilities"),
     CHOICE(SEC_TRAITS, 1, abilities, sUR, "Abilities", "Give every Pokémon random abilities.", NULL),
     TOGGLE(SEC_TRAITS, 2, allowWonderGuard, "Allow Wonder Guard", "Wonder Guard can be handed out.", visAbilities),
     TOGGLE(SEC_TRAITS, 2, combineDuplicateAbilities, "Combine Duplicate Abil.", "Abilities with the same effect (Clear\nBody/White Smoke...) count as one.", visAbilities),
     TOGGLE(SEC_TRAITS, 2, ensureTwoAbilities, "Ensure Two Abilities", "Every Pokémon gets two abilities.", visAbilities),
-    TOGGLE(SEC_TRAITS, 2, abilitiesFollowEvos, "Follow Evolutions", "Evolutions keep their family's\nrandom abilities.", visAbilities),
+    TOGGLE(SEC_TRAITS, 2, abilitiesFollowEvos, "Follow Evolutions", "Non-split evolutions keep their\npre-evolution's random abilities.", visAbilities),
     TOGGLE(SEC_TRAITS, 2, banTrapAbilities, "Ban Trapping Abilities", "No Arena Trap, Magnet Pull or\nShadow Tag.", visAbilities),
     TOGGLE(SEC_TRAITS, 2, banNegativeAbilities, "Ban Negative Abilities", "No Defeatist, Slow Start, Truant,\nKlutz or Stall.", visAbilities),
     TOGGLE(SEC_TRAITS, 2, banBadAbilities, "Ban Bad Abilities", "No Minus, Plus, Anticipation, Forewarn,\nFrisk, Honey Gather, Aura Break...", visAbilities),
     HDR(SEC_TRAITS, "Pokémon Evolutions"),
-    CHOICE(SEC_TRAITS, 1, evolutions, sEvosC, "Evolutions", "Every Level: every Pokémon evolves\ninto a random Pokémon each level up.", NULL),
-    TOGGLE(SEC_TRAITS, 2, evoSimilarStrength, "Similar Strength", "New evolutions have a similar base\nstat total to the original.", visEvos),
+    CHOICE(SEC_TRAITS, 1, evolutions, sEvosC, "Evolutions", "Random: new targets with the same EXP\ncurve. Every Level: evolve each level.", NULL),
+    TOGGLE(SEC_TRAITS, 2, evoSimilarStrength, "Similar Strength", "New evolutions have a similar base\nstat total to the original.", visEvosRandom),
     TOGGLE(SEC_TRAITS, 2, evoSameTyping, "Same Typing", "New evolutions share a type with\nthe Pokémon evolving.", visEvos),
-    TOGGLE(SEC_TRAITS, 2, evoLimitThreeStages, "Limit to Three Stages", "No evolution chain longer than\nthree stages.", visEvos),
+    TOGGLE(SEC_TRAITS, 2, evoLimitThreeStages, "Limit to Three Stages", "No evolution chain longer than\nthree stages.", visEvosRandom),
     TOGGLE(SEC_TRAITS, 2, evoNoConvergence, "No Convergence", "No two Pokémon evolve into the\nsame Pokémon.", visEvos),
     TOGGLE(SEC_TRAITS, 2, evoForceChange, "Force Change", "Every evolution is different from\nthe original.", visEvos),
-    TOGGLE(SEC_TRAITS, 2, evoForceGrowth, "Force Growth", "Evolutions always have a higher base\nstat total than before.", visEvos),
-    TOGGLE(SEC_TRAITS, 1, evoChangeImpossible, "Change Impossible Evos", "Trade and other hard evolutions\nbecome level-up or stone evolutions.", NULL),
-    SLIDER(SEC_TRAITS, 1, evoMakeEasier, 0, 55, 5, SF_LEVEL, "Make Evolutions Easier", "Every Pokémon is fully evolved by this\nlevel (Off = unchanged).", NULL),
-    TOGGLE(SEC_TRAITS, 1, evoEstimatedLevels, "Use Estimated Evo Levels", "Changed evolutions use levels estimated\nfrom the game instead of fixed ones.", NULL),
-    TOGGLE(SEC_TRAITS, 1, evoRemoveTimeBased, "Remove Time-Based Evos", "Day/night evolutions work any time;\nsplit ones become stone evolutions.", NULL),
+    TOGGLE(SEC_TRAITS, 2, evoForceGrowth, "Force Growth", "Evolutions always have a higher base\nstat total than before.", visEvosRandom),
+    TOGGLE(SEC_TRAITS, 1, evoChangeImpossible, "Change Impossible Evos", "Trade and other impossible evolutions\nbecome level-up or item evolutions.", NULL),
+    SLIDER(SEC_TRAITS, 1, evoMakeEasier, 0, 55, 5, SF_LEVEL, "Make Evolutions Easier", "Final stage by this Lv, middle by 75%.\nMax (55): levels kept, other fixes on.", NULL),
+    TOGGLE(SEC_TRAITS, 1, evoEstimatedLevels, "Use Estimated Evo Levels", "Changed evolutions use levels estimated\nfrom the game instead of fixed ones.", visEstLevels),
+    TOGGLE(SEC_TRAITS, 1, evoRemoveTimeBased, "Remove Time-Based Evos", "Day/night evos work any time; day/night\npairs and dusk use Sun/Moon/Dusk Stone.", NULL),
 
     // ---------------- Type effectiveness ----------------
-    CHOICE(SEC_TYPES, 0, typeChart, sTypeChart, "Type Effectiveness", "Random keeps the same number of\nweaknesses, resistances and immunities.", NULL),
+    CHOICE(SEC_TYPES, 0, typeChart, sTypeChart, "Type Effectiveness", "Random, balanced, identity-keeping or\ninverse type matchups.", NULL),
     TOGGLE(SEC_TYPES, 1, inverseRandomImmunities, "Add Random Immunities", "A few weaknesses become immunities\ninstead (as many as the base game).", visInverse),
-    TOGGLE(SEC_TYPES, 0, updateTypeChart, "Update Type Effectiveness", "Use the Gen 9 type chart before any\nrandomization. Off = the older chart.", NULL),
+    TOGGLE(SEC_TYPES, 0, updateTypeChart, "Update Type Effectiveness", "Gen 6+ matchups before any randomizing.\nOff = chart of Battle Mechanics gen.", NULL),
 
     // ---------------- Starters, statics & trades ----------------
     HDR(SEC_STARTERS, "Starter Pokémon"),
-    CHOICE(SEC_STARTERS, 1, starters, sStarters, "Starters", "Custom: type 3 names. Blank slots are\nBulbasaur, Charmander, Squirtle.", NULL),
+    CHOICE(SEC_STARTERS, 1, starters, sStarters, "Starters", "Custom: type 3 names (blank = random).\nBasic: not evolved from anything.", NULL),
     TEXT(SEC_STARTERS, 2, TF_STARTER1, "Starter 1", "Name of the first starter (all caps).", visCustomStarters),
     TEXT(SEC_STARTERS, 2, TF_STARTER2, "Starter 2", "Name of the second starter (all caps).", visCustomStarters),
     TEXT(SEC_STARTERS, 2, TF_STARTER3, "Starter 3", "Name of the third starter (all caps).", visCustomStarters),
+    TOGGLE(SEC_STARTERS, 2, starterAllowAltFormes, "Allow Alternate Formes", "Regional and other alternate forms can\nbe starters.", visRandomStarters),
     TOGGLE(SEC_STARTERS, 2, starterNoLegends, "Don't Use Legendaries", "Random starters are never legendary.", visRandomStarters),
-    TOGGLE(SEC_STARTERS, 1, starterHeldItems, "Random Starter Held Items", "The starters come holding a random\nitem.", NULL),
+    TOGGLE(SEC_STARTERS, 1, starterHeldItems, "Random Starter Held Items", "All three starters hold the same\nrandom item (Gen 3 rule).", NULL),
     TOGGLE(SEC_STARTERS, 2, starterBanBadItems, "Ban Bad Items", "No berries, mail or other weak items.", visStarterItems),
     TOGGLE(SEC_STARTERS, 2, starterBstMinOn, "Limit BST: Minimum", "Random starters have at least this\nbase stat total.", visRandomStarters),
     TEXT(SEC_STARTERS, 3, TF_BST_MIN, "Minimum BST", "Type a number (e.g. 300).", visBstMin),
     TOGGLE(SEC_STARTERS, 2, starterBstMaxOn, "Limit BST: Maximum", "Random starters have at most this\nbase stat total.", visRandomStarters),
     TEXT(SEC_STARTERS, 3, TF_BST_MAX, "Maximum BST", "Type a number (e.g. 350).", visBstMax),
-    CHOICE(SEC_STARTERS, 2, starterTypes, sStarterTypes, "Type Restrictions", "Triangle: the 3 starters beat each other\nin a circle. Unique: 3 different types.", visRandomStarters),
+    CHOICE(SEC_STARTERS, 2, starterTypes, sStarterTypes, "Type Restrictions", "Triangle: the 3 beat each other in a\ncircle. Unique: no shared types.", visRandomStarters),
     TEXT(SEC_STARTERS, 3, TF_TYPE, "Single Type", "Type name in caps (e.g. DRAGON).\nBlank = a random type.", visSingleType),
-    TOGGLE(SEC_STARTERS, 2, starterNoDualTypes, "No Dual Types", "Random starters have only one type.", visRandomStarters),
+    TOGGLE(SEC_STARTERS, 2, starterNoDualTypes, "No Dual Types", "Random starters have only one type\n(they may still evolve into two).", visRandomStarters),
     HDR(SEC_STARTERS, "Static Pokémon"),
-    CHOICE(SEC_STARTERS, 1, statics, sStatics, "Static Pokémon", "Gifts, legendaries, Snorlax, Game\nCorner prizes, fossils, the Togepi Egg...", NULL),
-    TOGGLE(SEC_STARTERS, 2, staticRandomize600, "Randomize 600+ BST", "Pokémon with 600+ BST (Dragonite...)\nswap like legendaries do.", visStatics),
-    TOGGLE(SEC_STARTERS, 2, staticLimitMainGameLegends, "Limit Main-Game Legends", "Legendaries in the main story are\nreplaced by different legendaries.", visStatics),
-    TOGGLE(SEC_STARTERS, 2, staticFixMusic, "Fix Music", "Static battles play legendary music\nonly when the new Pokémon is legendary.", visStatics),
-    TOGGLE(SEC_STARTERS, 2, staticLevelModOn, "Percentage Level Modifier", "Change the level of static Pokémon.", visStatics),
+    CHOICE(SEC_STARTERS, 1, statics, sStatics, "Static Pokémon", "Each gift/legend/Snorlax/prize/fossil\ngets its own, never-repeated Pokémon.", NULL),
+    TOGGLE(SEC_STARTERS, 2, staticRandomize600, "Randomize 600+ BST", "Statics with 600+ BST (Mewtwo...) get\na purely random replacement.", visStaticsSimilar),
+    TOGGLE(SEC_STARTERS, 2, staticAllowAltFormes, "Allow Alternate Formes", "Regional and other alternate forms can\nreplace static Pokémon.", visStatics),
+    TOGGLE(SEC_STARTERS, 2, staticFixMusic, "Fix Music", "Legendary encounters keep their special\nbattle music after randomizing.", visStatics),
+    TOGGLE(SEC_STARTERS, 1, staticLevelModOn, "Static Level Modifier", "Change the level of static Pokémon\n(works with statics unchanged too).", NULL),
     SLIDER(SEC_STARTERS, 3, staticLevelMod, -100, 150, 5, SF_SIGNED_PERCENT, "Level Change", "Percentage added to static levels.", visStaticLevel),
     HDR(SEC_STARTERS, "In-Game Trades"),
-    CHOICE(SEC_STARTERS, 1, trades, sTrades, "In-Game Trades", "Randomize the Pokémon NPCs trade.", NULL),
+    CHOICE(SEC_STARTERS, 1, trades, sTrades, "In-Game Trades", "Given only, or both the Pokémon you\nget and the one asked for (all unique).", NULL),
     TOGGLE(SEC_STARTERS, 2, tradeNicknames, "Randomize Nicknames", "Traded Pokémon get a random nickname.", visTrades),
-    TOGGLE(SEC_STARTERS, 2, tradeOTs, "Randomize OTs", "Traded Pokémon get a random Original\nTrainer name.", visTrades),
+    TOGGLE(SEC_STARTERS, 2, tradeOTs, "Randomize OTs", "Traded Pokémon get a random Original\nTrainer name and ID.", visTrades),
     TOGGLE(SEC_STARTERS, 2, tradeIVs, "Randomize IVs", "Traded Pokémon get random IVs.", visTrades),
     TOGGLE(SEC_STARTERS, 2, tradeItems, "Randomize Items", "Traded Pokémon hold a random item.", visTrades),
 
     // ---------------- Moves ----------------
     HDR(SEC_MOVES, "Move Data"),
-    TOGGLE(SEC_MOVES, 1, movePower, "Randomize Move Power", "Attacks get random power (20-150).", NULL),
-    TOGGLE(SEC_MOVES, 1, moveAccuracy, "Randomize Move Accuracy", "Moves get random accuracy (60-100%).", NULL),
-    TOGGLE(SEC_MOVES, 1, movePP, "Randomize Move PP", "Moves get random PP (5-40).", NULL),
-    TOGGLE(SEC_MOVES, 1, moveType, "Randomize Move Types", "Every move gets a random type.", NULL),
-    TOGGLE(SEC_MOVES, 1, moveNames, "Randomize Move Names", "Moves get silly random names.", NULL),
-    CHOICE(SEC_MOVES, 1, updateMovesGen, sMechGen, "Update Moves to Gen", "Move power/accuracy/PP/type from this\ngeneration. Off = same as Battle Mechanics.", NULL),
+    TOGGLE(SEC_MOVES, 1, movePower, "Randomize Move Power", "Random power, mostly 50-100, sometimes\n20-150. Multi-hit: divided per hit.", NULL),
+    TOGGLE(SEC_MOVES, 1, moveAccuracy, "Randomize Move Accuracy", "Most moves get random accuracy. OHKO\nstays low; sure-hit moves never change.", NULL),
+    TOGGLE(SEC_MOVES, 1, movePP, "Randomize Move PP", "Every move gets random PP (5-40,\nmostly 15-25).", NULL),
+    TOGGLE(SEC_MOVES, 1, moveType, "Randomize Move Types", "Every move except Struggle and ???\nmoves gets a random type.", NULL),
+    TOGGLE(SEC_MOVES, 1, moveCategory, "Randomize Move Category", "Damaging moves randomly become\nPhysical or Special.", NULL),
+    TOGGLE(SEC_MOVES, 1, moveNames, "Randomize Move Names", "Moves get random names based on\ntheir (randomized) type.", NULL),
+    CHOICE(SEC_MOVES, 1, updateMovesGen, sMechGen, "Update Moves to Gen", "Move power/accuracy/PP/type from this\ngen. Off = same as Battle Mechanics.", NULL),
     HDR(SEC_MOVES, "Pokémon Movesets"),
-    CHOICE(SEC_MOVES, 1, movesets, sMovesets, "Movesets", "Every Pokémon learns random moves.\nEach gets a decent attack early on.", NULL),
+    CHOICE(SEC_MOVES, 1, movesets, sMovesets, "Movesets", "Random movesets; each Pokémon starts\nwith a good attack. Metronome: only it.", NULL),
     TOGGLE(SEC_MOVES, 2, guaranteedLevel1On, "Guaranteed Level 1 Moves", "Every Pokémon knows a set number of\nmoves at level 1.", visMovesets),
     SLIDER(SEC_MOVES, 3, guaranteedLevel1Moves, 2, 4, 1, SF_PLAIN, "Moves at Level 1", "How many moves at level 1 (2-4).", visLevel1),
-    TOGGLE(SEC_MOVES, 2, reorderDamagingMoves, "Reorder Damaging Moves", "Stronger attacks are learned later.", visMovesets),
-    TOGGLE(SEC_MOVES, 2, movesetNoGameBreaking, "No Game-Breaking Moves", "No OHKO, fixed-damage or Sketch-type\nmoves in random movesets.", visMovesets),
-    TOGGLE(SEC_MOVES, 2, movesetGoodDamagingOn, "Force % Good Damaging", "Guarantee a share of strong attacks.", visMovesets),
-    SLIDER(SEC_MOVES, 3, movesetGoodDamaging, 0, 100, 5, SF_PERCENT, "Good Damaging Moves", "Share of learned moves that are good\nattacks.", visMovesetDamaging),
+    TOGGLE(SEC_MOVES, 2, reorderDamagingMoves, "Reorder Damaging Moves", "Weaker attacks are learned first;\nother moves keep their places.", visMovesets),
+    TOGGLE(SEC_MOVES, 2, evolutionMovesForAll, "Evolution Moves for All", "Every evolved Pokémon learns a\nmove when it evolves.", visMovesets),
+    TOGGLE(SEC_MOVES, 2, movesetNoGameBreaking, "No Game-Breaking Moves", "No Sonic Boom or Dragon Rage. Gen 1\nrules: also OHKO moves and Spore.", visMovesets),
+    TOGGLE(SEC_MOVES, 2, movesetGoodDamagingOn, "Force % Good Damaging", "Extra chance for each move to be a\ngood attack.", visMovesets),
+    SLIDER(SEC_MOVES, 3, movesetGoodDamaging, 0, 100, 5, SF_PERCENT, "Good Damaging Moves", "Chance that each learned move is a\ngood attack.", visMovesetDamaging),
 
     // ---------------- Foes ----------------
-    CHOICE(SEC_FOES, 0, trainers, sTrainers, "Trainer Pokémon", "Themed: each trainer (or gym) gets a\nrandom type. Keep: keep existing themes.", NULL),
+    CHOICE(SEC_FOES, 0, trainers, sTrainers, "Trainer Pokémon", "Random, even spread, or type themes\n(per gym/E4, or keep original themes).", NULL),
     HDR(SEC_FOES, "Better Movesets for..."),
-    TOGGLE(SEC_FOES, 1, betterMovesets[0], "Boss Trainers", "Gym Leaders, Elite Four, Champion:\nTM/egg moves that fit the Pokémon.", NULL),
-    TOGGLE(SEC_FOES, 1, betterMovesets[1], "Important Trainers", "Rival, Giovanni, Team Rocket bosses.", NULL),
+    TOGGLE(SEC_FOES, 1, betterMovesets[0], "Boss Trainers", "Gym Leaders, Giovanni, Elite Four,\nChampion: TM/tutor moves that fit.", NULL),
+    TOGGLE(SEC_FOES, 1, betterMovesets[1], "Important Trainers", "Your rival's battles.", NULL),
     TOGGLE(SEC_FOES, 1, betterMovesets[2], "Regular Trainers", "Every other trainer.", NULL),
     HDR(SEC_FOES, "Additional Pokémon for..."),
     SLIDER(SEC_FOES, 1, additionalMons[0], 0, 5, 1, SF_PLAIN, "Boss Trainers", "Extra Pokémon (up to 6 total).\n0 = off.", NULL),
     SLIDER(SEC_FOES, 1, additionalMons[1], 0, 5, 1, SF_PLAIN, "Important Trainers", "Extra Pokémon (up to 6 total).\n0 = off.", NULL),
     SLIDER(SEC_FOES, 1, additionalMons[2], 0, 5, 1, SF_PLAIN, "Regular Trainers", "Extra Pokémon (up to 6 total).\n0 = off.", NULL),
     HDR(SEC_FOES, "Add Held Items to..."),
-    TOGGLE(SEC_FOES, 1, heldItemsFor[0], "Boss Trainers", "Give boss trainers' Pokémon items.", NULL),
-    TOGGLE(SEC_FOES, 1, heldItemsFor[1], "Important Trainers", "Give important trainers' Pokémon items.", NULL),
+    TOGGLE(SEC_FOES, 1, heldItemsFor[0], "Boss Trainers", "Gym Leaders, Giovanni, Elite Four and\nChampion's Pokémon hold items.", NULL),
+    TOGGLE(SEC_FOES, 1, heldItemsFor[1], "Important Trainers", "Your rival's Pokémon hold items.", NULL),
     TOGGLE(SEC_FOES, 1, heldItemsFor[2], "Regular Trainers", "Give regular trainers' Pokémon items.", NULL),
-    TOGGLE(SEC_FOES, 1, heldConsumableOnly, "Consumable Only", "Only items that get used up (berries,\nFocus Sash, gems...).", NULL),
-    TOGGLE(SEC_FOES, 1, heldSensible, "Sensible Items", "Items that suit the Pokémon (Choice\nSpecs on special attackers, etc.).", NULL),
-    TOGGLE(SEC_FOES, 1, heldHighestOnly, "Highest Level Only", "Only the trainer's highest-level\nPokémon gets an item.", NULL),
+    TOGGLE(SEC_FOES, 1, heldConsumableOnly, "Consumable Only", "Only single-use items: mostly berries,\nplus Focus Sash, White Herb...", NULL),
+    TOGGLE(SEC_FOES, 1, heldSensible, "Sensible Items", "Items that suit the Pokémon and its\nmoves (resist berries, boosters...).", NULL),
+    TOGGLE(SEC_FOES, 1, heldHighestOnly, "Highest Level Only", "Only one of the trainer's highest-\nlevel Pokémon gets an item.", NULL),
     HDR(SEC_FOES, "Force Diverse Types for..."),
-    TOGGLE(SEC_FOES, 1, diverseTypes[0], "Boss Trainers", "No two Pokémon on the team share\na primary type.", NULL),
-    TOGGLE(SEC_FOES, 1, diverseTypes[1], "Important Trainers", "No two Pokémon on the team share\na primary type.", NULL),
-    TOGGLE(SEC_FOES, 1, diverseTypes[2], "Regular Trainers", "No two Pokémon on the team share\na primary type.", NULL),
+    TOGGLE(SEC_FOES, 1, diverseTypes[0], "Boss Trainers", "No two Pokémon share a type.\nIgnored for type-themed trainers.", NULL),
+    TOGGLE(SEC_FOES, 1, diverseTypes[1], "Important Trainers", "No two Pokémon share a type.\nIgnored for type-themed trainers.", NULL),
+    TOGGLE(SEC_FOES, 1, diverseTypes[2], "Regular Trainers", "No two Pokémon share a type.\nIgnored for type-themed trainers.", NULL),
     HDR(SEC_FOES, "Battle Style"),
-    CHOICE(SEC_FOES, 1, battleStyle, sBattleStyle, "Battle Style", "Random: each trainer randomly single or\ndouble. Trainers need 2+ Pokémon.", NULL),
+    CHOICE(SEC_FOES, 1, battleStyle, sBattleStyle, "Battle Style", "Random singles/doubles. The first rival\nbattle never changes.", NULL),
     CHOICE(SEC_FOES, 2, battleStyleDoubles, sSinglesDoubles, "Style", "Every trainer battle uses this style.", visSingleStyle),
     HDR(SEC_FOES, "Other"),
-    TOGGLE(SEC_FOES, 1, rivalCarriesTeam, "Rival Carries Team", "Your rival keeps his starter and team\nthroughout the game, evolving them.", NULL),
-    TOGGLE(SEC_FOES, 1, trainerSimilarStrength, "Similar Strength", "Replacements have a similar base\nstat total.", NULL),
-    TOGGLE(SEC_FOES, 1, trainerAvoidDuplicates, "Try to Avoid Duplicates", "A trainer's Pokémon are all different.", NULL),
-    TOGGLE(SEC_FOES, 1, trainerWeightTypes, "Weight Types by Count", "Themed trainers pick types with many\nPokémon more often.", NULL),
-    TOGGLE(SEC_FOES, 1, trainerLocalPokemon, "Use Local Pokémon", "Trainers use Pokémon that can be\ncaught in the wild nearby.", NULL),
+    TOGGLE(SEC_FOES, 1, rivalCarriesTeam, "Rival Carries Starter", "The rival always uses the starter you\ndidn't pick (evolved); the rest random.", visTrainersRandom),
+    TOGGLE(SEC_FOES, 1, trainerSimilarStrength, "Similar Strength", "Replacements have a similar base stat\ntotal (other rules come first).", NULL),
+    TOGGLE(SEC_FOES, 1, trainerAvoidDuplicates, "Try to Avoid Duplicates", "A trainer's Pokémon are all different\n(no two from one family).", NULL),
+    TOGGLE(SEC_FOES, 1, trainerWeightTypes, "Weight Types by Count", "Types with more Pokémon are picked\nmore often for themes.", visTrainerWeight),
+    TOGGLE(SEC_FOES, 1, trainerLocalPokemon, "Use Local Pokémon", "Trainers use the wild Pokémon of the\narea they are in (evolved).", visTrainersRandom),
+    TOGGLE(SEC_FOES, 1, trainerAllowAltFormes, "Allow Alternate Formes", "Regional and other alternate forms\ncan be used by trainers.", NULL),
+    TOGGLE(SEC_FOES, 1, trainerRandomShiny, "Random Shiny Trainer Mons", "Trainer Pokémon have a 1/256 chance\nto be shiny.", NULL),
     TOGGLE(SEC_FOES, 1, trainerNoLegends, "Don't Use Legendaries", "Trainers never use legendaries.", NULL),
     TOGGLE(SEC_FOES, 1, noEarlyWonderGuard, "No Early Wonder Guard", "No Wonder Guard on trainer Pokémon\nbefore level 20.", NULL),
-    SLIDER(SEC_FOES, 1, leagueUnique, 0, 2, 1, SF_PLAIN, "League Unique Pokémon", "Elite Four/Champion get this many\nPokémon nobody else uses. 0 = off.", NULL),
-    TOGGLE(SEC_FOES, 1, randomTrainerNames, "Randomize Trainer Names", "Trainers get random names.", NULL),
+    SLIDER(SEC_FOES, 1, leagueUnique, 0, 2, 1, SF_PLAIN, "League Unique Pokémon", "E4/Champion's top-level Pokémon are\nused by no other trainer. 0 = off.", visTrainersRandom),
+    TOGGLE(SEC_FOES, 1, randomTrainerNames, "Randomize Trainer Names", "Trainers get random names (the same\nname always becomes the same one).", NULL),
     TOGGLE(SEC_FOES, 1, randomTrainerClassNames, "Random Trainer Classes", "Trainer classes get random names.", NULL),
     TOGGLE(SEC_FOES, 1, trainersEvolveOn, "Trainers Evolve Pokémon", "Trainer Pokémon evolve as their level\nallows; fully evolved by the level below.", NULL),
     SLIDER(SEC_FOES, 2, trainersEvolveLevel, 30, 65, 1, SF_LEVEL, "Fully Evolved By", "Latest level for fully evolved\ntrainer Pokémon.", visTrainerEvolve),
-    TOGGLE(SEC_FOES, 1, trainerLevelModOn, "Percentage Level Modifier", "Change every trainer Pokémon's level.", NULL),
+    TOGGLE(SEC_FOES, 1, trainerLevelModOn, "Percentage Level Modifier", "Change every trainer Pokémon's level\n(1-100).", NULL),
     SLIDER(SEC_FOES, 2, trainerLevelMod, -100, 150, 5, SF_SIGNED_PERCENT, "Level Change", "Percentage added to trainer levels.", visTrainerLevel),
 
     // ---------------- Wild ----------------
     TOGGLE(SEC_WILD, 0, wild, "Randomize Wild Pokémon", "Turn on to randomize wild encounters.", NULL),
     HDR(SEC_WILD, "Replacements Per Species"),
-    CHOICE(SEC_WILD, 1, wildZone, sWildZone, "Replacements", "How often a species gets a new\nreplacement. Always = no fixed pools.", visWild),
+    CHOICE(SEC_WILD, 1, wildZone, sWildZone, "Replacements", "Area where each Pokémon keeps one fixed\nreplacement (Max/Always = none).", visWild),
     TOGGLE(SEC_WILD, 2, wildSplitEncounterTypes, "Split by Encounter Types", "Grass, surfing, fishing and Rock Smash\nget separate replacements.", visWildSplit),
     HDR(SEC_WILD, "Type Restrictions"),
-    CHOICE(SEC_WILD, 1, wildTypeRestriction, sWildType, "Types", "Zone Themes: every area gets a random\ntype. Primary: keep the first type.", visWild),
-    TOGGLE(SEC_WILD, 2, wildKeepThemes, "Keep Set/Zone Themes", "Areas full of one type (e.g. caves)\nkeep that type.", visWildKeepThemes),
+    CHOICE(SEC_WILD, 1, wildTypeRestriction, sWildType, "Types", "Zone Themes: each zone gets one random\ntype. Primary: keep the first type.", visWild),
+    TOGGLE(SEC_WILD, 2, wildKeepThemes, "Keep Set/Zone Themes", "Encounter sets that all share a type\nkeep that type theme.", visWildKeepThemes),
     HDR(SEC_WILD, "Evolution Restrictions"),
-    CHOICE(SEC_WILD, 1, wildEvoRestriction, sWildEvo, "Evolutions", "Only Basic: only unevolved Pokémon.\nSame Stage: keep the evolution stage.", visWild),
-    TOGGLE(SEC_WILD, 2, wildKeepRelations, "Keep Relations", "Related Pokémon in an area are\nreplaced by related Pokémon.", visWildKeepRelations),
+    CHOICE(SEC_WILD, 1, wildEvoRestriction, sWildEvo, "Evolutions", "Only Basic: nothing evolves into them.\nSame Stage: keep the evolution stage.", visWild),
+    TOGGLE(SEC_WILD, 2, wildKeepRelations, "Keep Relations", "Related Pokémon in a zone are replaced\nby Pokémon related the same way.", visWildKeepRelations),
     HDR(SEC_WILD, "Other"),
+    TOGGLE(SEC_WILD, 1, wildAllowAltFormes, "Allow Alternate Formes", "Regional and other alternate forms can\nappear in the wild.", visWild),
     TOGGLE(SEC_WILD, 1, wildNoLegends, "Don't Use Legendaries", "Legendaries never appear in the wild.", visWild),
-    TOGGLE(SEC_WILD, 1, wildCatchRateOn, "Set Minimum Catch Rate", "Make hard-to-catch Pokémon easier.", NULL),
-    SLIDER(SEC_WILD, 2, wildCatchRate, 1, 5, 1, SF_PLAIN, "Catch Rate Level", "1 = normal ... 4 = equal for all,\n5 = always caught.", visWildCatch),
-    TOGGLE(SEC_WILD, 1, wildHeldItems, "Randomize Held Items", "Wild Pokémon hold random items.", NULL),
+    TOGGLE(SEC_WILD, 1, wildCatchRateOn, "Set Minimum Catch Rate", "Raise catch rates that are below the\nchosen level (works without wild rando).", NULL),
+    SLIDER(SEC_WILD, 2, wildCatchRate, 1, 5, 1, SF_PLAIN, "Catch Rate Level", "1-3: higher minimums, 4: max catch rate\nfor all, 5: every ball always catches.", visWildCatch),
+    TOGGLE(SEC_WILD, 1, wildHeldItems, "Randomize Held Items", "Random held items; Pokémon that held\nnothing still hold nothing.", NULL),
     TOGGLE(SEC_WILD, 2, wildBanBadItems, "Ban Bad Items", "No berries, mail or other weak items.", visWildHeldBan),
-    TOGGLE(SEC_WILD, 1, wildCatchEmAll, "Catch Em' All Mode", "Every Pokémon appears somewhere before\nany repeats.", visWild),
+    TOGGLE(SEC_WILD, 1, wildCatchEmAll, "Catch Em' All Mode", "Every Pokémon is used once before any\nrepeats (beats Similar Strength).", visWild),
     TOGGLE(SEC_WILD, 1, wildSimilarStrength, "Similar Strength", "Replacements have a similar base\nstat total.", visWild),
-    TOGGLE(SEC_WILD, 2, wildBalanceLowLevel, "Balance Low Level", "No abnormally strong Pokémon at\nlow levels.", visWildBalance),
+    TOGGLE(SEC_WILD, 2, wildBalanceLowLevel, "Balance Low Level", "Caps base stat totals by level: no\nabnormally strong low-level Pokémon.", visWildBalance),
     TOGGLE(SEC_WILD, 1, wildMegas, "Permanent Mega Pokémon", "Mega Evolved Pokémon can appear and\nstay Mega after you catch them.", visWild),
     TOGGLE(SEC_WILD, 1, wildLevelModOn, "Percentage Level Modifier", "Change every wild Pokémon's level.", NULL),
     SLIDER(SEC_WILD, 2, wildLevelMod, -100, 150, 5, SF_SIGNED_PERCENT, "Level Change", "Percentage added to wild levels.", visWildLevel),
 
     // ---------------- TMs & tutors ----------------
     HDR(SEC_TMS, "TMs & HMs"),
-    CHOICE(SEC_TMS, 1, tmMoves, sUR, "TM Moves", "TMs teach random moves.\nHMs never change.", NULL),
-    TOGGLE(SEC_TMS, 2, tmNoGameBreaking, "No Game-Breaking Moves", "No OHKO or fixed-damage TMs.", visTmMoves),
-    TOGGLE(SEC_TMS, 2, tmKeepFieldMoves, "Keep Field Move TMs", "TMs with field uses (Dig, Flash...)\nkeep their move.", visTmMoves),
-    TOGGLE(SEC_TMS, 2, tmGoodDamagingOn, "Force % Good Damaging", "Guarantee a share of strong attacks.", visTmMoves),
-    SLIDER(SEC_TMS, 3, tmGoodDamaging, 0, 100, 5, SF_PERCENT, "Good Damaging Moves", "Share of TMs that are good attacks.", visTmDamaging),
-    CHOICE(SEC_TMS, 1, tmCompat, sCompat, "TM/HM Compatibility", "Which Pokémon can learn each TM.\nSame type: 90% same, 50% Normal, 25%.", NULL),
-    TOGGLE(SEC_TMS, 2, tmLevelupSanity, "TM/Levelup Move Sanity", "A Pokémon can always learn TMs of\nmoves it learns by level up.", visTmCompat),
-    TOGGLE(SEC_TMS, 2, tmCompatFollowEvos, "Follow Evolutions", "Evolutions keep their family's\ncompatibility.", visTmCompat),
-    TOGGLE(SEC_TMS, 2, fullHMCompat, "Full HM Compatibility", "Every Pokémon can learn every HM.", visTmCompat),
+    CHOICE(SEC_TMS, 1, tmMoves, sUR, "TM Moves", "Each TM gets a new unique move.\nHMs never change.", visNotMetronome),
+    TOGGLE(SEC_TMS, 2, tmNoGameBreaking, "No Game-Breaking Moves", "No Sonic Boom or Dragon Rage. Gen 1\nrules: also OHKO moves and Spore.", visTmMoves),
+    TOGGLE(SEC_TMS, 2, tmKeepFieldMoves, "Keep Field Move TMs", "TMs of field moves (Dig, Secret Power)\nkeep their move.", visTmMoves),
+    TOGGLE(SEC_TMS, 2, tmGoodDamagingOn, "Force % Good Damaging", "Extra chance for each TM to be a\ngood attack.", visTmMoves),
+    SLIDER(SEC_TMS, 3, tmGoodDamaging, 0, 100, 5, SF_PERCENT, "Good Damaging Moves", "Chance that each TM is a good attack.", visTmDamaging),
+    CHOICE(SEC_TMS, 1, tmCompat, sCompat, "TM/HM Compatibility", "Same type: 90% own type, 50% Normal,\n25% others. Completely: 50% each.", NULL),
+    TOGGLE(SEC_TMS, 2, tmLevelupSanity, "TM/Levelup Move Sanity", "A Pokémon can always learn TMs of\nmoves it learns by level up.", NULL),
+    TOGGLE(SEC_TMS, 2, tmCompatFollowEvos, "Follow Evolutions", "Evolutions learn every TM their\npre-evolution learns (+ a few more).", visTmCompatRandom),
+    TOGGLE(SEC_TMS, 2, fullHMCompat, "Full HM Compatibility", "Every Pokémon can learn every HM.", visNotFullTm),
     HDR(SEC_TMS, "Move Tutors"),
-    CHOICE(SEC_TMS, 1, tutorMoves, sUR, "Move Tutor Moves", "Move tutors teach random moves.", NULL),
-    TOGGLE(SEC_TMS, 2, tutorNoGameBreaking, "No Game-Breaking Moves", "No OHKO or fixed-damage tutor moves.", visTutorMoves),
-    TOGGLE(SEC_TMS, 2, tutorKeepFieldMoves, "Keep Field Move Tutors", "Tutors of field moves keep them.", visTutorMoves),
-    TOGGLE(SEC_TMS, 2, tutorGoodDamagingOn, "Force % Good Damaging", "Guarantee a share of strong attacks.", visTutorMoves),
-    SLIDER(SEC_TMS, 3, tutorGoodDamaging, 0, 100, 5, SF_PERCENT, "Good Damaging Moves", "Share of tutor moves that are good\nattacks.", visTutorDamaging),
-    CHOICE(SEC_TMS, 1, tutorCompat, sCompat, "Tutor Compatibility", "Which Pokémon can learn tutor moves.", NULL),
+    CHOICE(SEC_TMS, 1, tutorMoves, sUR, "Move Tutor Moves", "Each tutor gets a new unique move\n(no TM/HM moves).", visNotMetronome),
+    TOGGLE(SEC_TMS, 2, tutorNoGameBreaking, "No Game-Breaking Moves", "No Sonic Boom or Dragon Rage. Gen 1\nrules: also OHKO moves and Spore.", visTutorMoves),
+    TOGGLE(SEC_TMS, 2, tutorKeepFieldMoves, "Keep Field Move Tutors", "Tutors of field moves keep them\n(not healing moves like Soft-Boiled).", visTutorMoves),
+    TOGGLE(SEC_TMS, 2, tutorGoodDamagingOn, "Force % Good Damaging", "Extra chance for each tutor move to\nbe a good attack.", visTutorMoves),
+    SLIDER(SEC_TMS, 3, tutorGoodDamaging, 0, 100, 5, SF_PERCENT, "Good Damaging Moves", "Chance that each tutor move is a\ngood attack.", visTutorDamaging),
+    CHOICE(SEC_TMS, 1, tutorCompat, sCompat, "Tutor Compatibility", "Same type: 90% own type, 50% Normal,\n25% others. Completely: 50% each.", NULL),
+    TOGGLE(SEC_TMS, 2, tutorLevelupSanity, "Tutor/Levelup Move Sanity", "A Pokémon can always learn tutor\nmoves it learns by level up.", NULL),
+    TOGGLE(SEC_TMS, 2, tutorCompatFollowEvos, "Follow Evolutions", "Evolutions learn every tutor move their\npre-evolution learns (+ a few more).", visTutorCompatRandom),
 
     // ---------------- Items ----------------
-    CHOICE(SEC_ITEMS, 0, fieldItems, sFieldItems, "Field Items", "Items in Poké Balls and hidden items.\nEven: every item about equally often.", NULL),
+    CHOICE(SEC_ITEMS, 0, fieldItems, sFieldItems, "Field Items", "Item balls + hidden items. TM balls keep\nTMs (random numbers). Key items stay.", NULL),
     TOGGLE(SEC_ITEMS, 1, fieldBanBad, "Ban Bad Items", "No berries, mail or other weak items.", visFieldItems),
-    CHOICE(SEC_ITEMS, 0, shopItems, sShopItems, "Shop Items", "Regular clerks keep balls & medicine.\nSpecial shops are fully randomized.", NULL),
-    TOGGLE(SEC_ITEMS, 1, shopBanBad, "Ban Bad Items", "No berries, mail or other weak items.", visShopItems),
-    TOGGLE(SEC_ITEMS, 1, shopBanRegular, "Ban Regular Shop Items", "Random stock never includes normal\nmart items (Potions, Repels...).", visShopItems),
-    TOGGLE(SEC_ITEMS, 1, shopBanOverpowered, "Ban Overpowered Items", "No Lucky Egg, Rare Candy, Master Ball\nor items that sell for a fortune.", visShopItems),
-    TOGGLE(SEC_ITEMS, 1, shopGuaranteeEvo, "Guarantee Evolution Items", "Every evolution item is sold somewhere.", visShopItems),
-    TOGGLE(SEC_ITEMS, 1, shopGuaranteeX, "Guarantee X Items", "Every X item, Guard Spec. and Dire Hit\nis sold somewhere.", visShopItems),
-    TOGGLE(SEC_ITEMS, 1, shopBalancePrices, "Balance Shop Prices", "Rebalance prices of items that are far\ntoo cheap or expensive.", visShopItems),
-    TOGGLE(SEC_ITEMS, 0, shopSpecial, "Randomize Special Shops", "Evolution, herb and Celadon counters\nsell random items, no duplicates.", NULL),
-    CHOICE(SEC_ITEMS, 0, pickupItems, sUR, "Pickup Items", "Items found by the Pickup ability.", NULL),
+    CHOICE(SEC_ITEMS, 0, shopItems, sShopItems, "Shop Items", "Shop stock except balls, medicine and\nrepels (incl. Celadon 4F/5F counters).", NULL),
+    TOGGLE(SEC_ITEMS, 1, shopBanBad, "Ban Bad Items", "No berries, mail or other weak items.", visShopFilters),
+    TOGGLE(SEC_ITEMS, 1, shopBanRegular, "Ban Regular Shop Items", "Random stock never includes normal\nmart items (Potions, Repels...).", visShopFilters),
+    TOGGLE(SEC_ITEMS, 1, shopBanOverpowered, "Ban Overpowered Items", "No Lucky Egg, Rare Candy, Master Ball\nor items that sell for a fortune.", visShopFilters),
+    TOGGLE(SEC_ITEMS, 1, shopGuaranteeEvo, "Guarantee Evolution Items", "Evolution items keep being sold where\nthey were (also in special shops).", visShopFilters),
+    TOGGLE(SEC_ITEMS, 1, shopGuaranteeX, "Guarantee X Items", "X items, Guard Spec. and Dire Hit keep\nbeing sold where they were.", visShopFilters),
+    TOGGLE(SEC_ITEMS, 0, shopBalancePrices, "Balance Shop Prices", "Use FVX's balanced prices for items\nthat are far too cheap or expensive.", NULL),
+    TOGGLE(SEC_ITEMS, 0, shopAddCheapRareCandy, "Add Cheap Rare Candies", "Poké Marts and the Celadon counters\nsell Rare Candies for ¥10.", NULL),
+    TOGGLE(SEC_ITEMS, 0, shopSpecial, "Randomize Special Shops", "Evolution, herb, competitive and other\nspecial shops: random, no duplicates.", NULL),
+    CHOICE(SEC_ITEMS, 0, pickupItems, sUR, "Pickup Items", "Items found by the Pickup ability are\nrandomized.", NULL),
     TOGGLE(SEC_ITEMS, 1, pickupBanBad, "Ban Bad Items", "No berries, mail or other weak items.", visPickup),
 
     // ---------------- Graphics ----------------
     { .kind = RK_CHOICE, .section = SEC_GRAPHICS, .offset = OFS(playerGraphics), .size = 1, .label = CS("Player Character"),
-      .desc = CS("Replace your character's sprites.\nFrom UPR FVX's graphics packs."), .choices = NULL },
+      .desc = CS("Replace a player character's sprites\n(UPR FVX graphics packs)."), .choices = NULL },
+    CHOICE(SEC_GRAPHICS, 1, playerGraphicsReplace, sBoyGirl, "Character to Replace", "Auto: whichever character you pick\nin Oak's intro gets the new sprites.", visPlayerGraphics),
 
     // ---------------- Misc ----------------
     TOGGLE(SEC_MISC, 0, instantText, "Instantaneous Text", "All text appears instantly, whatever\nthe text speed option says.", NULL),
-    TOGGLE(SEC_MISC, 0, runIndoors, "Running Shoes Indoors", "Run inside buildings and caves too.", NULL),
-    TOGGLE(SEC_MISC, 0, randomPcPotion, "Randomize PC Potion", "The item in your bedroom PC is random.", NULL),
-    TOGGLE(SEC_MISC, 0, nationalDexAtStart, "National Dex at Start", "The Pokédex starts in National mode.", NULL),
-    TOGGLE(SEC_MISC, 0, fastEggs, "Fast Egg Hatching", "Eggs hatch in very few steps.", NULL),
+    TOGGLE(SEC_MISC, 0, runIndoors, "Running Shoes Indoors", "Run with the Running Shoes anywhere,\nincluding inside buildings.", NULL),
+    TOGGLE(SEC_MISC, 0, randomPcPotion, "Randomize PC Potion", "The Potion in your bedroom PC becomes\na random useful item.", NULL),
+    TOGGLE(SEC_MISC, 0, nationalDexAtStart, "National Dex at Start", "The National Dex from the start. Oak's\naides count National Dex entries.", NULL),
+    TOGGLE(SEC_MISC, 0, fastEggs, "Fast Egg Hatching", "Every Egg hatches in as few steps as\npossible (under 256).", NULL),
     TOGGLE(SEC_MISC, 0, lowerCaseNames, "Lower Case Pokémon Names", "“Pikachu” instead of “PIKACHU”.", NULL),
     TOGGLE(SEC_MISC, 0, randomCatchTutorial, "Random Catching Tutorial", "The old man in Viridian catches a\nrandom Pokémon.", NULL),
-    TOGGLE(SEC_MISC, 0, banLuckyEgg, "Ban Lucky Egg", "The Lucky Egg never appears anywhere.", NULL),
+    TOGGLE(SEC_MISC, 0, banLuckyEgg, "Ban Lucky Egg", "The Lucky Egg is never picked as a\nrandomized item.", NULL),
     TOGGLE(SEC_MISC, 0, balanceStaticLevels, "Balance Static Levels", "Revived fossils come back at level 30\ninstead of 5 (as in UPR FVX).", NULL),
     TOGGLE(SEC_MISC, 0, runWithoutShoes, "Run Without Running Shoes", "Hold B to run from the very start.", NULL),
-    TOGGLE(SEC_MISC, 0, reusableTMs, "Infinitely Reusable TMs", "TMs are never used up.", NULL),
-    TOGGLE(SEC_MISC, 0, forgettableTMs, "Forgettable HMs", "HM moves can be forgotten like\nany other move.", NULL),
-    TOGGLE(SEC_MISC, 0, noEVs, "No EVs From Pokémon", "Defeating Pokémon gives no EVs.", NULL),
+    TOGGLE(SEC_MISC, 0, reusableTMs, "Infinitely Reusable TMs", "TMs are never used up (they can still\nbe tossed, held and sold).", NULL),
+    TOGGLE(SEC_MISC, 0, forgettableTMs, "Forgettable HMs", "HM moves can be forgotten like any\nother move. Careful not to softlock!", NULL),
+    TOGGLE(SEC_MISC, 0, noEVs, "No EVs From Pokémon", "Defeated Pokémon give 0 EVs (vitamins\nand Power items still work).", NULL),
 
     // ---------------- Begin ----------------
     { .kind = RK_ACTION, .section = SEC_BEGIN, .label = CS("Begin Run"), .desc = CS("Start the adventure with these\nsettings. Press A.") },
@@ -618,6 +639,8 @@ static void DrawHeader(void)
     AddTextPrinterParameterized3(WIN_HEADER, FONT_NORMAL, 4, 1, sColAccent, TEXT_SKIP_DRAW, CS("="));
     AddTextPrinterParameterized3(WIN_HEADER, FONT_NORMAL, 14, 1, sColText, TEXT_SKIP_DRAW, sSectionNames[sSection]);
     StringCopy(buf, CS("SELECT Menu  START Begin"));
+    if (14 + GetStringWidth(FONT_NORMAL, sSectionNames[sSection], 0) + 6 > GetStringRightAlignXOffset(FONT_SMALL, buf, 236))
+        StringCopy(buf, CS("SELECT Menu"));
     AddTextPrinterParameterized3(WIN_HEADER, FONT_SMALL, GetStringRightAlignXOffset(FONT_SMALL, buf, 236), 3, sColDim, TEXT_SKIP_DRAW, buf);
     CopyWindowToVram(WIN_HEADER, COPYWIN_FULL);
 }
@@ -1097,6 +1120,7 @@ static void Task_Begin(u8 taskId)
         DestroyTask(taskId);
         FreeAllWindowBuffers();
         sInitialized = FALSE;
+        RH_ApplyPendingSettings();   // so the intro already uses them (instant text, player graphics)
         StartNewGameSceneFrlg();
     }
 }

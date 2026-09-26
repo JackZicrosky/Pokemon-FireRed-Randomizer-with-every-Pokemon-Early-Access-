@@ -11,6 +11,7 @@
 #include "constants/rh_shops.h"
 #include "constants/rh_special_shops.h"
 #include "data/rh_randomizer_tables.h"
+#include "data/rh_prices.h"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -76,52 +77,76 @@ static u16 RandomPoolItem(u32 salt, u32 a, u32 b, bool32 banBad)
     return ITEM_POTION;
 }
 
-static u16 RandomTM(u32 salt, u32 key)
-{
-    u16 item;
-    u32 tries;
-    for (tries = 0; tries < 8; tries++)
-    {
-        item = GetTMHMItemId(1 + RH_Hash(salt, key, 7 + tries) % NUM_TECHNICAL_MACHINES);
-        if (item != ITEM_NONE)
-            return item;
-    }
-    return ITEM_TM_TOXIC;
-}
-
 // ---------------------------------------------------------------------------
 // Field items (item balls + hidden items)
 // ---------------------------------------------------------------------------
+static bool32 FieldPoolItemOk(u16 it)
+{
+    return !ItemIsProtected(it) && GetItemTMHMIndex(it) == 0 && !RH_ItemBanned(it) && !(S->fieldBanBad && RH_ItemIsBad(it));
+}
+
+// k-th field item (in a keyed order) that passes "ok": different k never share an entry.
+static s32 RankedFieldEntry(u32 k, bool32 tms)
+{
+    u32 p, n = RH_FIELD_ITEM_COUNT, count = 0, accepted = 0;
+    for (p = 0; p < n; p++)
+    {
+        u16 it = sRhFieldItems[p].item;
+        accepted += tms ? (GetItemTMHMIndex(it) != 0 && !ItemIsProtected(it)) : FieldPoolItemOk(it);
+    }
+    if (accepted == 0)
+        return -1;
+    k %= accepted;
+    for (p = 0; p < n; p++)
+    {
+        u32 x = RH_Permute(SALT_FIELD_ITEM, p, n);
+        u16 it = sRhFieldItems[x].item;
+        if (tms ? (GetItemTMHMIndex(it) != 0 && !ItemIsProtected(it)) : FieldPoolItemOk(it))
+        {
+            if (count == k)
+                return x;
+            count++;
+        }
+    }
+    return -1;
+}
+
+// Rank of field entry i among the spots of its own kind (TM or not; every spot counts, so no two spots share a
+// rank even when their original item is banned).
+static u32 FieldRank(u32 i, bool32 tm)
+{
+    u32 p, r = 0;
+    for (p = 0; p < i; p++)
+    {
+        u16 it = sRhFieldItems[p].item;
+        if (!ItemIsProtected(it) && (GetItemTMHMIndex(it) != 0) == tm)
+            r++;
+    }
+    return r;
+}
+
 enum Item RH_FieldItem(enum Item item, u32 flag)
 {
     u32 i, x, guard;
+    bool32 isTM = GetItemTMHMIndex(item) != 0;
     if (!S->enabled || S->fieldItems == 0 || ItemIsProtected(item))
-    {
-        if (S->banLuckyEgg && item == ITEM_LUCKY_EGG && S->enabled && S->fieldItems)
-            return ITEM_RARE_CANDY;
         return item;
-    }
     for (i = 0; i < RH_FIELD_ITEM_COUNT; i++)
         if (sRhFieldItems[i].flag == flag)
             break;
     switch (S->fieldItems)
     {
-    case 1:     // shuffle the game's own items
+    case 1:     // shuffle the game's own items (FVX: TMs stay in TM spots, only their numbers move)
+    {
+        s32 e;
         if (i == RH_FIELD_ITEM_COUNT)
             return item;
-        x = i;
-        for (guard = 0; guard < 64; guard++)
-        {
-            u16 it;
-            x = RH_Permute(SALT_FIELD_ITEM, x, RH_FIELD_ITEM_COUNT);
-            it = sRhFieldItems[x].item;
-            if (!ItemIsProtected(it) && !RH_ItemBanned(it) && !(S->fieldBanBad && RH_ItemIsBad(it)))
-                return it;
-        }
-        return item;
-    case 3:     // random, every item about equally often
-        if (GetItemTMHMIndex(item) != 0)
-            return RandomTM(SALT_FIELD_ITEM, flag);
+        e = RankedFieldEntry(FieldRank(i, isTM), isTM);
+        return e >= 0 ? sRhFieldItems[e].item : item;
+    }
+    case 3:     // random, every item about equally often (TM spots: every TM before any repeats)
+        if (isTM)
+            return GetTMHMItemId(1 + RH_Permute(SALT_FIELD_ITEM, FieldRank(i, TRUE) % NUM_TECHNICAL_MACHINES, NUM_TECHNICAL_MACHINES));
         x = (i == RH_FIELD_ITEM_COUNT) ? flag % RH_ITEM_COUNT : i;
         for (guard = 0; guard < 128; guard++)
         {
@@ -131,8 +156,8 @@ enum Item RH_FieldItem(enum Item item, u32 flag)
         }
         return item;
     default:    // random
-        if (GetItemTMHMIndex(item) != 0)
-            return RandomTM(SALT_FIELD_ITEM, flag);
+        if (isTM)
+            return GetTMHMItemId(1 + RH_Permute(SALT_FIELD_ITEM, FieldRank(i, TRUE) % NUM_TECHNICAL_MACHINES, NUM_TECHNICAL_MACHINES));
         return RandomPoolItem(SALT_FIELD_ITEM, flag, 0, S->fieldBanBad);
     }
 }
@@ -234,6 +259,12 @@ static bool32 SpecialListKept(u32 list)
     return (list == RH_SPECIAL_EVO && S->shopGuaranteeEvo) || (list == RH_SPECIAL_TRAINING && S->shopGuaranteeX);
 }
 
+// Can every evolution item still be bought? (The evolution sellers keep their stock.)
+bool32 RH_EvoItemsForSale(void)
+{
+    return !S->enabled || !S->shopSpecial || S->shopGuaranteeEvo;
+}
+
 static bool32 IsKeptSpecialItem(u16 item)
 {
     u32 l, i;
@@ -248,20 +279,6 @@ static bool32 IsKeptSpecialItem(u16 item)
     return FALSE;
 }
 
-// Global slot index -> item: a keyed bijection over the item pool with a fixed predicate is injective,
-// so two slots can never get the same item.
-static u16 SpecialSlotItem(u32 globalSlot)
-{
-    u32 x = globalSlot % RH_ITEM_COUNT, guard;
-    for (guard = 0; guard < 2048; guard++)
-    {
-        x = RH_Permute(SALT_SPECIAL_SHOP, x, RH_ITEM_COUNT);
-        if (SpecialItemOk(sRhItems[x].item) && !IsKeptSpecialItem(sRhItems[x].item))
-            return sRhItems[x].item;
-    }
-    return ITEM_NONE;
-}
-
 // VAR_0x8004 = RH_SPECIAL_* shop id. Opens the shop; the script waits via waitstate.
 void RH_OpenSpecialShop(void)
 {
@@ -273,13 +290,32 @@ void RH_OpenSpecialShop(void)
     for (l = 0; l < list; l++)
         for (i = 0; sSpecialLists[l][i] != ITEM_NONE; i++)
             offset++;
-    for (i = 0; items[i] != ITEM_NONE && n < SPECIAL_MAX_ITEMS; i++)
+    if (S->enabled && S->shopSpecial && !SpecialListKept(list))
     {
-        u16 item = items[i];
-        if (S->enabled && S->shopSpecial && !SpecialListKept(list))
-            item = SpecialSlotItem(offset + i);
-        if (item != ITEM_NONE)
-            sSpecialBuffer[n++] = item;
+        // Global slot j gets the j-th allowed item of a keyed order of the item pool, so no item is ever sold by
+        // two special shops (FVX-style no-duplicates).
+        u32 len, accepted = 0, rank = 0, p;
+        for (len = 0; items[len] != ITEM_NONE && len < SPECIAL_MAX_ITEMS; len++)
+            ;
+        for (p = 0; p < RH_ITEM_COUNT; p++)
+            accepted += SpecialItemOk(sRhItems[p].item) && !IsKeptSpecialItem(sRhItems[p].item);
+        if (accepted != 0)
+        {
+            offset %= accepted;
+            for (p = 0; p < RH_ITEM_COUNT * 2 && n < len; p++)
+            {
+                u16 it = sRhItems[RH_Permute(SALT_SPECIAL_SHOP, p % RH_ITEM_COUNT, RH_ITEM_COUNT)].item;
+                if (!SpecialItemOk(it) || IsKeptSpecialItem(it))
+                    continue;
+                if (rank++ >= offset)
+                    sSpecialBuffer[n++] = it;
+            }
+        }
+    }
+    else
+    {
+        for (i = 0; items[i] != ITEM_NONE && n < SPECIAL_MAX_ITEMS; i++)
+            sSpecialBuffer[n++] = items[i];
     }
     sSpecialBuffer[n] = ITEM_NONE;
     CreatePokemartMenu(sSpecialBuffer);
@@ -290,15 +326,38 @@ void RH_OpenSpecialShop(void)
 // ---------------------------------------------------------------------------
 u32 RH_ItemPrice(u16 item, u32 vanilla)
 {
-    if (!S->enabled || S->shopItems == 0 || !S->shopBalancePrices || vanilla == 0)
+    if (!S->enabled || vanilla == 0)
         return vanilla;
-    if (IsEvolutionItem(item))
-        return 3000;
-    if (vanilla < 100)
-        return 100;
-    if (vanilla > 20000)
-        return 20000;
+    if (S->shopAddCheapRareCandy && item == ITEM_RARE_CANDY)
+        return 10;                                           // FVX "Add Cheap Rare Candies"
+    if (!S->shopBalancePrices)
+        return vanilla;
+    if (item < ARRAY_COUNT(sRhBalancedPrices) && sRhBalancedPrices[item] != 0)
+        return sRhBalancedPrices[item];                      // FVX's balanced price table
     return vanilla;
+}
+
+// Celadon Dept. Store counters that FVX randomizes (4F stones, 5F X items and vitamins). VAR_0x8004 = counter.
+extern const u16 CeladonCity_DepartmentStore_4F_Items[], CeladonCity_DepartmentStore_5F_XItems[], CeladonCity_DepartmentStore_5F_Vitamins[];
+static EWRAM_DATA u16 sCounterBuffer[32] = {0};
+
+void RH_OpenRandomizedPokemart(void)
+{
+    static const u16 *const sCounters[] = { CeladonCity_DepartmentStore_4F_Items, CeladonCity_DepartmentStore_5F_XItems, CeladonCity_DepartmentStore_5F_Vitamins };
+    u32 which = gSpecialVar_0x8004 % ARRAY_COUNT(sCounters), i, n = 0, k;
+    const u16 *items = sCounters[which];
+    for (i = 0; items[i] != ITEM_NONE && n < ARRAY_COUNT(sCounterBuffer) - 1; i++)
+    {
+        u16 it = RH_ShopItem(items[i], RH_MART_COUNT + which, i);
+        for (k = 0; k < n && sCounterBuffer[k] != it; k++)
+            ;
+        if (k == n)
+            sCounterBuffer[n++] = it;
+    }
+    if (S->enabled && S->shopAddCheapRareCandy && n < ARRAY_COUNT(sCounterBuffer) - 1)
+        sCounterBuffer[n++] = ITEM_RARE_CANDY;
+    sCounterBuffer[n] = ITEM_NONE;
+    CreatePokemartMenu(sCounterBuffer);
 }
 
 // ---------------------------------------------------------------------------

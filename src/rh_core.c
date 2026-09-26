@@ -83,6 +83,16 @@ static u32 Mix(u32 h)
     return h;
 }
 
+// Hash of every setting: cache key for results that depend on many options.
+u32 RH_SettingsHash(void)
+{
+    const u8 *b = (const u8 *)S;
+    u32 i, h = 2166136261u;
+    for (i = 0; i < sizeof(struct RhSettings); i++)
+        h = (h ^ b[i]) * 16777619u;
+    return h;
+}
+
 u32 RH_Hash(u32 salt, u32 a, u32 b)
 {
     return Mix(S->seed ^ Mix(salt * 0x9E3779B1 + a * 0x85EBCA77 + b * 0xC2B2AE3D + 0x27D4EB2F));
@@ -231,16 +241,65 @@ bool32 RH_GenMoveData(u16 move, u32 gen, struct RhMoveData *out)
 
 u32 RH_StatsGen(void)
 {
-    if (S->updateBaseStatsGen)
+    if (S->enabled && S->updateBaseStatsGen)
         return S->updateBaseStatsGen;
     return S->mechanicsGen ? S->mechanicsGen : 9;
 }
 
 u32 RH_MovesGen(void)
 {
-    if (S->updateMovesGen)
+    if (S->enabled && S->updateMovesGen)
         return S->updateMovesGen;
     return S->mechanicsGen ? S->mechanicsGen : 9;
+}
+
+// Different Pokemon (forms count once) this species evolves into in the base game, among the allowed Pokemon.
+static u32 DistinctVanillaTargets(u16 species)
+{
+    const struct Evolution *e = GetSpeciesEvolutionsVanilla(species);
+    u16 seen[8];
+    u32 i, j, n = 0;
+    for (i = 0; e != NULL && e[i].method != EVOLUTIONS_END && n < ARRAY_COUNT(seen); i++)
+    {
+        u16 base;
+        s32 idx;
+        if (e[i].method == EVO_NONE || e[i].targetSpecies == SPECIES_NONE)
+            continue;
+        idx = RH_PoolIndexOf(e[i].targetSpecies);
+        if (idx < 0 || !RH_PoolAllowed(idx))
+            continue;
+        base = GET_BASE_SPECIES_ID(e[i].targetSpecies);
+        for (j = 0; j < n && seen[j] != base; j++)
+            ;
+        if (j == n)
+            seen[n++] = base;
+    }
+    return n;
+}
+
+// Root for "Follow Evolutions" traits: like the family root, but a split evolution (Eeveelutions, Bellossom,
+// Slowking, Gallade, Shedinja...) starts its own branch, as in FVX. Memoized: it's used by every type lookup.
+struct TraitRootMemo { u16 species; u16 root; u8 pool; };
+static EWRAM_DATA struct TraitRootMemo sTraitRootMemo[64] = {0};
+
+u16 RH_TraitRoot(u16 species)
+{
+    struct TraitRootMemo *m = &sTraitRootMemo[species & 63];
+    u16 s = species;
+    u32 g;
+    if (m->species == species && m->pool == S->speciesPool + 1)
+        return m->root;
+    for (g = 0; g < 3; g++)
+    {
+        u16 pre = RH_PreEvo(s);
+        if (pre == SPECIES_NONE || DistinctVanillaTargets(pre) > 1)
+            break;
+        s = pre;
+    }
+    m->species = species;
+    m->root = s;
+    m->pool = S->speciesPool + 1;
+    return s;
 }
 
 u16 RH_FamilyRoot(u16 species)
@@ -329,8 +388,6 @@ static bool32 FilterOk(const struct RhPoolMon *m, const struct RhFilter *f)
     {
         return FALSE;
     }
-    if (S->leagueUnique && RH_IsLeagueReserved(m->species))
-        return FALSE;                                        // kept for the Elite Four / Champion
     if (f->legend == 1 && m->legendary)
         return FALSE;
     if (f->legend == 2 && !m->legendary)
@@ -387,13 +444,17 @@ u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash)
 // type, stage, exclusion and legendary rules (in that order) rather than failing.
 u16 RH_PickSpecies(struct RhFilter *f, u32 hash, u16 similarTo)
 {
+    return RH_PickSpeciesNearBst(f, hash, similarTo != SPECIES_NONE ? RH_VanillaBST(similarTo) : 0);
+}
+
+u16 RH_PickSpeciesNearBst(struct RhFilter *f, u32 hash, u32 bst)
+{
     static const u8 sWindows[] = { 10, 20, 35 };
     u32 i;
     u16 result;
     u16 keepMin = f->minBst, keepMax = f->maxBst;
-    if (similarTo != SPECIES_NONE)
+    if (bst != 0)
     {
-        u32 bst = RH_VanillaBST(similarTo);
         for (i = 0; i < ARRAY_COUNT(sWindows); i++)
         {
             f->minBst = max(keepMin, bst * (100 - sWindows[i]) / 100);

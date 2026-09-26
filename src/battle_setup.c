@@ -562,9 +562,11 @@ void StartMarowakBattle(void)
 
     if (CheckBagHasItem(ITEM_SILPH_SCOPE, 1))
     {
-        u32 personality = GetMonPersonality(SPECIES_MAROWAK, MON_FEMALE, NATURE_SERIOUS, RANDOM_UNOWN_LETTER);
+        enum Species species = RH_StaticSpecies(SPECIES_MAROWAK);
+        u32 personality = GetMonPersonality(species, MON_FEMALE, NATURE_SERIOUS, RANDOM_UNOWN_LETTER);
 
-        CreateMonWithIVsPersonality(&gParties[B_TRAINER_OPPONENT_A][0], SPECIES_MAROWAK, 30, 31, personality);
+        CreateMonWithIVsPersonality(&gParties[B_TRAINER_OPPONENT_A][0], species, RH_StaticLevel(30), 31, personality);
+        GiveMonInitialMoveset(&gParties[B_TRAINER_OPPONENT_A][0]);
     }
 
     CreateBattleStartTask(GetWildBattleTransition(), 0);
@@ -593,7 +595,7 @@ void BattleSetup_StartLegendaryBattle(void)
 
     if (!RH_StaticUsesLegendMusic(GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_SPECIES), TRUE))
         CreateBattleStartTask(GetWildBattleTransition(), 0);   // randomized into a regular Pokemon ("Fix Music")
-    else switch (GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_SPECIES))
+    else switch (RH_LegendMusicSpecies(GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_SPECIES)))
     {
     case SPECIES_GROUDON:
     case SPECIES_GROUDON_PRIMAL:

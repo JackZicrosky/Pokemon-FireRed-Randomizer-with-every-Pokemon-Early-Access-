@@ -1991,10 +1991,14 @@ static void LoadTrainerPic(u16 whichPic, u16 tileOffset)
     switch (whichPic)
     {
     case MALE_PLAYER_PIC:
+        if (RH_LoadOakSpeechPlayerPic(MALE, (void *)VRAM + 0x600 + tileOffset, BG_PLTT_ID(4)))
+            break;
         LoadPalette(sOakSpeech_Red_Pal, BG_PLTT_ID(4), sizeof(sOakSpeech_Red_Pal));
         DecompressDataWithHeaderVram(sOakSpeech_Red_Tiles, (void *)VRAM + 0x600 + tileOffset);
         break;
     case FEMALE_PLAYER_PIC:
+        if (RH_LoadOakSpeechPlayerPic(FEMALE, (void *)VRAM + 0x600 + tileOffset, BG_PLTT_ID(4)))
+            break;
         LoadPalette(sOakSpeech_Leaf_Pal, BG_PLTT_ID(4), sizeof(sOakSpeech_Leaf_Pal));
         DecompressDataWithHeaderVram(sOakSpeech_Leaf_Tiles, (void *)VRAM + 0x600 + tileOffset);
         break;

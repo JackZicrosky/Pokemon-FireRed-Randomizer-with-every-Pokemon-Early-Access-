@@ -363,10 +363,14 @@ static inline const u64 GetTrainerAIFlagsFromId(u16 trainerId)
 
 // Romhack custom player graphics (src/rh_player_graphics.c)
 const struct TrainerPicInfo *RH_PlayerTrainerPicInfo(enum TrainerPicID trainerPic);
+bool32 RH_PlayerGraphicsReplaces(u32 gender);
+bool32 RH_LoadOakSpeechPlayerPic(u32 gender, void *vram, u32 paletteOffset);
 
 static inline const struct TrainerPicInfo *GetTrainerPicInfo(enum TrainerPicID trainerPic)
 {
-    if (gSaveBlock3Ptr->rhSettings.playerGraphics && (trainerPic == TRAINER_PIC_RED || trainerPic == TRAINER_PIC_LEAF))
+    if (gSaveBlock3Ptr->rhSettings.playerGraphics
+     && ((trainerPic == TRAINER_PIC_RED && RH_PlayerGraphicsReplaces(MALE))
+      || (trainerPic == TRAINER_PIC_LEAF && RH_PlayerGraphicsReplaces(FEMALE))))
         return RH_PlayerTrainerPicInfo(trainerPic);
     return &gTrainerPicInfo[trainerPic];
 }

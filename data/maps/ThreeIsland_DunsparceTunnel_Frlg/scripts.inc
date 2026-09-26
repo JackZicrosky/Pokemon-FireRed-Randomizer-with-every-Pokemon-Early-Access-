@@ -4,7 +4,7 @@ ThreeIsland_DunsparceTunnel_Frlg_MapScripts::
 
 ThreeIsland_DunsparceTunnel_OnTransition::
 	setworldmapflag FLAG_WORLD_MAP_THREE_ISLAND_DUNSPARCE_TUNNEL
-	specialvar VAR_RESULT, IsNationalPokedexEnabled
+	specialvar VAR_RESULT, RH_IsPostgameNationalDex
 	copyvar VAR_0x8008, VAR_RESULT
 	call_if_eq VAR_0x8008, TRUE, ThreeIsland_DunsparceTunnel_EventScript_SetLayoutDugOut
 	call_if_eq VAR_0x8008, FALSE, ThreeIsland_DunsparceTunnel_EventScript_MoveProspectorToWall
@@ -23,7 +23,7 @@ ThreeIsland_DunsparceTunnel_EventScript_Prospector::
 	lock
 	faceplayer
 	goto_if_set FLAG_GOT_NUGGET_FROM_DUNSPARCE_TUNNEL, ThreeIsland_DunsparceTunnel_EventScript_ProspectorAlreadyGaveNugget
-	specialvar VAR_RESULT, IsNationalPokedexEnabled
+	specialvar VAR_RESULT, RH_IsPostgameNationalDex
 	goto_if_eq VAR_RESULT, TRUE, ThreeIsland_DunsparceTunnel_EventScript_ProspectorStruckGold
 	msgbox ThreeIsland_DunsparceTunnel_Text_ProspectingForGold
 	closemessage

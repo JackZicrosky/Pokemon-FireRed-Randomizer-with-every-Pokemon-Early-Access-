@@ -3,6 +3,8 @@
 #include "data.h"
 #include "event_object_movement.h"
 #include "sprite.h"
+#include "palette.h"
+#include "decompress.h"
 #include "rh_player_palettes.h"
 #include "constants/event_objects.h"
 #include "constants/trainers.h"
@@ -12,6 +14,7 @@ struct RhPlayerPack
     const struct SpriteFrameImage *normal, *surf, *bike, *fish, *item, *itemBike;
     const u32 *front;
     const u16 *frontPal;
+    const u32 *oak;
     const u8 *back;
     const u16 *backPal;
 };
@@ -37,6 +40,18 @@ static s32 KindOf(u16 graphicsId)
     }
 }
 
+static bool32 IsGirlGraphics(u16 graphicsId)
+{
+    switch (graphicsId)
+    {
+    case OBJ_EVENT_GFX_GREEN_NORMAL: case OBJ_EVENT_GFX_GREEN_BIKE: case OBJ_EVENT_GFX_GREEN_SURF:
+    case OBJ_EVENT_GFX_GREEN_FIELD_MOVE: case OBJ_EVENT_GFX_GREEN_FISH: case OBJ_EVENT_GFX_GREEN_VS_SEEKER:
+    case OBJ_EVENT_GFX_GREEN_VS_SEEKER_BIKE:
+        return TRUE;
+    }
+    return FALSE;
+}
+
 static const struct RhPlayerPack *CurrentPack(void)
 {
     u32 i = gSaveBlock3Ptr->rhSettings.playerGraphics;
@@ -45,12 +60,46 @@ static const struct RhPlayerPack *CurrentPack(void)
     return &sRhPlayerPacks[i - 1];
 }
 
+// "Character to Replace": 0 = Auto (whichever character the player picked), 1 = Boy, 2 = Girl.
+static u32 ReplacedGender(void)
+{
+    u32 r = gSaveBlock3Ptr->rhSettings.playerGraphicsReplace;
+    if (r == 0 || r > 2)
+        return gSaveBlock2Ptr->playerGender != MALE ? FEMALE : MALE;
+    return r == 2 ? FEMALE : MALE;
+}
+
+bool32 RH_PlayerGraphicsIsGirl(void)
+{
+    return ReplacedGender() == FEMALE;
+}
+
+// Is the given player character (MALE / FEMALE) replaced by a graphics pack?
+bool32 RH_PlayerGraphicsReplaces(u32 gender)
+{
+    return CurrentPack() != NULL && (gender != MALE) == RH_PlayerGraphicsIsGirl();
+}
+
+// Oak's intro pics (8bpp BG, 64x96): TRUE if the pack's pic was loaded.
+bool32 RH_LoadOakSpeechPlayerPic(u32 gender, void *vram, u32 paletteOffset)
+{
+    const struct RhPlayerPack *pack = CurrentPack();
+    u32 r = gSaveBlock3Ptr->rhSettings.playerGraphicsReplace;
+    // In Oak's intro the choice isn't made yet: with Auto, both characters show the pack.
+    if (pack == NULL || (r != 0 && (gender != MALE) != (r == 2)))
+        return FALSE;
+    LoadPalette(pack->frontPal, paletteOffset, PLTT_SIZE_4BPP);
+    DecompressDataWithHeaderVram(pack->oak, vram);
+    return TRUE;
+}
+
 const struct ObjectEventGraphicsInfo *RH_PlayerObjectGraphics(u16 graphicsId, const struct ObjectEventGraphicsInfo *vanilla)
 {
     const struct RhPlayerPack *pack = CurrentPack();
     s32 kind = KindOf(graphicsId);
+    bool32 isGirl = IsGirlGraphics(graphicsId);
     struct ObjectEventGraphicsInfo *info;
-    if (pack == NULL || kind < 0 || vanilla == NULL)
+    if (pack == NULL || kind < 0 || vanilla == NULL || isGirl != RH_PlayerGraphicsIsGirl())
         return NULL;
     info = &sPlayerGfx[kind];
     *info = *vanilla;

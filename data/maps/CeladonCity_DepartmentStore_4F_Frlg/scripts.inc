@@ -18,7 +18,8 @@ CeladonCity_DepartmentStore_4F_EventScript_Clerk::
 	faceplayer
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart CeladonCity_DepartmentStore_4F_Items
+	setvar VAR_0x8004, 0
+	special RH_OpenRandomizedPokemart
 	msgbox gText_PleaseComeAgain
 	release
 	end

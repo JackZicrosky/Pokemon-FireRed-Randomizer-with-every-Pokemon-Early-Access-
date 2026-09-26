@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "main.h"
 #include "event_data.h"
 #include "field_effect.h"
@@ -473,7 +474,10 @@ void DrawMultichoiceMenuInternal(u8 left, u8 top, u8 multichoiceId, bool8 ignore
 
 static void DrawMultichoiceMenu(u8 left, u8 top, u8 multichoiceId, bool8 ignoreBPress, u8 cursorPos)
 {
-    DrawMultichoiceMenuInternal(left, top, multichoiceId, ignoreBPress, cursorPos, sMultichoiceLists[multichoiceId].list, sMultichoiceLists[multichoiceId].count);
+    const struct MenuAction *list = sMultichoiceLists[multichoiceId].list;
+    if (multichoiceId == MULTI_GAME_CORNER_POKEMON_PRIZES)
+        list = RH_GameCornerPrizeList(list, sMultichoiceLists[multichoiceId].count);   // randomized prize names
+    DrawMultichoiceMenuInternal(left, top, multichoiceId, ignoreBPress, cursorPos, list, sMultichoiceLists[multichoiceId].count);
 }
 
 #define tLeft           data[0]

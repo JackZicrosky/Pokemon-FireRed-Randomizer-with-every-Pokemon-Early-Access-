@@ -58,6 +58,8 @@ void RH_OpenMart(void)
     for (i = 0; themed[i].item != ITEM_NONE; i++)
         if (badges >= themed[i].minBadges)
             count = Append(count, RH_ShopItem(themed[i].item, mart, 64 + i));
+    if (gSaveBlock3Ptr->rhSettings.enabled && gSaveBlock3Ptr->rhSettings.shopAddCheapRareCandy)
+        count = Append(count, ITEM_RARE_CANDY);             // FVX "Add Cheap Rare Candies"
     sRhMartBuffer[count] = ITEM_NONE;
 
     CreatePokemartMenu(sRhMartBuffer);

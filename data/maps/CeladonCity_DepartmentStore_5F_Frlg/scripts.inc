@@ -18,7 +18,8 @@ CeladonCity_DepartmentStore_5F_EventScript_ClerkXItems::
 	faceplayer
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart CeladonCity_DepartmentStore_5F_XItems
+	setvar VAR_0x8004, 1
+	special RH_OpenRandomizedPokemart
 	msgbox gText_PleaseComeAgain
 	release
 	end
@@ -41,7 +42,8 @@ CeladonCity_DepartmentStore_5F_EventScript_ClerkVitamins::
 	faceplayer
 	message gText_HowMayIServeYou
 	waitmessage
-	pokemart CeladonCity_DepartmentStore_5F_Vitamins
+	setvar VAR_0x8004, 2
+	special RH_OpenRandomizedPokemart
 	msgbox gText_PleaseComeAgain
 	release
 	end

@@ -230,7 +230,7 @@ static void BuildChart(void)
     {
         u8 backup[NT][NT];
         memcpy(backup, sChart.eff, sizeof(backup));
-        for (i = 0; i < 8; i++)
+        for (i = 0; i < 32; i++)
         {
             if (RandomizeChart(sChart.eff, S->typeChart == 2))
                 break;

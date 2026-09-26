@@ -21,8 +21,9 @@ SaffronCity_Dojo_EventScript_HitmonleeBall::
 	lock
 	faceplayer
 	goto_if_set FLAG_GOT_HITMON_FROM_DOJO, SaffronCity_Dojo_EventScript_AlreadyGotHitmon
-	showmonpic SPECIES_HITMONLEE, 10, 3
 	setvar VAR_TEMP_1, SPECIES_HITMONLEE
+	special RH_BufferStaticSpecies
+	showmonpic VAR_RESULT, 10, 3
 	applymovement LOCALID_KARATE_MASTER, Common_Movement_WalkInPlaceFasterUp
 	waitmovement 0
 	textcolor NPC_TEXT_COLOR_MALE
@@ -42,8 +43,9 @@ SaffronCity_Dojo_EventScript_HitmonchanBall::
 	lock
 	faceplayer
 	goto_if_set FLAG_GOT_HITMON_FROM_DOJO, SaffronCity_Dojo_EventScript_AlreadyGotHitmon
-	showmonpic SPECIES_HITMONCHAN, 10, 3
 	setvar VAR_TEMP_1, SPECIES_HITMONCHAN
+	special RH_BufferStaticSpecies
+	showmonpic VAR_RESULT, 10, 3
 	applymovement LOCALID_KARATE_MASTER, Common_Movement_WalkInPlaceFasterUp
 	waitmovement 0
 	textcolor NPC_TEXT_COLOR_MALE
@@ -65,7 +67,7 @@ SaffronCity_Dojo_EventScript_GiveHitmon::
 
 SaffronCity_Dojo_EventScript_ReceivedHitmonParty::
 	removeobject VAR_LAST_TALKED
-	bufferspeciesname STR_VAR_1, VAR_TEMP_1
+	special RH_BufferStaticSpecies
 	playfanfare MUS_LEVEL_UP
 	message SaffronCity_Dojo_Text_ReceivedMonFromKarateMaster
 	waitmessage
@@ -80,7 +82,7 @@ SaffronCity_Dojo_EventScript_ReceivedHitmonParty::
 
 SaffronCity_Dojo_EventScript_ReceivedHitmonPC::
 	removeobject VAR_LAST_TALKED
-	bufferspeciesname STR_VAR_1, VAR_TEMP_1
+	special RH_BufferStaticSpecies
 	playfanfare MUS_LEVEL_UP
 	message SaffronCity_Dojo_Text_ReceivedMonFromKarateMaster
 	waitmessage
@@ -225,7 +227,7 @@ SaffronCity_Dojo_Text_HitoshiPostBattle::
 
 SaffronCity_Dojo_Text_YouWantHitmonlee::
 	.string "You want the hard-kicking\n"
-	.string "HITMONLEE?$"
+	.string "{STR_VAR_1}?$"
 
 SaffronCity_Dojo_Text_ReceivedMonFromKarateMaster::
 	.string "{PLAYER} received the {STR_VAR_1}\n"
@@ -233,7 +235,7 @@ SaffronCity_Dojo_Text_ReceivedMonFromKarateMaster::
 
 SaffronCity_Dojo_Text_YouWantHitmonchan::
 	.string "You want the piston-punching\n"
-	.string "HITMONCHAN?$"
+	.string "{STR_VAR_1}?$"
 
 SaffronCity_Dojo_Text_ReceivedMonFromKarateMaster2::
 	.string "{PLAYER}は　カラテ　だいおう　から\n"

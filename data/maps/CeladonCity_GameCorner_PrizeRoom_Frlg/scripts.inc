@@ -103,7 +103,7 @@ CeladonCity_GameCorner_PrizeRoom_EventScript_Porygon::
 	end
 
 CeladonCity_GameCorner_PrizeRoom_EventScript_ConfirmPrizeMon::
-	bufferspeciesname STR_VAR_1, VAR_TEMP_1
+	special RH_BufferStaticSpecies
 	msgbox CeladonCity_GameCorner_PrizeRoom_Text_YouWantPrize, MSGBOX_YESNO
 	goto_if_eq VAR_RESULT, NO, CeladonCity_GameCorner_PrizeRoom_EventScript_EndPrizeExchange
 	checkcoins VAR_RESULT
@@ -207,7 +207,7 @@ CeladonCity_GameCorner_PrizeRoom_EventScript_NotEnoughCoins::
 CeladonCity_GameCorner_PrizeRoom_EventScript_ReceivedMonParty::
 	removecoins VAR_TEMP_2
 	updatecoinsbox
-	bufferspeciesname STR_VAR_1, VAR_TEMP_1
+	special RH_BufferStaticSpecies
 	playfanfare MUS_LEVEL_UP
 	message gText_PlayerObtainedTheMon
 	waitmessage
@@ -220,7 +220,7 @@ CeladonCity_GameCorner_PrizeRoom_EventScript_ReceivedMonParty::
 CeladonCity_GameCorner_PrizeRoom_EventScript_ReceivedMonPC::
 	removecoins VAR_TEMP_2
 	updatecoinsbox
-	bufferspeciesname STR_VAR_1, VAR_TEMP_1
+	special RH_BufferStaticSpecies
 	playfanfare MUS_LEVEL_UP
 	message gText_PlayerObtainedTheMon
 	waitmessage
@@ -262,35 +262,35 @@ CeladonCity_GameCorner_PrizeRoom_EventScript_ChoosePrizeTM::
 CeladonCity_GameCorner_PrizeRoom_EventScript_TM13::
 	setvar VAR_TEMP_1, ITEM_TM13
 	setvar VAR_TEMP_2, 4000
-	buffermovename STR_VAR_2, MOVE_ICE_BEAM
+	special RH_BufferTMMoveFromItem
 	goto CeladonCity_GameCorner_PrizeRoom_EventScript_ConfirmPrizeTM
 	end
 
 CeladonCity_GameCorner_PrizeRoom_EventScript_TM23::
 	setvar VAR_TEMP_1, ITEM_TM23
 	setvar VAR_TEMP_2, 3500
-	buffermovename STR_VAR_2, MOVE_IRON_TAIL
+	special RH_BufferTMMoveFromItem
 	goto CeladonCity_GameCorner_PrizeRoom_EventScript_ConfirmPrizeTM
 	end
 
 CeladonCity_GameCorner_PrizeRoom_EventScript_TM24::
 	setvar VAR_TEMP_1, ITEM_TM24
 	setvar VAR_TEMP_2, 4000
-	buffermovename STR_VAR_2, MOVE_THUNDERBOLT
+	special RH_BufferTMMoveFromItem
 	goto CeladonCity_GameCorner_PrizeRoom_EventScript_ConfirmPrizeTM
 	end
 
 CeladonCity_GameCorner_PrizeRoom_EventScript_TM30::
 	setvar VAR_TEMP_1, ITEM_TM30
 	setvar VAR_TEMP_2, 4500
-	buffermovename STR_VAR_2, MOVE_SHADOW_BALL
+	special RH_BufferTMMoveFromItem
 	goto CeladonCity_GameCorner_PrizeRoom_EventScript_ConfirmPrizeTM
 	end
 
 CeladonCity_GameCorner_PrizeRoom_EventScript_TM35::
 	setvar VAR_TEMP_1, ITEM_TM35
 	setvar VAR_TEMP_2, 4000
-	buffermovename STR_VAR_2, MOVE_FLAMETHROWER
+	special RH_BufferTMMoveFromItem
 	goto CeladonCity_GameCorner_PrizeRoom_EventScript_ConfirmPrizeTM
 	end
 

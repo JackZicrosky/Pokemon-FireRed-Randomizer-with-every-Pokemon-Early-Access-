@@ -91,7 +91,8 @@ extern const u8 PokedexRating_Text_Complete[];
 
 u16 GetFrlgPokedexCount(void)
 {
-    if (gSpecialVar_0x8004 == 0)
+    // "National Dex at Start": Oak's aides count the whole National Dex (the random Pokemon aren't Kanto's)
+    if (gSpecialVar_0x8004 == 0 && !gSaveBlock3Ptr->rhSettings.nationalDexAtStart)
     {
         gSpecialVar_0x8005 = GetKantoPokedexCount(FLAG_GET_SEEN);
         gSpecialVar_0x8006 = GetKantoPokedexCount(FLAG_GET_CAUGHT);

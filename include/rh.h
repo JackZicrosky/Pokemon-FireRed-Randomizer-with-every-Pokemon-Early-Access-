@@ -36,6 +36,7 @@ void RH_OnNewGame(void);
 enum Species RH_ModifyWildSpecies(const struct WildPokemonInfo *info, u32 slot, enum WildPokemonArea area, u32 level);
 u8 RH_ModifyWildLevel(u8 level);
 u8 RH_CatchRate(enum Species species, u8 vanilla);
+#define RH_CatchRateOf(species) RH_CatchRate((species), gSpeciesInfo[(species)].catchRate)
 bool32 RH_GuaranteedCatch(void);
 enum Item RH_WildHeldItem(enum Species species, bool32 rare, enum Item vanilla);
 
@@ -49,6 +50,10 @@ bool32 RH_IsStaticGift(u16 species);
 u8 RH_StaticLevel(u8 level);
 u8 RH_BalanceStaticLevel(u16 species, u8 level);
 bool32 RH_StaticUsesLegendMusic(u16 newSpecies, bool32 vanillaLegendMusic);
+u16 RH_LegendMusicSpecies(u16 newSpecies);
+enum Species RH_RoamerSpecies(enum Species species);
+struct MenuAction;
+const struct MenuAction *RH_GameCornerPrizeList(const struct MenuAction *vanilla, u32 count);
 enum Species RH_TradeSpecies(u32 tradeId, enum Species species, bool32 requested);
 void RH_ModifyTradeMon(struct Pokemon *mon, u32 tradeId);
 u16 RH_CatchTutorialSpecies(u16 vanilla);
@@ -66,6 +71,7 @@ enum Ability RH_SpeciesAbility(enum Species species, u32 slot, enum Ability vani
 u32 RH_SpeciesBaseStat(enum Species species, u32 stat, u32 vanilla);
 enum GrowthRate RH_SpeciesGrowthRate(enum Species species, enum GrowthRate vanilla);
 const struct LevelUpMove *RH_LevelUpLearnset(enum Species species, const struct LevelUpMove *vanilla);
+const u16 *RH_EggMoves(enum Species species, const u16 *vanilla);
 const struct Evolution *RH_Evolutions(enum Species species, const struct Evolution *vanilla);
 bool32 RH_CanLearnTeachable(enum Species species, enum Move move, bool32 (*vanillaCheck)(enum Species, enum Move));
 const u8 *RH_SpeciesName(const u8 *name);

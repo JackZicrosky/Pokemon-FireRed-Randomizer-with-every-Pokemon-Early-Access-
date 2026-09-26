@@ -15,6 +15,7 @@ enum RhSalt
     SALT_TYPE_CHART, SALT_MOVE_NAME, SALT_TRAINER_NAME, SALT_TRAINER_CLASS, SALT_NICKNAME, SALT_OT, SALT_IV,
     SALT_TUTOR, SALT_PICKUP, SALT_SPECIAL_SHOP, SALT_EXTRA_MON, SALT_RIVAL, SALT_LEAGUE, SALT_ADDED_STATS,
     SALT_EVO_LEVEL, SALT_WILD_ITEM, SALT_CATCH_ALL, SALT_BATTLE_STYLE, SALT_STARTER_ITEM, SALT_STARTER_TYPE,
+    SALT_EVO_RANK, SALT_STATIC_SLOT, SALT_TRADE_SLOT, SALT_TRAINER_SHINY, SALT_EGG_MOVES, SALT_MOVE_CAT2,
 };
 
 u32 RH_Hash(u32 salt, u32 a, u32 b);
@@ -28,6 +29,7 @@ u16 RH_PoolSpecies(u32 index);
 s32 RH_PoolIndexOf(u16 species);
 bool32 RH_PoolAllowed(u32 index);            // respects the Pokemon Pool setting (never megas)
 u16 RH_FamilyRoot(u16 species);
+u16 RH_TraitRoot(u16 species);             // family root, but split evolutions start their own branch
 u16 RH_PreEvo(u16 species);                  // direct pre-evolution (vanilla), SPECIES_NONE if basic
 struct RhMoveData { u8 power, accuracy, pp, type, category; };
 const u8 *RH_GenBaseStats(u16 species, u32 gen);             // HP, Atk, Def, Speed, SpAtk, SpDef or NULL
@@ -36,6 +38,8 @@ u32 RH_StatsGen(void);                       // generation whose base stats are 
 u32 RH_MovesGen(void);                       // generation whose move data is used (1-9)
 bool32 RH_IsLegendary(u16 species);
 u32 RH_VanillaBST(u16 species);
+u32 RH_SettingsHash(void);
+bool32 RH_EvoItemsForSale(void);             // evolution sellers keep every evolution item                   // hash of all settings (cache key)
 u32 RH_SpeciesStage(u16 species);            // 1 = basic
 u32 RH_SpeciesChain(u16 species);            // stages in its vanilla line
 bool32 RH_SpeciesHasType(u16 species, u8 type);
@@ -63,6 +67,7 @@ struct RhFilter
 u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash);
 bool32 RH_FilterAccepts(const struct RhFilter *f, u32 poolIndex);
 u16 RH_PickSpecies(struct RhFilter *f, u32 hash, u16 similarTo);   // relaxes constraints when nothing fits
+u16 RH_PickSpeciesNearBst(struct RhFilter *f, u32 hash, u32 bst);  // same, around a base stat total (0 = any)
 void RH_FilterExclude(struct RhFilter *f, u16 species);
 
 u16 RH_EvolveOnce(u16 species, u32 salt);
@@ -70,7 +75,9 @@ u16 RH_EvolveTimes(u16 species, u32 times);
 u16 RH_FullyEvolve(u16 species);
 s32 RH_ApplyPercent(s32 value, s16 percent);   // value * (100 + percent) / 100, min 1
 
-bool32 RH_IsLeagueReserved(u16 species);     // "Pokemon League Has Unique Pokemon"
+bool32 RH_IsLeagueReserved(u16 species);
+u32 RH_InGameTradeCount(void);
+void RH_InGameTradeSpecies(u32 id, u16 *given, u16 *requested);     // "Pokemon League Has Unique Pokemon"
 
 // Items --------------------------------------------------------------------
 bool32 RH_ItemIsBad(u16 item);

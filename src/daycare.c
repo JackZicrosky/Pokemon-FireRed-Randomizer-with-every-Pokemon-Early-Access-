@@ -1033,7 +1033,7 @@ void CreateEgg(struct Pokemon *mon, enum Species species, bool8 setHotSpringsLoc
     language = LANGUAGE_JAPANESE;
     SetMonData(mon, MON_DATA_POKEBALL, &ball);
     SetMonData(mon, MON_DATA_NICKNAME, sJapaneseEggNickname);
-    u8 rhEggCycles = gSaveBlock3Ptr->rhSettings.fastEggs ? 1 : gSpeciesInfo[species].eggCycles;
+    u8 rhEggCycles = gSaveBlock3Ptr->rhSettings.fastEggs ? 0 : gSpeciesInfo[species].eggCycles;   // FVX: hatches at the next egg-cycle check
     SetMonData(mon, MON_DATA_FRIENDSHIP, &rhEggCycles);
     SetMonData(mon, MON_DATA_MET_LEVEL, &metLevel);
     SetMonData(mon, MON_DATA_LANGUAGE, &language);
@@ -1058,7 +1058,7 @@ static void SetInitialEggData(struct Pokemon *mon, enum Species species, struct 
     metLevel = 0;
     language = LANGUAGE_JAPANESE;
     SetMonData(mon, MON_DATA_NICKNAME, sJapaneseEggNickname);
-    u8 rhEggCycles = gSaveBlock3Ptr->rhSettings.fastEggs ? 1 : gSpeciesInfo[species].eggCycles;
+    u8 rhEggCycles = gSaveBlock3Ptr->rhSettings.fastEggs ? 0 : gSpeciesInfo[species].eggCycles;   // FVX: hatches at the next egg-cycle check
     SetMonData(mon, MON_DATA_FRIENDSHIP, &rhEggCycles);
     SetMonData(mon, MON_DATA_MET_LEVEL, &metLevel);
     SetMonData(mon, MON_DATA_LANGUAGE, &language);

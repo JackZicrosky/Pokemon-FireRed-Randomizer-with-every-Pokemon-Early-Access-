@@ -8,7 +8,11 @@
 
 // Despite having a variable to track it, the roamer is
 // hard-coded to only ever be in map group 0
+#if IS_FRLG
+#define ROAMER_MAP_GROUP MAP_GROUP(MAP_ROUTE1)   // the Kanto routes
+#else
 #define ROAMER_MAP_GROUP 0
+#endif
 
 enum
 {
@@ -35,6 +39,37 @@ EWRAM_DATA u8 gEncounteredRoamerIndex = 0;
 //         map in the location table there is not a location set that starts with
 //         that map then the roamer will be significantly less likely to move away
 //         from that map when it lands there.
+#if IS_FRLG
+// FireRed/LeafGreen: the legendary beast roams the Kanto routes (layout as in pokefirered).
+#define R(n) MAP_NUM(MAP_ROUTE##n)
+static const u8 sRoamerLocations[][6] =
+{
+    { R(1),  R(2),  R(21_NORTH), R(22), ___, ___ },
+    { R(2),  R(1),  R(3),  R(22), ___, ___ },
+    { R(3),  R(2),  R(4),  ___, ___, ___ },
+    { R(4),  R(3),  R(5),  R(9),  ___, ___ },
+    { R(5),  R(4),  R(6),  R(7),  R(8),  R(9) },
+    { R(6),  R(5),  R(7),  R(8),  R(11), ___ },
+    { R(7),  R(5),  R(6),  R(8),  R(16), ___ },
+    { R(8),  R(5),  R(6),  R(7),  R(10), R(12) },
+    { R(9),  R(4),  R(5),  R(10), ___, ___ },
+    { R(10), R(8),  R(9),  R(12), ___, ___ },
+    { R(11), R(6),  R(12), ___, ___, ___ },
+    { R(12), R(10), R(11), R(13), ___, ___ },
+    { R(13), R(12), R(14), ___, ___, ___ },
+    { R(14), R(13), R(15), ___, ___, ___ },
+    { R(15), R(14), R(18), ___, ___, ___ },
+    { R(16), R(7),  R(17), ___, ___, ___ },
+    { R(17), R(16), R(18), ___, ___, ___ },
+    { R(18), R(15), R(17), ___, ___, ___ },
+    { R(21_NORTH), R(1), R(22), ___, ___, ___ },
+    { R(22), R(1),  R(2),  ___, ___, ___ },
+    { R(24), R(25), R(4),  R(9),  ___, ___ },
+    { R(25), R(24), R(9),  ___, ___, ___ },
+    { ___, ___, ___, ___, ___, ___ },
+};
+#undef R
+#else
 static const u8 sRoamerLocations[][6] =
 {
     { MAP_NUM(MAP_ROUTE110), MAP_NUM(MAP_ROUTE111), MAP_NUM(MAP_ROUTE117), MAP_NUM(MAP_ROUTE118), MAP_NUM(MAP_ROUTE134), ___ },
@@ -59,6 +94,7 @@ static const u8 sRoamerLocations[][6] =
     { MAP_NUM(MAP_ROUTE134), MAP_NUM(MAP_ROUTE133), MAP_NUM(MAP_ROUTE110), ___, ___, ___ },
     { ___, ___, ___, ___, ___, ___ },
 };
+#endif
 
 #undef ___
 #define NUM_LOCATION_SETS (ARRAY_COUNT(sRoamerLocations) - 1)
@@ -101,7 +137,8 @@ void MoveAllRoamers(void)
 
 static void CreateInitialRoamerMon(u8 index, enum Species species, u8 level)
 {
-    species = RH_StaticSpecies(species);
+    species = RH_RoamerSpecies(species);
+    level = RH_StaticLevel(level);
     ClearRoamerLocationHistory(index);
     u32 personality = GetMonPersonality(species,
         GetSynchronizedGender(ROAMER_ORIGIN, species),
@@ -157,10 +194,21 @@ bool8 TryAddRoamer(enum Species species, u8 level)
 // gSpecialVar_0x8004 here corresponds to the options in the multichoice MULTI_TV_LATI (0 for 'Red', 1 for 'Blue')
 void InitRoamer(void)
 {
+#if IS_FRLG
+    // FRLG: the beast depends on the starter (Bulbasaur -> Entei, Squirtle -> Raikou, Charmander -> Suicune)
+    switch (VarGet(VAR_STARTER_MON))
+    {
+    default:
+    case 0:  TryAddRoamer(SPECIES_ENTEI, 50);   break;
+    case 1:  TryAddRoamer(SPECIES_RAIKOU, 50);  break;
+    case 2:  TryAddRoamer(SPECIES_SUICUNE, 50); break;
+    }
+#else
     if (gSpecialVar_0x8004 == 0) // Red
         TryAddRoamer(SPECIES_LATIAS, 40);
     else
         TryAddRoamer(SPECIES_LATIOS, 40);
+#endif
 }
 
 void UpdateLocationHistoryForRoamer(void)

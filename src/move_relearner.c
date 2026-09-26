@@ -64,6 +64,7 @@ static EWRAM_DATA struct
     u8 heartSpriteIds[16];
     u16 movesToLearn[MAX_RELEARNER_MOVES];
     struct ListMenuItem menuItems[MAX_RELEARNER_MOVES + 1];
+    u8 menuNames[MAX_RELEARNER_MOVES][MOVE_NAME_LENGTH + 1];   // randomizer: move names are built in a small ring buffer
     u8 mainTask;
     u8 numMenuChoices;
     u8 numToShowAtOnce;
@@ -794,7 +795,8 @@ static void CreateLearnableMovesList(void)
 
     for (i = 0; i < sMoveRelearnerStruct->numMenuChoices; i++)
     {
-        sMoveRelearnerStruct->menuItems[i].name = GetMoveName(sMoveRelearnerStruct->movesToLearn[i]);
+        StringCopy(sMoveRelearnerStruct->menuNames[i], GetMoveName(sMoveRelearnerStruct->movesToLearn[i]));
+        sMoveRelearnerStruct->menuItems[i].name = sMoveRelearnerStruct->menuNames[i];
         sMoveRelearnerStruct->menuItems[i].id = sMoveRelearnerStruct->movesToLearn[i];
     }
 

@@ -9,6 +9,7 @@ static const u16 sRhPg0_ItemBike[] = INCGFX_U16("graphics/rh_player/ethan_frlg/i
 const u16 gRhPlayerPal0[] = INCGFX_U16("graphics/rh_player/ethan_frlg/normal.png", ".gbapal");
 static const u32 sRhPg0_Front[] = INCGFX_U32("graphics/rh_player/ethan_frlg/front.png", ".4bpp.smol");
 static const u16 sRhPg0_FrontPal[] = INCGFX_U16("graphics/rh_player/ethan_frlg/front.png", ".gbapal");
+static const u32 sRhPg0_Oak[] = INCGFX_U32("graphics/rh_player/ethan_frlg/oak.png", ".8bpp.smol");
 static const u8 sRhPg0_Back[] = INCGFX_U8("graphics/rh_player/ethan_frlg/back.png", ".4bpp");
 static const u16 sRhPg0_BackPal[] = INCGFX_U16("graphics/rh_player/ethan_frlg/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg0_PicNormal[] = {
@@ -61,6 +62,7 @@ static const u16 sRhPg1_ItemBike[] = INCGFX_U16("graphics/rh_player/kris_frlg/it
 const u16 gRhPlayerPal1[] = INCGFX_U16("graphics/rh_player/kris_frlg/normal.png", ".gbapal");
 static const u32 sRhPg1_Front[] = INCGFX_U32("graphics/rh_player/kris_frlg/front.png", ".4bpp.smol");
 static const u16 sRhPg1_FrontPal[] = INCGFX_U16("graphics/rh_player/kris_frlg/front.png", ".gbapal");
+static const u32 sRhPg1_Oak[] = INCGFX_U32("graphics/rh_player/kris_frlg/oak.png", ".8bpp.smol");
 static const u8 sRhPg1_Back[] = INCGFX_U8("graphics/rh_player/kris_frlg/back.png", ".4bpp");
 static const u16 sRhPg1_BackPal[] = INCGFX_U16("graphics/rh_player/kris_frlg/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg1_PicNormal[] = {
@@ -113,6 +115,7 @@ static const u16 sRhPg2_ItemBike[] = INCGFX_U16("graphics/rh_player/red_fr/itemb
 const u16 gRhPlayerPal2[] = INCGFX_U16("graphics/rh_player/red_fr/normal.png", ".gbapal");
 static const u32 sRhPg2_Front[] = INCGFX_U32("graphics/rh_player/red_fr/front.png", ".4bpp.smol");
 static const u16 sRhPg2_FrontPal[] = INCGFX_U16("graphics/rh_player/red_fr/front.png", ".gbapal");
+static const u32 sRhPg2_Oak[] = INCGFX_U32("graphics/rh_player/red_fr/oak.png", ".8bpp.smol");
 static const u8 sRhPg2_Back[] = INCGFX_U8("graphics/rh_player/red_fr/back.png", ".4bpp");
 static const u16 sRhPg2_BackPal[] = INCGFX_U16("graphics/rh_player/red_fr/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg2_PicNormal[] = {
@@ -165,6 +168,7 @@ static const u16 sRhPg3_ItemBike[] = INCGFX_U16("graphics/rh_player/leaf/itembik
 const u16 gRhPlayerPal3[] = INCGFX_U16("graphics/rh_player/leaf/normal.png", ".gbapal");
 static const u32 sRhPg3_Front[] = INCGFX_U32("graphics/rh_player/leaf/front.png", ".4bpp.smol");
 static const u16 sRhPg3_FrontPal[] = INCGFX_U16("graphics/rh_player/leaf/front.png", ".gbapal");
+static const u32 sRhPg3_Oak[] = INCGFX_U32("graphics/rh_player/leaf/oak.png", ".8bpp.smol");
 static const u8 sRhPg3_Back[] = INCGFX_U8("graphics/rh_player/leaf/back.png", ".4bpp");
 static const u16 sRhPg3_BackPal[] = INCGFX_U16("graphics/rh_player/leaf/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg3_PicNormal[] = {
@@ -217,6 +221,7 @@ static const u16 sRhPg4_ItemBike[] = INCGFX_U16("graphics/rh_player/brendan_e/it
 const u16 gRhPlayerPal4[] = INCGFX_U16("graphics/rh_player/brendan_e/normal.png", ".gbapal");
 static const u32 sRhPg4_Front[] = INCGFX_U32("graphics/rh_player/brendan_e/front.png", ".4bpp.smol");
 static const u16 sRhPg4_FrontPal[] = INCGFX_U16("graphics/rh_player/brendan_e/front.png", ".gbapal");
+static const u32 sRhPg4_Oak[] = INCGFX_U32("graphics/rh_player/brendan_e/oak.png", ".8bpp.smol");
 static const u8 sRhPg4_Back[] = INCGFX_U8("graphics/rh_player/brendan_e/back.png", ".4bpp");
 static const u16 sRhPg4_BackPal[] = INCGFX_U16("graphics/rh_player/brendan_e/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg4_PicNormal[] = {
@@ -269,6 +274,7 @@ static const u16 sRhPg5_ItemBike[] = INCGFX_U16("graphics/rh_player/may_e/itembi
 const u16 gRhPlayerPal5[] = INCGFX_U16("graphics/rh_player/may_e/normal.png", ".gbapal");
 static const u32 sRhPg5_Front[] = INCGFX_U32("graphics/rh_player/may_e/front.png", ".4bpp.smol");
 static const u16 sRhPg5_FrontPal[] = INCGFX_U16("graphics/rh_player/may_e/front.png", ".gbapal");
+static const u32 sRhPg5_Oak[] = INCGFX_U32("graphics/rh_player/may_e/oak.png", ".8bpp.smol");
 static const u8 sRhPg5_Back[] = INCGFX_U8("graphics/rh_player/may_e/back.png", ".4bpp");
 static const u16 sRhPg5_BackPal[] = INCGFX_U16("graphics/rh_player/may_e/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg5_PicNormal[] = {
@@ -321,6 +327,7 @@ static const u16 sRhPg6_ItemBike[] = INCGFX_U16("graphics/rh_player/brendan_rs/i
 const u16 gRhPlayerPal6[] = INCGFX_U16("graphics/rh_player/brendan_rs/normal.png", ".gbapal");
 static const u32 sRhPg6_Front[] = INCGFX_U32("graphics/rh_player/brendan_rs/front.png", ".4bpp.smol");
 static const u16 sRhPg6_FrontPal[] = INCGFX_U16("graphics/rh_player/brendan_rs/front.png", ".gbapal");
+static const u32 sRhPg6_Oak[] = INCGFX_U32("graphics/rh_player/brendan_rs/oak.png", ".8bpp.smol");
 static const u8 sRhPg6_Back[] = INCGFX_U8("graphics/rh_player/brendan_rs/back.png", ".4bpp");
 static const u16 sRhPg6_BackPal[] = INCGFX_U16("graphics/rh_player/brendan_rs/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg6_PicNormal[] = {
@@ -373,6 +380,7 @@ static const u16 sRhPg7_ItemBike[] = INCGFX_U16("graphics/rh_player/may_rs/itemb
 const u16 gRhPlayerPal7[] = INCGFX_U16("graphics/rh_player/may_rs/normal.png", ".gbapal");
 static const u32 sRhPg7_Front[] = INCGFX_U32("graphics/rh_player/may_rs/front.png", ".4bpp.smol");
 static const u16 sRhPg7_FrontPal[] = INCGFX_U16("graphics/rh_player/may_rs/front.png", ".gbapal");
+static const u32 sRhPg7_Oak[] = INCGFX_U32("graphics/rh_player/may_rs/oak.png", ".8bpp.smol");
 static const u8 sRhPg7_Back[] = INCGFX_U8("graphics/rh_player/may_rs/back.png", ".4bpp");
 static const u16 sRhPg7_BackPal[] = INCGFX_U16("graphics/rh_player/may_rs/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg7_PicNormal[] = {
@@ -425,6 +433,7 @@ static const u16 sRhPg8_ItemBike[] = INCGFX_U16("graphics/rh_player/wally/itembi
 const u16 gRhPlayerPal8[] = INCGFX_U16("graphics/rh_player/wally/normal.png", ".gbapal");
 static const u32 sRhPg8_Front[] = INCGFX_U32("graphics/rh_player/wally/front.png", ".4bpp.smol");
 static const u16 sRhPg8_FrontPal[] = INCGFX_U16("graphics/rh_player/wally/front.png", ".gbapal");
+static const u32 sRhPg8_Oak[] = INCGFX_U32("graphics/rh_player/wally/oak.png", ".8bpp.smol");
 static const u8 sRhPg8_Back[] = INCGFX_U8("graphics/rh_player/wally/back.png", ".4bpp");
 static const u16 sRhPg8_BackPal[] = INCGFX_U16("graphics/rh_player/wally/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg8_PicNormal[] = {
@@ -477,6 +486,7 @@ static const u16 sRhPg9_ItemBike[] = INCGFX_U16("graphics/rh_player/prof_birch/i
 const u16 gRhPlayerPal9[] = INCGFX_U16("graphics/rh_player/prof_birch/normal.png", ".gbapal");
 static const u32 sRhPg9_Front[] = INCGFX_U32("graphics/rh_player/prof_birch/front.png", ".4bpp.smol");
 static const u16 sRhPg9_FrontPal[] = INCGFX_U16("graphics/rh_player/prof_birch/front.png", ".gbapal");
+static const u32 sRhPg9_Oak[] = INCGFX_U32("graphics/rh_player/prof_birch/oak.png", ".8bpp.smol");
 static const u8 sRhPg9_Back[] = INCGFX_U8("graphics/rh_player/prof_birch/back.png", ".4bpp");
 static const u16 sRhPg9_BackPal[] = INCGFX_U16("graphics/rh_player/prof_birch/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg9_PicNormal[] = {
@@ -529,6 +539,7 @@ static const u16 sRhPg10_ItemBike[] = INCGFX_U16("graphics/rh_player/cynthia/ite
 const u16 gRhPlayerPal10[] = INCGFX_U16("graphics/rh_player/cynthia/normal.png", ".gbapal");
 static const u32 sRhPg10_Front[] = INCGFX_U32("graphics/rh_player/cynthia/front.png", ".4bpp.smol");
 static const u16 sRhPg10_FrontPal[] = INCGFX_U16("graphics/rh_player/cynthia/front.png", ".gbapal");
+static const u32 sRhPg10_Oak[] = INCGFX_U32("graphics/rh_player/cynthia/oak.png", ".8bpp.smol");
 static const u8 sRhPg10_Back[] = INCGFX_U8("graphics/rh_player/cynthia/back.png", ".4bpp");
 static const u16 sRhPg10_BackPal[] = INCGFX_U16("graphics/rh_player/cynthia/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg10_PicNormal[] = {
@@ -581,6 +592,7 @@ static const u16 sRhPg11_ItemBike[] = INCGFX_U16("graphics/rh_player/ghost/itemb
 const u16 gRhPlayerPal11[] = INCGFX_U16("graphics/rh_player/ghost/normal.png", ".gbapal");
 static const u32 sRhPg11_Front[] = INCGFX_U32("graphics/rh_player/ghost/front.png", ".4bpp.smol");
 static const u16 sRhPg11_FrontPal[] = INCGFX_U16("graphics/rh_player/ghost/front.png", ".gbapal");
+static const u32 sRhPg11_Oak[] = INCGFX_U32("graphics/rh_player/ghost/oak.png", ".8bpp.smol");
 static const u8 sRhPg11_Back[] = INCGFX_U8("graphics/rh_player/ghost/back.png", ".4bpp");
 static const u16 sRhPg11_BackPal[] = INCGFX_U16("graphics/rh_player/ghost/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg11_PicNormal[] = {
@@ -633,6 +645,7 @@ static const u16 sRhPg12_ItemBike[] = INCGFX_U16("graphics/rh_player/wraith/item
 const u16 gRhPlayerPal12[] = INCGFX_U16("graphics/rh_player/wraith/normal.png", ".gbapal");
 static const u32 sRhPg12_Front[] = INCGFX_U32("graphics/rh_player/wraith/front.png", ".4bpp.smol");
 static const u16 sRhPg12_FrontPal[] = INCGFX_U16("graphics/rh_player/wraith/front.png", ".gbapal");
+static const u32 sRhPg12_Oak[] = INCGFX_U32("graphics/rh_player/wraith/oak.png", ".8bpp.smol");
 static const u8 sRhPg12_Back[] = INCGFX_U8("graphics/rh_player/wraith/back.png", ".4bpp");
 static const u16 sRhPg12_BackPal[] = INCGFX_U16("graphics/rh_player/wraith/back.png", ".gbapal");
 static const struct SpriteFrameImage sRhPg12_PicNormal[] = {
@@ -677,19 +690,19 @@ static const struct SpriteFrameImage sRhPg12_PicItem[] = { overworld_ascending_f
 static const struct SpriteFrameImage sRhPg12_PicItemBike[] = { overworld_ascending_frames(sRhPg12_ItemBike, 4, 4) };
 
 static const struct RhPlayerPack sRhPlayerPacks[] = {
-    { .normal = sRhPg0_PicNormal, .surf = sRhPg0_PicSurf, .bike = sRhPg0_PicBike, .fish = sRhPg0_PicFish, .item = sRhPg0_PicItem, .itemBike = sRhPg0_PicItemBike, .front = sRhPg0_Front, .frontPal = sRhPg0_FrontPal, .back = sRhPg0_Back, .backPal = sRhPg0_BackPal },
-    { .normal = sRhPg1_PicNormal, .surf = sRhPg1_PicSurf, .bike = sRhPg1_PicBike, .fish = sRhPg1_PicFish, .item = sRhPg1_PicItem, .itemBike = sRhPg1_PicItemBike, .front = sRhPg1_Front, .frontPal = sRhPg1_FrontPal, .back = sRhPg1_Back, .backPal = sRhPg1_BackPal },
-    { .normal = sRhPg2_PicNormal, .surf = sRhPg2_PicSurf, .bike = sRhPg2_PicBike, .fish = sRhPg2_PicFish, .item = sRhPg2_PicItem, .itemBike = sRhPg2_PicItemBike, .front = sRhPg2_Front, .frontPal = sRhPg2_FrontPal, .back = sRhPg2_Back, .backPal = sRhPg2_BackPal },
-    { .normal = sRhPg3_PicNormal, .surf = sRhPg3_PicSurf, .bike = sRhPg3_PicBike, .fish = sRhPg3_PicFish, .item = sRhPg3_PicItem, .itemBike = sRhPg3_PicItemBike, .front = sRhPg3_Front, .frontPal = sRhPg3_FrontPal, .back = sRhPg3_Back, .backPal = sRhPg3_BackPal },
-    { .normal = sRhPg4_PicNormal, .surf = sRhPg4_PicSurf, .bike = sRhPg4_PicBike, .fish = sRhPg4_PicFish, .item = sRhPg4_PicItem, .itemBike = sRhPg4_PicItemBike, .front = sRhPg4_Front, .frontPal = sRhPg4_FrontPal, .back = sRhPg4_Back, .backPal = sRhPg4_BackPal },
-    { .normal = sRhPg5_PicNormal, .surf = sRhPg5_PicSurf, .bike = sRhPg5_PicBike, .fish = sRhPg5_PicFish, .item = sRhPg5_PicItem, .itemBike = sRhPg5_PicItemBike, .front = sRhPg5_Front, .frontPal = sRhPg5_FrontPal, .back = sRhPg5_Back, .backPal = sRhPg5_BackPal },
-    { .normal = sRhPg6_PicNormal, .surf = sRhPg6_PicSurf, .bike = sRhPg6_PicBike, .fish = sRhPg6_PicFish, .item = sRhPg6_PicItem, .itemBike = sRhPg6_PicItemBike, .front = sRhPg6_Front, .frontPal = sRhPg6_FrontPal, .back = sRhPg6_Back, .backPal = sRhPg6_BackPal },
-    { .normal = sRhPg7_PicNormal, .surf = sRhPg7_PicSurf, .bike = sRhPg7_PicBike, .fish = sRhPg7_PicFish, .item = sRhPg7_PicItem, .itemBike = sRhPg7_PicItemBike, .front = sRhPg7_Front, .frontPal = sRhPg7_FrontPal, .back = sRhPg7_Back, .backPal = sRhPg7_BackPal },
-    { .normal = sRhPg8_PicNormal, .surf = sRhPg8_PicSurf, .bike = sRhPg8_PicBike, .fish = sRhPg8_PicFish, .item = sRhPg8_PicItem, .itemBike = sRhPg8_PicItemBike, .front = sRhPg8_Front, .frontPal = sRhPg8_FrontPal, .back = sRhPg8_Back, .backPal = sRhPg8_BackPal },
-    { .normal = sRhPg9_PicNormal, .surf = sRhPg9_PicSurf, .bike = sRhPg9_PicBike, .fish = sRhPg9_PicFish, .item = sRhPg9_PicItem, .itemBike = sRhPg9_PicItemBike, .front = sRhPg9_Front, .frontPal = sRhPg9_FrontPal, .back = sRhPg9_Back, .backPal = sRhPg9_BackPal },
-    { .normal = sRhPg10_PicNormal, .surf = sRhPg10_PicSurf, .bike = sRhPg10_PicBike, .fish = sRhPg10_PicFish, .item = sRhPg10_PicItem, .itemBike = sRhPg10_PicItemBike, .front = sRhPg10_Front, .frontPal = sRhPg10_FrontPal, .back = sRhPg10_Back, .backPal = sRhPg10_BackPal },
-    { .normal = sRhPg11_PicNormal, .surf = sRhPg11_PicSurf, .bike = sRhPg11_PicBike, .fish = sRhPg11_PicFish, .item = sRhPg11_PicItem, .itemBike = sRhPg11_PicItemBike, .front = sRhPg11_Front, .frontPal = sRhPg11_FrontPal, .back = sRhPg11_Back, .backPal = sRhPg11_BackPal },
-    { .normal = sRhPg12_PicNormal, .surf = sRhPg12_PicSurf, .bike = sRhPg12_PicBike, .fish = sRhPg12_PicFish, .item = sRhPg12_PicItem, .itemBike = sRhPg12_PicItemBike, .front = sRhPg12_Front, .frontPal = sRhPg12_FrontPal, .back = sRhPg12_Back, .backPal = sRhPg12_BackPal },
+    { .normal = sRhPg0_PicNormal, .surf = sRhPg0_PicSurf, .bike = sRhPg0_PicBike, .fish = sRhPg0_PicFish, .item = sRhPg0_PicItem, .itemBike = sRhPg0_PicItemBike, .front = sRhPg0_Front, .frontPal = sRhPg0_FrontPal, .oak = sRhPg0_Oak, .back = sRhPg0_Back, .backPal = sRhPg0_BackPal },
+    { .normal = sRhPg1_PicNormal, .surf = sRhPg1_PicSurf, .bike = sRhPg1_PicBike, .fish = sRhPg1_PicFish, .item = sRhPg1_PicItem, .itemBike = sRhPg1_PicItemBike, .front = sRhPg1_Front, .frontPal = sRhPg1_FrontPal, .oak = sRhPg1_Oak, .back = sRhPg1_Back, .backPal = sRhPg1_BackPal },
+    { .normal = sRhPg2_PicNormal, .surf = sRhPg2_PicSurf, .bike = sRhPg2_PicBike, .fish = sRhPg2_PicFish, .item = sRhPg2_PicItem, .itemBike = sRhPg2_PicItemBike, .front = sRhPg2_Front, .frontPal = sRhPg2_FrontPal, .oak = sRhPg2_Oak, .back = sRhPg2_Back, .backPal = sRhPg2_BackPal },
+    { .normal = sRhPg3_PicNormal, .surf = sRhPg3_PicSurf, .bike = sRhPg3_PicBike, .fish = sRhPg3_PicFish, .item = sRhPg3_PicItem, .itemBike = sRhPg3_PicItemBike, .front = sRhPg3_Front, .frontPal = sRhPg3_FrontPal, .oak = sRhPg3_Oak, .back = sRhPg3_Back, .backPal = sRhPg3_BackPal },
+    { .normal = sRhPg4_PicNormal, .surf = sRhPg4_PicSurf, .bike = sRhPg4_PicBike, .fish = sRhPg4_PicFish, .item = sRhPg4_PicItem, .itemBike = sRhPg4_PicItemBike, .front = sRhPg4_Front, .frontPal = sRhPg4_FrontPal, .oak = sRhPg4_Oak, .back = sRhPg4_Back, .backPal = sRhPg4_BackPal },
+    { .normal = sRhPg5_PicNormal, .surf = sRhPg5_PicSurf, .bike = sRhPg5_PicBike, .fish = sRhPg5_PicFish, .item = sRhPg5_PicItem, .itemBike = sRhPg5_PicItemBike, .front = sRhPg5_Front, .frontPal = sRhPg5_FrontPal, .oak = sRhPg5_Oak, .back = sRhPg5_Back, .backPal = sRhPg5_BackPal },
+    { .normal = sRhPg6_PicNormal, .surf = sRhPg6_PicSurf, .bike = sRhPg6_PicBike, .fish = sRhPg6_PicFish, .item = sRhPg6_PicItem, .itemBike = sRhPg6_PicItemBike, .front = sRhPg6_Front, .frontPal = sRhPg6_FrontPal, .oak = sRhPg6_Oak, .back = sRhPg6_Back, .backPal = sRhPg6_BackPal },
+    { .normal = sRhPg7_PicNormal, .surf = sRhPg7_PicSurf, .bike = sRhPg7_PicBike, .fish = sRhPg7_PicFish, .item = sRhPg7_PicItem, .itemBike = sRhPg7_PicItemBike, .front = sRhPg7_Front, .frontPal = sRhPg7_FrontPal, .oak = sRhPg7_Oak, .back = sRhPg7_Back, .backPal = sRhPg7_BackPal },
+    { .normal = sRhPg8_PicNormal, .surf = sRhPg8_PicSurf, .bike = sRhPg8_PicBike, .fish = sRhPg8_PicFish, .item = sRhPg8_PicItem, .itemBike = sRhPg8_PicItemBike, .front = sRhPg8_Front, .frontPal = sRhPg8_FrontPal, .oak = sRhPg8_Oak, .back = sRhPg8_Back, .backPal = sRhPg8_BackPal },
+    { .normal = sRhPg9_PicNormal, .surf = sRhPg9_PicSurf, .bike = sRhPg9_PicBike, .fish = sRhPg9_PicFish, .item = sRhPg9_PicItem, .itemBike = sRhPg9_PicItemBike, .front = sRhPg9_Front, .frontPal = sRhPg9_FrontPal, .oak = sRhPg9_Oak, .back = sRhPg9_Back, .backPal = sRhPg9_BackPal },
+    { .normal = sRhPg10_PicNormal, .surf = sRhPg10_PicSurf, .bike = sRhPg10_PicBike, .fish = sRhPg10_PicFish, .item = sRhPg10_PicItem, .itemBike = sRhPg10_PicItemBike, .front = sRhPg10_Front, .frontPal = sRhPg10_FrontPal, .oak = sRhPg10_Oak, .back = sRhPg10_Back, .backPal = sRhPg10_BackPal },
+    { .normal = sRhPg11_PicNormal, .surf = sRhPg11_PicSurf, .bike = sRhPg11_PicBike, .fish = sRhPg11_PicFish, .item = sRhPg11_PicItem, .itemBike = sRhPg11_PicItemBike, .front = sRhPg11_Front, .frontPal = sRhPg11_FrontPal, .oak = sRhPg11_Oak, .back = sRhPg11_Back, .backPal = sRhPg11_BackPal },
+    { .normal = sRhPg12_PicNormal, .surf = sRhPg12_PicSurf, .bike = sRhPg12_PicBike, .fish = sRhPg12_PicFish, .item = sRhPg12_PicItem, .itemBike = sRhPg12_PicItemBike, .front = sRhPg12_Front, .frontPal = sRhPg12_FrontPal, .oak = sRhPg12_Oak, .back = sRhPg12_Back, .backPal = sRhPg12_BackPal },
 };
 const u8 *const gRhPlayerGraphicsNames[] = {
     COMPOUND_STRING("Default"),

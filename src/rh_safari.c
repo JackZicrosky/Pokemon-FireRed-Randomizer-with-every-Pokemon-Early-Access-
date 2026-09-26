@@ -66,8 +66,9 @@ static s32 LandPoolForMap(void)
     return -1;
 }
 
-enum Species RH_SafariSpecies(enum Species species, enum WildPokemonArea area)
+enum Species RH_SafariSpecies(enum Species species, enum WildPokemonArea area, bool32 *handled)
 {
+    *handled = FALSE;
     u32 mode = VarGet(VAR_RH_SAFARI_GEN), total;
     s32 pool, alt = -1;
 
@@ -91,6 +92,7 @@ enum Species RH_SafariSpecies(enum Species species, enum WildPokemonArea area)
     }
     if (total == 0)
         return species;
+    *handled = TRUE;
     return ApplyFormGroup(PickFromPool(pool, mode, total));
 }
 

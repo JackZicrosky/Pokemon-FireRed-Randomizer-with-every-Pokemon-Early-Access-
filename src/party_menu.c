@@ -5604,7 +5604,8 @@ static void Task_LearnedMove(u8 taskId)
     if (gPartyMenu.learnMoveState == 0)
     {
         AdjustFriendship(mon, FRIENDSHIP_EVENT_LEARN_TMHM);
-        if (!GetItemImportance(item))
+        // Misc. tweak "Reusable TMs" (FVX): TMs stay tossable/holdable, only their count never drops
+        if (!GetItemImportance(item) && !(gSaveBlock3Ptr->rhSettings.reusableTMs && GetItemTMHMIndex(item) != 0))
             RemoveBagItem(item, 1);
     }
     GetMonNickname(mon, gStringVar1);
