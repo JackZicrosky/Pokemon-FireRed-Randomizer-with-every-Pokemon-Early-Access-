@@ -147,7 +147,7 @@ static bool32 RandomizeChart(u8 eff[NT][NT], bool32 balanced)
 static void KeepIdentities(u8 eff[NT][NT])
 {
     u32 swaps = 0, guard = 0;
-    while (swaps < 600 && guard < 4000)
+    while (swaps < 2500 && guard < 12000)
     {
         u32 a = RandBelow(NT), b = RandBelow(NT), c = RandBelow(NT), d, n = 0;
         u8 x, y, cand[NT];

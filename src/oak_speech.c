@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "bg.h"
 #include "data.h"
 #include "decompress.h"
@@ -24,7 +25,7 @@
 
 #if IS_FRLG
 
-#define INTRO_SPECIES SPECIES_NIDORAN_F
+#define INTRO_SPECIES RH_IntroSpecies(SPECIES_NIDORAN_F)
 
 enum
 {

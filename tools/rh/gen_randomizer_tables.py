@@ -143,6 +143,9 @@ for sc in sorted(glob.glob(R + f'data/maps/*{MAP_SUFFIX}/scripts.inc')):
         s = canon(m.group(1) or m.group(2))
         if s in S and (mapid, s) not in enc and s != 'SPECIES_TOGEPI':   # FVX leaves the Togepi Egg alone
             enc.append((mapid, s))
+# the Power Plant has two separate Electrode (the second one is found by object id at runtime)
+if ('MAP_POWER_PLANT', 'SPECIES_ELECTRODE') in enc:
+    enc.insert(enc.index(('MAP_POWER_PLANT', 'SPECIES_ELECTRODE')) + 1, ('MAP_POWER_PLANT', 'SPECIES_ELECTRODE'))
 for s in ('SPECIES_RAIKOU', 'SPECIES_ENTEI', 'SPECIES_SUICUNE'):
     enc.append(('ROAMER', s))
 out += 'struct RhStaticEncounter { u16 map; u16 species; };\n#define RH_STATIC_MAP_ROAMER 0xFFFE\n'
@@ -191,6 +194,18 @@ for mode in range(7):
         if k not in seen: seen[k] = len(seen)
         col.append(seen[k])
     ranks.append(col)
+# Rank of the species inside its zone (dense from 0 per zone): picks by rank never repeat inside a zone (FVX 1-to-1).
+zranks = []
+for mode in range(7):
+    seen = {}
+    col = []
+    for mp, ai, sp in pairs:
+        k = zone_species(mode, mp, ai, sp)
+        z = k[:-1]
+        d = seen.setdefault(z, {})
+        if sp not in d: d[sp] = len(d)
+        col.append(d[sp])
+    zranks.append(col)
 out2 = '\n// Every (map, area, species) wild encounter in the game with its region map section and lowest level.\n'
 out2 += 'struct RhWildPair { u16 map; u16 species; u8 area; u8 low; u8 mapsec; u8 pad; };\n'
 out2 += f'#define RH_WILD_PAIR_COUNT {len(pairs)}\nstatic const struct RhWildPair sRhWildPairs[RH_WILD_PAIR_COUNT] = {{\n'
@@ -199,6 +214,10 @@ out2 += '};\n'
 out2 += '// Catch Em\' All ranks: [pair][0 whole game, 1 +split, 2 location, 3 +split, 4 map, 5 +split, 6 set]\n'
 out2 += f'static const u16 sRhWildRank[RH_WILD_PAIR_COUNT][7] = {{\n'
 for n in range(len(pairs)): out2 += '    {' + ', '.join(str(ranks[m][n]) for m in range(7)) + '},\n'
+out2 += '};\n'
+out2 += '// Rank inside the zone: [pair][same modes]\n'
+out2 += f'static const u16 sRhWildZoneRank[RH_WILD_PAIR_COUNT][7] = {{\n'
+for n in range(len(pairs)): out2 += '    {' + ', '.join(str(zranks[m][n]) for m in range(7)) + '},\n'
 out2 += '};\n'
 open(R + 'src/data/rh_randomizer_tables.h', 'a').write(out2)
 print('wild pairs', len(pairs), 'ranks', [max(c) + 1 for c in ranks])

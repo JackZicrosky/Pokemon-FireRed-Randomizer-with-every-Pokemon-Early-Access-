@@ -38,6 +38,61 @@ static u32 Append(u32 count, u16 item)
     return count;
 }
 
+// ---------------------------------------------------------------------------
+// "Shop Items: Shuffle": every randomizable stock slot of every shop (marts, themed stock, the Celadon counters)
+// in one fixed order; slot number g gets the item of slot perm(g), so the game's shop items just move around.
+// ---------------------------------------------------------------------------
+extern const u16 CeladonCity_DepartmentStore_4F_Items[], CeladonCity_DepartmentStore_5F_XItems[], CeladonCity_DepartmentStore_5F_Vitamins[];
+bool32 RH_ShopSlotRandomizable(u16 item);
+u32 RH_Permute(u32 salt, u32 x, u32 n);
+#define SALT_SHOP_SHUFFLE 0x5105
+
+// Calls back for every randomizable slot; stops (returning its item) at index "stopAt". Returns the count.
+static u32 WalkShopSlots(u32 stopAt, u16 *itemAt, u32 findMart, u32 findSlot, s32 *foundIndex)
+{
+    static const u16 *const sCounters[] = { CeladonCity_DepartmentStore_4F_Items, CeladonCity_DepartmentStore_5F_XItems, CeladonCity_DepartmentStore_5F_Vitamins };
+    u32 m, i, n = 0;
+    for (m = 0; m < RH_MART_COUNT + ARRAY_COUNT(sCounters); m++)
+    {
+        const u16 *base = (m < RH_MART_COUNT) ? sRhMarts[m].base : sCounters[m - RH_MART_COUNT];
+        for (i = 0; base[i] != ITEM_NONE; i++)
+        {
+            if (!RH_ShopSlotRandomizable(base[i]))
+                continue;
+            if (m == findMart && i == findSlot)
+                *foundIndex = n;
+            if (n == stopAt)
+                *itemAt = base[i];
+            n++;
+        }
+        if (m >= RH_MART_COUNT)
+            continue;
+        for (i = 0; sRhMarts[m].themed[i].item != ITEM_NONE; i++)
+        {
+            u16 it = sRhMarts[m].themed[i].item;
+            if (!RH_ShopSlotRandomizable(it))
+                continue;
+            if (m == findMart && 64 + i == findSlot)
+                *foundIndex = n;
+            if (n == stopAt)
+                *itemAt = it;
+            n++;
+        }
+    }
+    return n;
+}
+
+u16 RH_ShuffledShopItem(u16 item, u32 mart, u32 slot)
+{
+    s32 g = -1;
+    u16 result = item;
+    u32 n = WalkShopSlots(0xFFFF, &result, mart, slot, &g);
+    if (g < 0 || n == 0)
+        return item;
+    WalkShopSlots(RH_Permute(SALT_SHOP_SHUFFLE, g, n), &result, 0xFFFF, 0xFFFF, &g);
+    return result;
+}
+
 // VAR_0x8004 = RH_MART_* id. Opens the mart; script waits via waitstate.
 void RH_OpenMart(void)
 {

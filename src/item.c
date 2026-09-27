@@ -1,6 +1,7 @@
 #include "global.h"
 #include "rh.h"
 #include "item.h"
+#include "move.h"
 #include "berry.h"
 #include "pokeball.h"
 #include "string_util.h"
@@ -864,7 +865,12 @@ u32 GetItemHoldEffectParam(enum Item itemId)
 
 const u8 *GetItemDescription(enum Item itemId)
 {
-    return gItemsInfo[SanitizeItemId(itemId)].description;
+    itemId = SanitizeItemId(itemId);
+    // a randomized TM describes the move it teaches now
+    if (gItemsInfo[itemId].pocket == POCKET_TM_HM && gSaveBlock3Ptr->rhSettings.enabled
+     && (gSaveBlock3Ptr->rhSettings.tmMoves || gSaveBlock3Ptr->rhSettings.movesets == 3))
+        return GetMoveDescription(GetItemTMHMMoveId(itemId));
+    return gItemsInfo[itemId].description;
 }
 
 u8 GetItemImportance(enum Item itemId)

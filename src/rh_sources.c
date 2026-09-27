@@ -85,6 +85,8 @@ static u32 ChainNow(u16 species)
     return n;
 }
 
+static EWRAM_DATA u16 sStarterChosen[3] = {0};
+
 static bool32 StarterExtraOk(u16 species)
 {
     u32 k;
@@ -96,6 +98,16 @@ static bool32 StarterExtraOk(u16 species)
             if (k == sStarterSlot)
                 continue;
             if (RH_SpeciesHasType(species, sStarterSlotTypes[k]))
+                return FALSE;
+        }
+    }
+    // Unique: no type shared with the starters already chosen
+    if (S->starterTypes == 3)
+    {
+        for (k = 0; k < 3; k++)
+        {
+            u16 o = (k == sStarterSlot) ? SPECIES_NONE : sStarterChosen[k];
+            if (o != SPECIES_NONE && (RH_SpeciesHasType(species, GetSpeciesType(o, 0)) || RH_SpeciesHasType(species, GetSpeciesType(o, 1))))
                 return FALSE;
         }
     }
@@ -127,18 +139,17 @@ static void BuildStarters(void)
     if (S->starters == 4)
         base.stage = 1;                                      // Random (basic): not evolved from anything
     base.allowVariants = S->starterAllowAltFormes;
-    if (S->starters != 1)                                    // blank Custom slots are plain random picks (FVX)
-    {
-        if (S->starterNoLegends)
-            base.legend = 1;
-        if (S->starterBstMinOn)
-            base.minBst = S->starterBstMin;
-        if (S->starterBstMaxOn)
-            base.maxBst = S->starterBstMax;
-        base.monoType = S->starterNoDualTypes;
-    }
+    // blank Custom slots are random picks with the same filters (FVX); only the type trios need all 3 random
+    if (S->starterNoLegends)
+        base.legend = 1;
+    if (S->starterBstMinOn)
+        base.minBst = S->starterBstMin;
+    if (S->starterBstMaxOn)
+        base.maxBst = S->starterBstMax;
+    base.monoType = S->starterNoDualTypes;
+    memset(sStarterChosen, 0, sizeof(sStarterChosen));
 
-    switch (S->starters == 1 ? 0 : S->starterTypes)
+    switch ((S->starters == 1 && (S->starterTypes == 1 || S->starterTypes == 2)) ? 0 : S->starterTypes)
     {
     case 1:
         slotTypes[0] = TYPE_GRASS;
@@ -172,66 +183,38 @@ static void BuildStarters(void)
     memcpy(sStarterSlotTypes, slotTypes, 3);
 
     for (i = 0; i < 3; i++)
+        if (S->starters == 1 && S->customStarters[i] != SPECIES_NONE)
+            sStarters.species[i] = sStarterChosen[i] = S->customStarters[i];
+    for (i = 0; i < 3; i++)
     {
         struct RhFilter f = base;
         u32 j;
         if (S->starters == 1 && S->customStarters[i] != SPECIES_NONE)
-        {
-            sStarters.species[i] = S->customStarters[i];
             continue;
-        }
-        for (j = 0; j < i; j++)
-            RH_FilterExclude(&f, sStarters.species[j]);
-        if (S->starters != 1)
-            f.type = slotTypes[i];
+        for (j = 0; j < 3; j++)
+            if (j != i && sStarterChosen[j] != SPECIES_NONE)
+                RH_FilterExclude(&f, sStarterChosen[j]);
+        f.type = slotTypes[i];
         sStarterSlot = i;
-        if (S->starters != 1)
-            f.extra = StarterExtraOk;
+        f.extra = StarterExtraOk;
         sStarters.species[i] = SPECIES_NONE;
         // "2 Evolutions" with Random evolutions: judged with this run's evolutions (a few tries, then any basic)
         if (S->starters == 3 && S->evolutions == 1)
         {
             u32 tries;
-            for (tries = 0; tries < 16 && sStarters.species[i] == SPECIES_NONE; tries++)
+            for (tries = 0; tries < 24 && sStarters.species[i] == SPECIES_NONE; tries++)
             {
                 struct RhFilter g = f;
                 u16 sp = RH_PickSpecies(&g, RH_Hash(SALT_STARTER, i, 100 + tries), SPECIES_NONE);
-                bool32 clash = FALSE;
-                for (j = 0; j < i && S->starterTypes == 3; j++)
-                {
-                    u16 o = sStarters.species[j];
-                    if (RH_SpeciesHasType(sp, GetSpeciesType(o, 0)) || RH_SpeciesHasType(sp, GetSpeciesType(o, 1)))
-                        clash = TRUE;
-                }
-                if (sp != SPECIES_NONE && !clash && ChainNow(sp) == 2)
+                if (sp != SPECIES_NONE && StarterExtraOk(sp) && ChainNow(sp) == 2)
                     sStarters.species[i] = sp;
-            }
-        }
-        if (S->starterTypes == 3 && i > 0 && S->starters != 1)   // Unique: no type shared with the starters already chosen
-        {
-            u32 tries;
-            for (tries = 0; tries < 64; tries++)
-            {
-                struct RhFilter g = f;
-                u16 sp = RH_PickSpecies(&g, RH_Hash(SALT_STARTER, i, tries), SPECIES_NONE);
-                bool32 clash = FALSE;
-                for (j = 0; j < i; j++)
-                {
-                    u16 o = sStarters.species[j];
-                    if (RH_SpeciesHasType(sp, GetSpeciesType(o, 0)) || RH_SpeciesHasType(sp, GetSpeciesType(o, 1)))
-                        clash = TRUE;
-                }
-                if (!clash)
-                {
-                    sStarters.species[i] = sp;
-                    break;
-                }
             }
         }
         if (sStarters.species[i] == SPECIES_NONE)
             sStarters.species[i] = RH_PickSpecies(&f, RH_Hash(SALT_STARTER, i, 0), SPECIES_NONE);
         if (sStarters.species[i] == SPECIES_NONE)
             sStarters.species[i] = sVanillaStarters[i];
+        sStarterChosen[i] = sStarters.species[i];
     }
 }
 
@@ -361,13 +344,14 @@ static void BuildStatics(void)
         sStaticsBuilt = i;
         f.extra = StaticNotUsedYet;
         f.allowVariants = S->staticAllowAltFormes;
+        RH_FilterExclude(&f, species);                       // always a different Pokemon (FVX banSamePokemon)
         switch (S->statics)
         {
         case 1:                                              // Swap Legendaries & Swap Standards
             f.legend = RH_IsLegendary(species) ? 2 : 1;
             break;
         case 3:                                              // Similar Strength
-            if (!(S->staticRandomize600 && RH_VanillaBST(species) >= 600))
+            if (!(S->staticRandomize600 && RH_SpeciesBST(species) >= 600))
                 similar = species;                           // "Randomize 600+ BST": those get a purely random pick
             break;
         }
@@ -400,12 +384,21 @@ enum Species RH_StaticSpecies(enum Species species)
 {
     u32 i;
     u16 mapKey = (gSaveBlock1Ptr->location.mapGroup << 8) | gSaveBlock1Ptr->location.mapNum;
+    u32 skip = 0;
     if (!StaticsActive() || InOaksLab())
         return species;
+    // the Power Plant's second Electrode (object 7) is a separate static encounter
+    if (species == SPECIES_ELECTRODE && mapKey == MAP_POWER_PLANT && gSpecialVar_LastTalked == 7)
+        skip = 1;
     for (i = 0; i < RH_STATIC_ENCOUNTER_COUNT; i++)
     {
         if (sRhStaticEncounters[i].map == mapKey && sRhStaticEncounters[i].species == species)
         {
+            if (skip)
+            {
+                skip--;
+                continue;
+            }
             sLastStaticOriginal = species;
             return StaticResult(i);
         }
@@ -422,6 +415,12 @@ enum Species RH_RoamerSpecies(enum Species species)
         if (sRhStaticEncounters[i].map == RH_STATIC_MAP_ROAMER && sRhStaticEncounters[i].species == species)
             return StaticResult(i);
     return species;
+}
+
+// Script special: "<species> flew away!" names the randomized Pokemon.
+void RH_RemapStaticVar8004(void)
+{
+    gSpecialVar_0x8004 = RH_StaticSpecies(gSpecialVar_0x8004);
 }
 
 // Script special: VAR_TEMP_1 = a gift's original species -> VAR_RESULT = its replacement, name in STR_VAR_1.
@@ -712,6 +711,18 @@ static u32 ZoneLowLevel(u32 zone, u16 species)
     return RH_ModifyWildLevel(low);
 }
 
+// "Keep Relations" (FVX): is another member of the species' family found in the same zone?
+static bool32 HasRelativeInZone(u32 pair, u32 zone)
+{
+    u32 p;
+    u16 root = RH_FamilyRoot(sRhWildPairs[pair].species);
+    for (p = 0; p < RH_WILD_PAIR_COUNT; p++)
+        if (sRhWildPairs[p].species != sRhWildPairs[pair].species && RH_FamilyRoot(sRhWildPairs[p].species) == root
+         && PairZone(p) == zone)
+            return TRUE;
+    return FALSE;
+}
+
 static EWRAM_DATA u8 sRelationStage = 0;
 static bool32 ChainLongEnough(u16 species)
 {
@@ -768,7 +779,13 @@ static enum Species PickWild(u16 mapKey, u32 mapsec, s32 pair, const struct Wild
     if (S->wildNoLegends)
         f.legend = 1;
     if (S->wildKeepThemes)                                   // "Keep Set/Zone Themes" wins over the other type rules
-        keptTheme = (pair >= 0 && S->wildZone != ZONE_ALWAYS) ? ZoneThemeType(themeZone) : AreaThemeType(info, area);
+    {
+        // with random zone themes, a themed zone keeps its type; otherwise each themed encounter set keeps its type
+        if (S->wildTypeRestriction == 1 && pair >= 0 && S->wildZone != ZONE_ALWAYS)
+            keptTheme = ZoneThemeType(themeZone);
+        else
+            keptTheme = AreaThemeType(info, area);
+    }
     if (keptTheme != TYPE_NONE)
     {
         f.type = keptTheme;
@@ -794,10 +811,17 @@ static enum Species PickWild(u16 mapKey, u32 mapsec, s32 pair, const struct Wild
         f.stage = RH_SpeciesStage(species);
         break;
     }
-    relations = S->wildKeepRelations && UsesMapping() && S->wildEvoRestriction != 2;
+    // FVX: only Pokemon that have a relative in the same zone are kept related
+    relations = S->wildKeepRelations && UsesMapping() && S->wildEvoRestriction != 2 && pair >= 0 && HasRelativeInZone(pair, zone);
+    // "No Premature Evolutions" (FVX): only when neither Same Stage nor Keep Relations is on
+    if (S->noPrematureEvos && S->wildEvoRestriction != 2 && !relations)
+    {
+        u32 lvl = (pair >= 0) ? sRhWildPairs[pair].low : (info->wildPokemon[slot].minLevel + info->wildPokemon[slot].maxLevel) / 2;
+        f.legalAtLevel = min(RH_ModifyWildLevel(lvl), 255);
+    }
     if (S->wildSimilarStrength)
     {
-        bst = RH_VanillaBST(species);
+        bst = RH_SpeciesBST(species);
         if (S->wildBalanceLowLevel)                          // FVX: no Geodude at level 2
         {
             u32 low = (pair >= 0 && UsesMapping()) ? ZoneLowLevel(zone, species) : RH_ModifyWildLevel(LowestLevelInSet(info, area, species));
@@ -819,15 +843,24 @@ static enum Species PickWild(u16 mapKey, u32 mapsec, s32 pair, const struct Wild
         g.stage = 1;
         sRelationStage = stage;
         g.extra = ChainLongEnough;
-        result = RH_PickSpeciesNearBst(&g, RH_Hash(SALT_WILD, zone, RH_FamilyRoot(species)), bst ? RH_VanillaBST(RH_FamilyRoot(species)) : 0);
+        result = RH_PickSpeciesNearBst(&g, RH_Hash(SALT_WILD, zone, RH_FamilyRoot(species)), bst ? RH_SpeciesBST(RH_FamilyRoot(species)) : 0);
         if (result != SPECIES_NONE)
             return RH_EvolveTimes(result, stage - 1);
     }
-    if (S->wildCatchEmAll && UsesMapping() && !f.megasOnly && pair >= 0)
+    if (S->wildCatchEmAll && S->wildZone != ZONE_ALWAYS && !f.megasOnly && pair >= 0)
     {
-        result = CatchAllPick(sRhWildRank[pair][CatchAllRankMode()], &f);   // catch 'em all wins over similar strength (FVX)
+        // every Pokemon is used once before any repeats; "Maximum Possible" ranks each slot of a set separately
+        // (catch 'em all wins over Similar Strength: every Pokemon must get its turn)
+        u32 rank = (S->wildZone == ZONE_MAX) ? sRhWildRank[pair][6] * 13 + slot : sRhWildRank[pair][CatchAllRankMode()];
+        result = CatchAllPick(rank, &f);
         if (result != SPECIES_NONE)
             return result;
+    }
+    if (UsesMapping() && pair >= 0)
+    {
+        // 1-to-1: the Pokemon of one zone all get different replacements (FVX)
+        result = RH_PickSpeciesNearBstRanked(&f, sRhWildZoneRank[pair][CatchAllRankMode()], RH_Hash(SALT_WILD, zone, 0x2A), bst);
+        return result ? result : species;
     }
     result = RH_PickSpeciesNearBst(&f, hash, bst);
     return result ? result : species;

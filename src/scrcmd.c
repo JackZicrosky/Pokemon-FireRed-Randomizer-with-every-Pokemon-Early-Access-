@@ -2689,6 +2689,7 @@ bool8 ScrCmd_playmoncry(struct ScriptContext *ctx)
 
     Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
 
+    species = RH_StaticSpecies(species);                     // a randomized static cries as its new self
     PlayCry_Script(species, mode);
     return FALSE;
 }

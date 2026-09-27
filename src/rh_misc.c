@@ -38,13 +38,26 @@ const u8 *RH_SpeciesName(const u8 *name)
 }
 
 // ---------------------------------------------------------------------------
+// The Pokemon Oak shows in his intro (FVX randomizes it unless "No Random Intro Mon")
+// ---------------------------------------------------------------------------
+u16 RH_IntroSpecies(u16 vanilla)
+{
+    struct RhFilter f = {0};
+    u16 sp;
+    if (!S->enabled || !S->randomIntroMon)
+        return vanilla;
+    sp = RH_PickSpecies(&f, RH_Hash(SALT_STATIC, 0x1A7, 0), SPECIES_NONE);
+    return sp ? sp : vanilla;
+}
+
+// ---------------------------------------------------------------------------
 // Catching tutorial (the old man in Viridian City)
 // ---------------------------------------------------------------------------
 u16 RH_CatchTutorialSpecies(u16 vanilla)
 {
     struct RhFilter f = {0};
     u16 sp;
-    if (!S->enabled || !S->randomCatchTutorial)
+    if (!S->randomCatchTutorial)                            // a Misc. Tweak: works with the randomizer off too
         return vanilla;
     f.legend = 1;
     f.stage = 1;
@@ -94,7 +107,7 @@ void RH_OnNewGame(void)
     }
     if (S->nationalDexAtStart)
         EnableNationalPokedex();
-    if (S->enabled && S->randomPcPotion)
+    if (S->randomPcPotion)
     {
         u32 tries;
         u16 item = ITEM_POTION;
@@ -151,6 +164,51 @@ void RH_TestSetup(void)
     AddBagItem(ITEM_HEALING_KIT, 1);
     AddBagItem(ITEM_HM_CUT, 1);
     AddBagItem(ITEM_MASTER_BALL, 5);
+}
+#endif
+#ifdef RH_TEST_MENU_PRESET
+// Test builds only: a broad "normal play" preset for the settings screen (instant text and graphics are left to the
+// test to set through the menu).
+void RH_TestMenuPreset(struct RhSettings *s)
+{
+    s->seed = 0xBEEF;
+    s->bstMode = 1;
+    s->baseStats = 2; s->types = 1; s->abilities = 1; s->evolutions = 1; s->evoAdjustLevels = TRUE;
+    s->evoChangeImpossible = TRUE;
+    s->typeChart = 2;
+    s->starters = 2; s->starterTypes = 2; s->starterNoLegends = TRUE; s->starterHeldItems = TRUE;
+    s->statics = 3; s->trades = 2;
+    s->movePower = TRUE; s->moveNames = TRUE; s->movesets = 1;
+    s->tmMoves = 1; s->tmCompat = 1; s->tutorMoves = 1;
+    s->trainers = 1; s->rivalCarriesTeam = TRUE; s->trainersEvolveOn = TRUE; s->heldItemsFor[0] = TRUE; s->battleStyle = 0;
+    s->wild = TRUE; s->wildZone = 2; s->wildSimilarStrength = TRUE;
+    s->fieldItems = 2; s->shopItems = 2; s->shopSpecial = TRUE;
+    s->paletteMode = 1; s->paletteFollowTypes = TRUE;
+    s->nuzlocke = TRUE; s->runIndoors = TRUE; s->runWithoutShoes = TRUE; s->reusableTMs = TRUE;
+    s->noPrematureEvos = TRUE;
+}
+#endif
+#ifdef RH_TEST_VARIANT
+// Test builds only: Misc. Tweaks in the field. Variant bit 0 = Running Shoes Indoors, bit 1 = Run Without Running
+// Shoes (the shoes flag is cleared), bit 2 = Instantaneous Text.
+void RH_TestTweaks(u32 variant)
+{
+    struct Pokemon mon;
+    S->enabled = TRUE;
+    S->runIndoors = (variant & 1) != 0;
+    S->runWithoutShoes = (variant & 2) != 0;
+    S->instantText = (variant & 4) != 0;
+    S->statics = (variant & 8) ? 2 : 0;
+    S->seed = 0x2468ACE;
+    RH_InvalidateSettingsHash();
+    if (variant & 2)
+        FlagClear(FLAG_SYS_B_DASH);
+    else
+        FlagSet(FLAG_SYS_B_DASH);
+    CreateMon(&mon, SPECIES_MEWTWO, 70, 0, OTID_STRUCT_PLAYER_ID);
+    GiveMonInitialMoveset(&mon);
+    CalculateMonStats(&mon);
+    GiveScriptedMonToPlayer(&mon, PARTY_SIZE);
 }
 #endif
 #endif

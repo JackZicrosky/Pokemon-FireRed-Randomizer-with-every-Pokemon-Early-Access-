@@ -5266,7 +5266,19 @@ const u16 *GetMonSpritePalFromSpecies(enum Species species, bool32 isShiny, bool
     return GetMonSpritePalFromSpeciesIsEgg(species, isShiny, isFemale, FALSE);
 }
 
+static const u16 *GetMonSpritePalFromSpeciesIsEggVanilla(enum Species species, bool32 isShiny, bool32 isFemale, bool32 isEgg);
+
+// Randomized palettes ("Pokemon Palettes") are made from the vanilla ones.
 const u16 *GetMonSpritePalFromSpeciesIsEgg(enum Species species, bool32 isShiny, bool32 isFemale, bool32 isEgg)
+{
+    const u16 *pal = GetMonSpritePalFromSpeciesIsEggVanilla(species, isShiny, isFemale, isEgg);
+    if (isEgg || gSaveBlock3Ptr->rhSettings.paletteMode == 0)
+        return pal;
+    return RH_MonPalette(SanitizeSpeciesId(species), isShiny,
+                         GetMonSpritePalFromSpeciesIsEggVanilla(species, FALSE, isFemale, FALSE), pal);
+}
+
+static const u16 *GetMonSpritePalFromSpeciesIsEggVanilla(enum Species species, bool32 isShiny, bool32 isFemale, bool32 isEgg)
 {
     species = SanitizeSpeciesId(species);
 

@@ -117,6 +117,16 @@ static u32 LevelRank(const struct Trainer *t, u32 slot)
     return r;
 }
 
+// "Highest Level Only": the highest-level Pokemon (the first one on ties, FVX), the rival's starter included.
+static bool32 IsHighestLevelSlot(const struct Trainer *t, u32 slot)
+{
+    u32 i;
+    for (i = 0; i < t->partySize; i++)
+        if (t->party[i].lvl > t->party[slot].lvl || (t->party[i].lvl == t->party[slot].lvl && i < slot))
+            return FALSE;
+    return TRUE;
+}
+
 static u8 GymTheme(s32 trainerId)
 {
     u32 i;
@@ -259,6 +269,17 @@ static u8 MemberTheme(u32 member)
     return TYPE_NONE;
 }
 
+static bool32 NotStarterFamily(u16 species)
+{
+    u32 i;
+    if (!CarriesStarter())
+        return TRUE;
+    for (i = 0; i < 3; i++)
+        if (RH_FamilyRoot(RH_StarterForSlot(i)) == RH_FamilyRoot(species))
+            return FALSE;
+    return TRUE;
+}
+
 static void BuildReserved(void)
 {
     u32 member, rank, slot;
@@ -282,9 +303,42 @@ static void BuildReserved(void)
             if (S->trainerNoLegends)
                 f.legend = 1;
             f.type = MemberTheme(member);
+            f.extra = NotStarterFamily;                      // FVX: the rival's starters are never league-unique
             for (j = 0; j < sReserved.count; j++)
                 RH_FilterExclude(&f, sReserved.species[j]);
-            sp = RH_PickSpecies(&f, RH_Hash(SALT_LEAGUE, member * 8 + rank, 0), S->trainerSimilarStrength ? orig : SPECIES_NONE);
+            {
+                // the league's unique Pokemon stay different from each other and keep the member's theme; the
+                // rival's starter families are avoided when possible (tiny pools can't always)
+                struct RhFilter g = f;
+                u32 h = RH_Hash(SALT_LEAGUE, member * 8 + rank, 0);
+                u16 similar = S->trainerSimilarStrength ? orig : SPECIES_NONE;
+                sp = RH_PickWithFilter(&g, h);
+                if (sp != SPECIES_NONE && similar != SPECIES_NONE)
+                {
+                    g = f;
+                    sp = RH_PickSpecies(&g, h, similar);
+                    if (!RH_FilterAccepts(&f, RH_PoolIndexOf(sp)))
+                        sp = RH_PickWithFilter(&f, h);
+                }
+                if (sp == SPECIES_NONE)
+                {
+                    g = f;
+                    g.extra = NULL;                          // allow a starter family
+                    sp = RH_PickWithFilter(&g, h);
+                }
+                if (sp == SPECIES_NONE)
+                {
+                    g = f;
+                    g.extra = NULL;
+                    g.type = TYPE_NONE;                      // then drop the theme, but never repeat one
+                    sp = RH_PickWithFilter(&g, h);
+                }
+                if (sp == SPECIES_NONE)
+                {
+                    g = f;
+                    sp = RH_PickSpecies(&g, h, similar);
+                }
+            }
             sReserved.species[sReserved.count++] = sp;
         }
     }
@@ -335,30 +389,29 @@ static u16 EvolveForLevelEx(u16 species, u32 level, u32 salt, u32 *steps)
     for (guard = 0; guard < 3; guard++)
     {
         const struct Evolution *e = GetSpeciesEvolutions(species);
-        u16 next = SPECIES_NONE;
-        u32 n = 0, pick;
+        u16 next = SPECIES_NONE, legal[8];
+        u32 n = 0;
         bool32 ok = FALSE;
+        // FVX: pick among the evolutions that are possible at this level (not a branch that isn't reached yet)
         for (i = 0; e != NULL && e[i].method != EVOLUTIONS_END; i++)
-            if (e[i].method != EVO_NONE && e[i].targetSpecies != SPECIES_NONE && e[i].targetSpecies != species)
-                n++;
-        if (n == 0)
-            break;
-        pick = RH_Hash(SALT_EVO_LEVEL, species, salt) % n;
-        for (i = 0; e[i].method != EVOLUTIONS_END; i++)
         {
-            if (e[i].method == EVO_NONE || e[i].targetSpecies == SPECIES_NONE || e[i].targetSpecies == species)
+            u16 t = e[i].targetSpecies;
+            bool32 can;
+            if (e[i].method == EVO_NONE || t == SPECIES_NONE || t == species || n >= ARRAY_COUNT(legal))
                 continue;
-            if (pick-- == 0)
-            {
-                next = e[i].targetSpecies;
-                if (e[i].method == EVO_LEVEL || e[i].method == EVO_LEVEL_BATTLE_ONLY)
-                    ok = level >= e[i].param && e[i].param > 1;
-                else
-                    ok = fullBy && level >= fullBy * 3 / 4 + (RH_SpeciesChain(next) > RH_SpeciesStage(next) ? 0 : fullBy / 8);
-                if (fullBy && level >= fullBy)
-                    ok = TRUE;
-                break;
-            }
+            if (e[i].method == EVO_LEVEL || e[i].method == EVO_LEVEL_BATTLE_ONLY)
+                can = level >= e[i].param && e[i].param > 1;
+            else
+                can = fullBy && level >= min(RH_EstimateEvoLevel(species, t), fullBy);   // FVX: estimated evo level
+            if (fullBy && level >= fullBy)
+                can = TRUE;
+            if (can)
+                legal[n++] = t;
+        }
+        if (n > 0)
+        {
+            next = legal[RH_Hash(SALT_EVO_LEVEL, species, salt) % n];
+            ok = TRUE;
         }
         if (!ok || next == SPECIES_NONE)
             break;
@@ -455,9 +508,11 @@ static void BetterMoveset(struct TrainerMon *mon)
     bool32 physical = GetSpeciesBaseAttack(mon->species) >= GetSpeciesBaseSpAttack(mon->species);
 
     // candidates: level-up moves known by now + TMs + tutor moves it can learn (FVX)
+    u32 levelUpCount;
     for (i = 0; l != NULL && l[i].move != LEVEL_UP_MOVE_END && count < ARRAY_COUNT(candidates); i++)
         if (l[i].level <= mon->lvl)
             candidates[count++] = l[i].move;
+    levelUpCount = count;
     for (i = 1; i <= NUM_TECHNICAL_MACHINES && count < ARRAY_COUNT(candidates); i++)
     {
         u16 m = GetTMHMMoveId(i);
@@ -518,8 +573,8 @@ static void BetterMoveset(struct TrainerMon *mon)
             mon->moves[n++] = best[i];
     if (status != MOVE_NONE)
         mon->moves[n++] = status;
-    // top up with remaining level-up moves if needed
-    for (i = count; i > 0 && n < MAX_MON_MOVES; i--)
+    // top up with the newest remaining level-up moves if needed
+    for (i = levelUpCount; i > 0 && n < MAX_MON_MOVES; i--)
     {
         u16 m = candidates[i - 1];
         for (j = 0; j < n; j++)
@@ -673,6 +728,9 @@ static void SetupTeamFilter(struct RhFilter *f, const struct TrainerMon *mon, u3
     f->extra = TeamPredicateWG;
     f->noLeagueReserved = (sLeagueMember == 0);             // kept even when the other rules are relaxed
     f->type = theme;
+    // "No Premature Evolutions" (FVX): nothing evolved further than its level allows
+    if (S->noPrematureEvos && !(S->trainersEvolveOn && mon->lvl >= S->trainersEvolveLevel))
+        f->legalAtLevel = min(mon->lvl, 255);
 }
 
 static u16 ChooseSpecies(const struct TrainerMon *mon, const struct Trainer *trainer, s32 trainerId, u32 slot, u32 tier)
@@ -707,7 +765,7 @@ static u16 ChooseSpecies(const struct TrainerMon *mon, const struct Trainer *tra
         if (similar != SPECIES_NONE)
         {
             // similar strength takes precedence (FVX): even distribution inside the +-20% window
-            u32 bst = RH_VanillaBST(similar);
+            u32 bst = RH_SpeciesBST(similar);
             f.minBst = bst * 80 / 100;
             f.maxBst = bst * 120 / 100;
         }
@@ -845,7 +903,7 @@ void RH_ModifyTrainerMon(struct TrainerMon *mon, const struct Trainer *trainer, 
     {
         bool32 give = TRUE;
         if (S->heldHighestOnly)
-            give = slot < trainer->partySize && LevelRank(trainer, slot) == 0;   // one Pokemon only
+            give = slot < trainer->partySize && IsHighestLevelSlot(trainer, slot);   // one Pokemon only
         if (give)
         {
             u32 h = RH_Hash(SALT_HELD_ITEM, trainerId, slot);
@@ -885,6 +943,14 @@ void RH_FinishTrainerParty(struct Pokemon *party, const struct Trainer *trainer,
         lo = min(lo, trainer->party[i].lvl);
         hi = max(hi, trainer->party[i].lvl);
     }
+    {
+        // FVX: extras stay below the ace's level, unless two or more share the highest level
+        u32 atHi = 0;
+        for (i = 0; i < trainer->partySize; i++)
+            atHi += (trainer->party[i].lvl == hi);
+        if (atHi >= 2)
+            hi++;
+    }
     first = *count;
     keep = gen->trainer;
     for (i = first; i < want; i++)
@@ -908,8 +974,8 @@ void RH_FinishTrainerParty(struct Pokemon *party, const struct Trainer *trainer,
             SetupTeamFilter(&f, &extra, tier, theme);
             sAvoidDupes = TRUE;
             extra.species = RH_PickSpecies(&f, RH_Hash(SALT_EXTRA_MON, trainerId, i), S->trainerSimilarStrength ? extra.species : SPECIES_NONE);
-            if (S->trainersEvolveOn)
-                extra.species = EvolveForLevel(extra.species, extra.lvl, i);
+            if (S->trainersEvolveOn)                         // at the level it will really have (after the modifier)
+                extra.species = EvolveForLevel(extra.species, S->trainerLevelModOn ? RH_ApplyPercent(extra.lvl, S->trainerLevelMod) : extra.lvl, i);
         }
         RH_ModifyTrainerMon(&extra, trainer, i);    // the real slot, so every added Pokemon is its own pick
         gen->trainer = NULL;                         // already modified
@@ -932,11 +998,18 @@ void RH_FinishTrainerParty(struct Pokemon *party, const struct Trainer *trainer,
 // ---------------------------------------------------------------------------
 enum TrainerBattleType RH_TrainerBattleType(u16 trainerId, enum TrainerBattleType vanilla)
 {
+    enum TrainerBattleType type;
     if (!S->enabled || S->battleStyle == 0 || trainerId >= TRAINERS_COUNT || IsFirstRivalBattle(trainerId))
         return vanilla;
     if (S->battleStyle == 2)
-        return S->battleStyleDoubles ? TRAINER_BATTLE_TYPE_DOUBLES : TRAINER_BATTLE_TYPE_SINGLES;
-    return (RH_Hash(SALT_BATTLE_STYLE, trainerId, 0) & 1) ? TRAINER_BATTLE_TYPE_DOUBLES : TRAINER_BATTLE_TYPE_SINGLES;
+        type = S->battleStyleDoubles ? TRAINER_BATTLE_TYPE_DOUBLES : TRAINER_BATTLE_TYPE_SINGLES;
+    else
+        type = (RH_Hash(SALT_BATTLE_STYLE, trainerId, 0) & 1) ? TRAINER_BATTLE_TYPE_DOUBLES : TRAINER_BATTLE_TYPE_SINGLES;
+    // a battle that became a double battle needs two usable Pokemon on the player's side (vanilla doubles ask for it)
+    if (type == TRAINER_BATTLE_TYPE_DOUBLES && vanilla != TRAINER_BATTLE_TYPE_DOUBLES
+     && GetMonsStateToDoubles() != PLAYER_HAS_TWO_USABLE_MONS)
+        type = TRAINER_BATTLE_TYPE_SINGLES;
+    return type;
 }
 
 static u32 StringHash(const u8 *s)

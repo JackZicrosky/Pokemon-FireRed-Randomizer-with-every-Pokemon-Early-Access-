@@ -431,6 +431,10 @@ static mapsec_u16_t GetRegionMapSectionId(u8 mapGroup, u8 mapNum)
 
 static bool8 MapHasSpecies(const struct WildEncounterTypes *info, u32 headerSectionId, enum Species species)
 {
+    // Randomized wild Pokemon: the vanilla tables would show wrong places (and spoil the originals), so the
+    // area is shown as unknown.
+    if (gSaveBlock3Ptr->rhSettings.enabled && gSaveBlock3Ptr->rhSettings.wild)
+        return FALSE;
     // If this is a header for Altering Cave, skip it if it's not the current Altering Cave encounter set
     if (headerSectionId == MAPSEC_ALTERING_CAVE)
     {

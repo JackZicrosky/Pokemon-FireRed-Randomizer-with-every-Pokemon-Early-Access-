@@ -3,6 +3,7 @@
 #include "constants/characters.h"
 #include "event_data.h"
 #include "item.h"
+#include "malloc.h"
 #include "move.h"
 #include "pokemon.h"
 #include "string_util.h"
@@ -125,43 +126,160 @@ u32 RH_MoveCategory(enum Move move, u32 vanilla)
     return vanilla;
 }
 
-// Random move names ("Randomize Move Names"), built from FVX's word lists: "<type word> <category word>", following
-// the move's (possibly randomized) type and category.
+// Random move names ("Randomize Move Names"), built from FVX's word lists: "<type word> <action word>". The action
+// word follows the move (FVX getActionWords): punch / sound / drain moves, healing, status infliction, trapping,
+// stat buffs / debuffs, else Physical / Special / Status words. No two moves share a name (FVX usedMoveNames).
 #define MOVE_NAME_BUFFERS 16                         // names stay valid for 16 more calls (menus keep a few pointers)
 static EWRAM_DATA u8 sMoveNameBuf[MOVE_NAME_BUFFERS][MOVE_NAME_LENGTH + 1] = {0};
 static EWRAM_DATA u8 sMoveNameNext = 0;
+struct MoveNameCache { u32 key; u16 pick[MOVES_COUNT]; };   // pick: (type word << 8) | action word
+static EWRAM_DATA struct MoveNameCache sMoveNames = {0};
+
+enum { AW_PHYSICAL, AW_SPECIAL, AW_STATUS, AW_HEAL, AW_BUFF, AW_DEBUFF, AW_TRAP, AW_POISON, AW_BURN, AW_FREEZE,
+       AW_PARALYZE, AW_SLEEP, AW_CONFUSION, AW_DRAIN, AW_PUNCH, AW_SOUND, AW_COUNT };
+static const u8 *const *const sActionWords[AW_COUNT] = {
+    sRhMoveWords_PHYSICAL, sRhMoveWords_SPECIAL, sRhMoveWords_STATUS, sRhMoveWords_STATUS_HEAL, sRhMoveWords_STATUS_BUFF,
+    sRhMoveWords_STATUS_DEBUFF, sRhMoveWords_STATUS_TRAP, sRhMoveWords_INFLICT_POISON, sRhMoveWords_INFLICT_BURN,
+    sRhMoveWords_INFLICT_FREEZE, sRhMoveWords_INFLICT_PARALYZE, sRhMoveWords_INFLICT_SLEEP, sRhMoveWords_INFLICT_CONFUSION,
+    sRhMoveWords_DRAIN, sRhMoveWords_PUNCH, sRhMoveWords_SOUND,
+};
+static const u8 sActionWordCounts[AW_COUNT] = {
+    ARRAY_COUNT(sRhMoveWords_PHYSICAL), ARRAY_COUNT(sRhMoveWords_SPECIAL), ARRAY_COUNT(sRhMoveWords_STATUS),
+    ARRAY_COUNT(sRhMoveWords_STATUS_HEAL), ARRAY_COUNT(sRhMoveWords_STATUS_BUFF), ARRAY_COUNT(sRhMoveWords_STATUS_DEBUFF),
+    ARRAY_COUNT(sRhMoveWords_STATUS_TRAP), ARRAY_COUNT(sRhMoveWords_INFLICT_POISON), ARRAY_COUNT(sRhMoveWords_INFLICT_BURN),
+    ARRAY_COUNT(sRhMoveWords_INFLICT_FREEZE), ARRAY_COUNT(sRhMoveWords_INFLICT_PARALYZE), ARRAY_COUNT(sRhMoveWords_INFLICT_SLEEP),
+    ARRAY_COUNT(sRhMoveWords_INFLICT_CONFUSION), ARRAY_COUNT(sRhMoveWords_DRAIN), ARRAY_COUNT(sRhMoveWords_PUNCH),
+    ARRAY_COUNT(sRhMoveWords_SOUND),
+};
+
+static bool32 HasAdditionalEffect(u16 move, enum MoveEffect effect)
+{
+    u32 i, n = GetMoveAdditionalEffectCount(move);
+    for (i = 0; i < n; i++)
+        if (GetMoveAdditionalEffectById(move, i)->moveEffect == effect)
+            return TRUE;
+    return FALSE;
+}
+
+static u32 ActionWordList(u16 move)
+{
+    u32 cat = GetMoveCategory(move), effect = GetMoveEffect(move);
+    bool32 trap = (effect == EFFECT_MEAN_LOOK || HasAdditionalEffect(move, MOVE_EFFECT_WRAP)
+                || HasAdditionalEffect(move, MOVE_EFFECT_PREVENT_ESCAPE));
+    if (gMovesInfo[move].punchingMove)
+        return AW_PUNCH;
+    if (gMovesInfo[move].soundMove)
+        return AW_SOUND;
+    if (cat != DAMAGE_CATEGORY_STATUS && HasAdditionalEffect(move, MOVE_EFFECT_ABSORB))
+        return AW_DRAIN;
+    if (cat == DAMAGE_CATEGORY_STATUS)
+    {
+        if (gMovesInfo[move].healingMove)
+            return AW_HEAL;
+        switch (GetMoveNonVolatileStatus(move))
+        {
+        case MOVE_EFFECT_POISON: case MOVE_EFFECT_TOXIC: return AW_POISON;
+        case MOVE_EFFECT_BURN:                          return AW_BURN;
+        case MOVE_EFFECT_FREEZE: case MOVE_EFFECT_FROSTBITE: return AW_FREEZE;
+        case MOVE_EFFECT_PARALYSIS:                     return AW_PARALYZE;
+        case MOVE_EFFECT_SLEEP:                         return AW_SLEEP;
+        default: break;
+        }
+        if (effect == EFFECT_CONFUSE || effect == EFFECT_SWAGGER)
+            return AW_CONFUSION;
+        if (trap)
+            return AW_TRAP;
+        if (effect == EFFECT_STAT_CHANGE)
+            return GetMoveTarget(move) == TARGET_USER ? AW_BUFF : AW_DEBUFF;
+        return AW_STATUS;
+    }
+    if (trap)
+        return AW_TRAP;
+    return cat == DAMAGE_CATEGORY_PHYSICAL ? AW_PHYSICAL : AW_SPECIAL;
+}
+
+static u32 MoveNamesKey(void)
+{
+    return (RH_SettingsHash() + 11) | 1;
+}
+
+static bool32 FitsName(const u8 *w1, const u8 *w2)
+{
+    return StringLength(w1) + StringLength(w2) <= MOVE_NAME_LENGTH;   // with or without the space
+}
+
+static bool32 SameWord(const u8 *a, const u8 *b)
+{
+    return a == b || (a[0] == b[0] && StringCompare(a, b) == 0);
+}
+
+static void BuildMoveNames(void)
+{
+    u32 move, j, tries;
+    // the words each move got so far, for the no-repeat check (the same word can be in two lists)
+    const u8 **w1s = Alloc(MOVES_COUNT * sizeof(u8 *));
+    const u8 **w2s = Alloc(MOVES_COUNT * sizeof(u8 *));
+    for (move = 0; move < MOVES_COUNT; move++)
+    {
+        u32 typeIdx, list, h, pick = 0xFFFF;
+        sMoveNames.pick[move] = 0xFFFF;
+        if (w1s != NULL && w2s != NULL)
+            w1s[move] = w2s[move] = NULL;
+        if (!IsRandomizableMove(move))
+            continue;
+        typeIdx = RH_TypeIndexOf(GetMoveType(move));
+        list = ActionWordList(move);
+        for (tries = 0; tries < 50 && pick == 0xFFFF; tries++)
+        {
+            u32 w1, w2;
+            bool32 used = FALSE;
+            const u8 *a, *b;
+            h = RH_Hash(SALT_MOVE_NAME, move, tries);
+            w1 = h % sRhMoveTypeWordCounts[typeIdx];
+            w2 = (h >> 12) % sActionWordCounts[list];
+            a = sRhMoveTypeWords[typeIdx][w1];
+            b = sActionWords[list][w2];
+            if (!FitsName(a, b))
+                continue;
+            for (j = 0; j < move && !used && w1s != NULL && w2s != NULL; j++)
+                used = (w1s[j] != NULL && SameWord(w1s[j], a) && SameWord(w2s[j], b));
+            if (!used)
+            {
+                pick = (w1 << 8) | w2;
+                if (w1s != NULL && w2s != NULL)
+                    w1s[move] = a, w2s[move] = b;
+            }
+        }
+        sMoveNames.pick[move] = pick;
+    }
+    if (w1s != NULL)
+        Free(w1s);
+    if (w2s != NULL)
+        Free(w2s);
+    sMoveNames.key = MoveNamesKey();
+}
 
 const u8 *RH_MoveName(enum Move move, const u8 *vanilla)
 {
     u8 *buf, *end;
     const u8 *w1, *w2;
-    u32 typeIdx, h, cat, l1, l2;
+    u32 typeIdx, pick;
     if (!S->enabled || !S->moveNames || !IsRandomizableMove(move))
         return vanilla;
+    if (sMoveNames.key != MoveNamesKey())
+        BuildMoveNames();
+    pick = sMoveNames.pick[move];
+    if (pick == 0xFFFF)
+        return vanilla;
     typeIdx = RH_TypeIndexOf(GetMoveType(move));
-    h = RH_Hash(SALT_MOVE_NAME, move, 0);
-    w1 = sRhMoveTypeWords[typeIdx][h % sRhMoveTypeWordCounts[typeIdx]];
-    cat = GetMoveCategory(move);
-    if (cat == DAMAGE_CATEGORY_PHYSICAL)
-        w2 = sRhMoveWords_PHYSICAL[(h >> 12) % ARRAY_COUNT(sRhMoveWords_PHYSICAL)];
-    else if (cat == DAMAGE_CATEGORY_SPECIAL)
-        w2 = sRhMoveWords_SPECIAL[(h >> 12) % ARRAY_COUNT(sRhMoveWords_SPECIAL)];
-    else
-        w2 = sRhMoveWords_STATUS[(h >> 12) % ARRAY_COUNT(sRhMoveWords_STATUS)];
+    w1 = sRhMoveTypeWords[typeIdx][pick >> 8];
+    w2 = sActionWords[ActionWordList(move)][pick & 0xFF];
     buf = sMoveNameBuf[sMoveNameNext];
     sMoveNameNext = (sMoveNameNext + 1) % MOVE_NAME_BUFFERS;
     end = StringCopy(buf, w1);
-    l1 = StringLength(w1);
-    l2 = StringLength(w2);
-    if (l1 + 1 + l2 <= MOVE_NAME_LENGTH)
-    {
-        *end++ = CHAR_SPACE;
-        StringCopy(end, w2);
-    }
-    else if (l1 + l2 <= MOVE_NAME_LENGTH)
-    {
-        StringCopy(end, w2);                                 // FVX: try the two words without a space
-    }
+    if (StringLength(w1) + 1 + StringLength(w2) <= MOVE_NAME_LENGTH)
+        *end++ = CHAR_SPACE;                                 // FVX: without the space if it doesn't fit
+    StringCopy(end, w2);
     return buf;
 }
 
@@ -173,6 +291,8 @@ enum { PICK_ANY, PICK_DAMAGING, PICK_GOOD };
 #define MF_DAMAGING (1 << 0)
 #define MF_GOOD     (1 << 1)
 #define MF_HM       (1 << 2)
+#define MF_PHYSICAL (1 << 3)
+#define MF_SPECIAL  (1 << 4)
 
 struct MoveCache
 {
@@ -219,6 +339,10 @@ static void EnsureMoveCache(void)
         }
         if (IsHMMove(move))
             f |= MF_HM;
+        if (GetMoveCategory(move) == DAMAGE_CATEGORY_PHYSICAL)
+            f |= MF_PHYSICAL;
+        else if (GetMoveCategory(move) == DAMAGE_CATEGORY_SPECIAL)
+            f |= MF_SPECIAL;
         sMoveCache.flags[i] = f;
     }
     // counting sort by type, so a same-type pick only looks at that type's moves
@@ -243,11 +367,16 @@ static bool32 IsBroken(u32 i)
     return sRhMoves[i].broken || (sRhMoves[i].gen1Broken && S->mechanicsGen == 1);
 }
 
+// Forced good attacks lean Physical or Special by the Pokemon's Attack : Sp. Atk ratio (FVX). 0 = no preference.
+static EWRAM_DATA u8 sPickCategoryFlag = 0;
+
 // type: TYPE_NONE = any type. noHM: level-up movesets never get HM moves (FVX).
 static bool32 MoveOk(u32 i, u8 type, u32 need, bool32 noBreaking, bool32 noHM)
 {
     u8 f = sMoveCache.flags[i];
     if (noBreaking && IsBroken(i))
+        return FALSE;
+    if (sPickCategoryFlag && need != PICK_ANY && !(f & sPickCategoryFlag))
         return FALSE;
     if (noHM && (f & MF_HM))
         return FALSE;
@@ -289,6 +418,11 @@ static u16 PickMove(u32 hash, u8 type, u32 need, bool32 noBreaking, bool32 noHM)
     for (i = 0; i < RH_MOVE_COUNT; i++)
         if (MoveOk(i, type, need, noBreaking, noHM))
             count++;
+    if (count == 0 && sPickCategoryFlag)
+    {
+        sPickCategoryFlag = 0;
+        return PickMove(hash, type, need, noBreaking, noHM);
+    }
     if (count == 0)
     {
         if (type != TYPE_NONE)
@@ -365,6 +499,23 @@ static u32 MovePowerForSort(u16 move)
     return GetMovePower(move) * HitCount(move);
 }
 
+// "Random (prefer same type)" (FVX): Normal/X -> 10% Normal, 30% X; X/Y -> 20% each; single type -> 40%. Else any type.
+static u8 SameTypePick(u16 species, u32 h)
+{
+    u8 t1 = GetSpeciesType(species, 0), t2 = GetSpeciesType(species, 1);
+    u32 r = (h >> 3) % 100;
+    if (t1 != t2 && (t1 == TYPE_NORMAL || t2 == TYPE_NORMAL))
+    {
+        u8 other = (t1 == TYPE_NORMAL) ? t2 : t1;
+        if (r < 10)
+            return TYPE_NORMAL;
+        return r < 40 ? other : TYPE_NONE;
+    }
+    if (t1 != t2)
+        return r < 20 ? t1 : (r < 40 ? t2 : TYPE_NONE);
+    return r < 40 ? t1 : TYPE_NONE;
+}
+
 const struct LevelUpMove *RH_LevelUpLearnset(enum Species species, const struct LevelUpMove *vanilla)
 {
     u32 i, j, n, total, key, goodPct, lv1Count, lastLv1;
@@ -425,36 +576,56 @@ const struct LevelUpMove *RH_LevelUpLearnset(enum Species species, const struct 
     }
 
     goodPct = S->movesetGoodDamagingOn ? S->movesetGoodDamaging : 0;
-    for (i = 0; i < n; i++)
     {
-        u16 move = MOVE_NONE;
-        u32 tries, need = PICK_ANY;
-        for (tries = 0; tries < 12; tries++)
+        // "Force % Good Damaging": exactly round(% x moves) of the moves are good attacks (FVX), at hashed slots
+        u8 forced[LEARNSET_MAX + 2];
+        u32 want = (goodPct * n + 50) / 100, have = 0;
+        u32 atk = GetSpeciesBaseAttack(species), spa = GetSpeciesBaseSpAttack(species);
+        memset(forced, 0, sizeof(forced));
+        forced[lastLv1] = TRUE;                              // FVX: always start with a good attack
+        for (i = 0; have < want && i < n * 4; i++)
         {
-            u32 h = RH_Hash(SALT_LEARNSET, species, i * 16 + tries);
-            u8 type = TYPE_NONE;
-            need = PICK_ANY;
-            if (i == lastLv1)
-                need = PICK_GOOD;                            // FVX: always start with a good attack
-            else if ((h % 100) < goodPct)
-                need = PICK_GOOD;
-            if (S->movesets == 1 && ((h >> 8) % 5) < 2)
-                type = GetSpeciesType(species, (h >> 11) & 1);   // "Prefer Same Type": 40% one of its types
-            move = PickMove(h >> 12, type, need, S->movesetNoGameBreaking, TRUE);
-            if (!InLearnset(c->moves, i, move))
-                break;
-            move = MOVE_NONE;
+            u32 k = RH_Hash(SALT_LEARNSET, species, 5000 + i) % n;
+            if (!forced[k])
+            {
+                forced[k] = TRUE;
+                have++;
+            }
         }
-        if (move == MOVE_NONE)
+        for (i = 0; have < want && i < n; i++)
+            if (!forced[i])
+                forced[i] = TRUE, have++;
+        for (i = 0; i < n; i++)
         {
-            // no duplicates: take the first unused move that fits
-            for (j = 0; j < RH_MOVE_COUNT && move == MOVE_NONE; j++)
-                if (MoveOk(j, TYPE_NONE, need, S->movesetNoGameBreaking, TRUE) && !InLearnset(c->moves, i, sRhMoves[j].move))
-                    move = sRhMoves[j].move;
+            u16 move = MOVE_NONE;
+            u32 tries, need = forced[i] ? PICK_GOOD : PICK_ANY;
+            for (tries = 0; tries < 12; tries++)
+            {
+                u32 h = RH_Hash(SALT_LEARNSET, species, i * 16 + tries);
+                u8 type = TYPE_NONE;
+                if (S->movesets == 1)
+                    type = SameTypePick(species, h);
+                // forced attacks: Physical with chance Atk / (Atk + SpA), else Special
+                sPickCategoryFlag = 0;
+                if (need == PICK_GOOD && atk + spa > 0)
+                    sPickCategoryFlag = ((RH_Hash(SALT_LEARNSET, species, 9000 + i) % (atk + spa)) < atk) ? MF_PHYSICAL : MF_SPECIAL;
+                move = PickMove(h >> 12, type, need, S->movesetNoGameBreaking, TRUE);
+                sPickCategoryFlag = 0;
+                if (!InLearnset(c->moves, i, move))
+                    break;
+                move = MOVE_NONE;
+            }
             if (move == MOVE_NONE)
-                move = MOVE_TACKLE;
+            {
+                // no duplicates: take the first unused move that fits
+                for (j = 0; j < RH_MOVE_COUNT && move == MOVE_NONE; j++)
+                    if (MoveOk(j, TYPE_NONE, need, S->movesetNoGameBreaking, TRUE) && !InLearnset(c->moves, i, sRhMoves[j].move))
+                        move = sRhMoves[j].move;
+                if (move == MOVE_NONE)
+                    move = MOVE_TACKLE;
+            }
+            c->moves[i].move = move;
         }
-        c->moves[i].move = move;
     }
 
     if (S->reorderDamagingMoves)
@@ -506,9 +677,11 @@ const u16 *RH_EggMoves(enum Species species, const u16 *vanilla)
             for (j = 0; j < 12; j++)
             {
                 u32 h = RH_Hash(SALT_EGG_MOVES, species, i * 16 + j);
-                u8 type = (S->movesets == 1 && ((h >> 8) % 5) < 2) ? GetSpeciesType(species, (h >> 11) & 1) : TYPE_NONE;
+                u8 type = (S->movesets == 1) ? SameTypePick(species, h) : TYPE_NONE;
                 u32 k;
-                move = PickMove(h >> 12, type, PICK_ANY, S->movesetNoGameBreaking, TRUE);
+                // egg moves follow "Force % Good Damaging" too (FVX)
+                u32 need = (S->movesetGoodDamagingOn && (RH_Hash(SALT_EGG_MOVES, species, 500 + i) % 100) < S->movesetGoodDamaging) ? PICK_GOOD : PICK_ANY;
+                move = PickMove(h >> 12, type, need, S->movesetNoGameBreaking, TRUE);
                 for (k = 0; k < i && sEggMoves[k] != move; k++)
                     ;
                 if (k == i)
@@ -543,15 +716,29 @@ static bool32 LearnsByLevelUp(enum Species species, enum Move move)
 // ---------------------------------------------------------------------------
 // FVX field moves (healing moves such as Soft-Boiled are not field moves there).
 static const u16 sFieldMoves[] = {
-    MOVE_CUT, MOVE_FLY, MOVE_SURF, MOVE_STRENGTH, MOVE_FLASH, MOVE_ROCK_SMASH, MOVE_WATERFALL, MOVE_DIVE,
-    MOVE_DIG, MOVE_TELEPORT, MOVE_SWEET_SCENT, MOVE_SECRET_POWER, MOVE_ROCK_CLIMB,
+    MOVE_CUT, MOVE_FLY, MOVE_SURF, MOVE_STRENGTH, MOVE_FLASH, MOVE_ROCK_SMASH, MOVE_WATERFALL,
+    MOVE_DIG, MOVE_TELEPORT, MOVE_SWEET_SCENT,                // FVX's FRLG list (no Secret Power / Dive here)
 };
+
+
 
 static bool32 IsFieldMove(u16 move)
 {
     u32 i;
     for (i = 0; i < ARRAY_COUNT(sFieldMoves); i++)
         if (sFieldMoves[i] == move)
+            return TRUE;
+    return FALSE;
+}
+
+// A field move that "Keep Field Move TMs" keeps on its own TM (it may not appear on another one).
+static bool32 IsKeptFieldTMMove(u16 move)
+{
+    u32 i;
+    if (!S->tmKeepFieldMoves || !IsFieldMove(move))
+        return FALSE;
+    for (i = 1; i <= NUM_TECHNICAL_MACHINES; i++)
+        if (gTMHMItemMoveIds[i].moveId == move)
             return TRUE;
     return FALSE;
 }
@@ -603,8 +790,8 @@ static u16 RandomMachineMove(u32 salt, u32 index, u32 goodPct, bool32 noBreaking
     for (tries = 0; tries < 64; tries++)
     {
         u32 h = RH_Hash(salt, index, tries);
-        u16 move = PickMove(h >> 8, TYPE_NONE, (h % 100) < goodPct ? PICK_GOOD : PICK_ANY, noBreaking, FALSE);
-        if ((keepField && IsFieldMove(move)) || UsedMachineMove(move, tmCount, tutorCount))
+        u16 move = PickMove(h >> 8, TYPE_NONE, goodPct ? PICK_GOOD : PICK_ANY, noBreaking, FALSE);
+        if (IsKeptFieldTMMove(move) || UsedMachineMove(move, tmCount, tutorCount))
             continue;
         return move;
     }
@@ -614,11 +801,18 @@ static u16 RandomMachineMove(u32 salt, u32 index, u32 goodPct, bool32 noBreaking
         const struct RhMove *m = &sRhMoves[(RH_Hash(salt, index, 999) + tries) % RH_MOVE_COUNT];
         if (noBreaking && m->broken)
             continue;
-        if (IsHMMove(m->move) || (keepField && IsFieldMove(m->move)) || UsedMachineMove(m->move, tmCount, tutorCount))
+        if (IsHMMove(m->move) || IsKeptFieldTMMove(m->move) || UsedMachineMove(m->move, tmCount, tutorCount))
             continue;
         return m->move;
     }
     return MOVE_NONE;
+}
+
+// "Force % Good Damaging" (FVX): exactly round(% x count) of the machines teach a good attack.
+static u32 ForcedGood(u32 salt, u32 index, u32 count, u32 pct)
+{
+    u32 want = (pct * count + 50) / 100;
+    return RH_Permute(salt + 77, index, count) < want;
 }
 
 static void BuildMachines(void)
@@ -631,8 +825,8 @@ static void BuildMachines(void)
         sMachines.tm[i] = vanilla;
         if (S->tmMoves && !(S->tmKeepFieldMoves && IsFieldMove(vanilla)))
         {
-            u16 m = RandomMachineMove(SALT_TM, i, S->tmGoodDamagingOn ? S->tmGoodDamaging : 0, S->tmNoGameBreaking,
-                                      S->tmKeepFieldMoves, i - 1, 0);
+            u16 m = RandomMachineMove(SALT_TM, i, ForcedGood(SALT_TM, i - 1, NUM_TECHNICAL_MACHINES, S->tmGoodDamagingOn ? S->tmGoodDamaging : 0),
+                                      S->tmNoGameBreaking, S->tmKeepFieldMoves, i - 1, 0);
             if (m != MOVE_NONE)
                 sMachines.tm[i] = m;
         }
@@ -642,8 +836,8 @@ static void BuildMachines(void)
         sMachines.tutor[i] = sTutorMoves[i];
         if (S->tutorMoves && !(S->tutorKeepFieldMoves && IsFieldMove(sTutorMoves[i])))
         {
-            u16 m = RandomMachineMove(SALT_TUTOR, i, S->tutorGoodDamagingOn ? S->tutorGoodDamaging : 0, S->tutorNoGameBreaking,
-                                      S->tutorKeepFieldMoves, NUM_TECHNICAL_MACHINES, i);
+            u16 m = RandomMachineMove(SALT_TUTOR, i, ForcedGood(SALT_TUTOR, i, NUM_RH_TUTORS, S->tutorGoodDamagingOn ? S->tutorGoodDamaging : 0),
+                                      S->tutorNoGameBreaking, S->tutorKeepFieldMoves, NUM_TECHNICAL_MACHINES, i);
             if (m != MOVE_NONE)
                 sMachines.tutor[i] = m;
         }
@@ -698,6 +892,84 @@ void RH_RemapTutorMove(void)
     StringCopy(gStringVar2, GetMoveName(gSpecialVar_0x8005));
 }
 
+// NPC texts such as "TM39 contains ROCK TOMB." name the vanilla move: every field message is passed through here
+// and the vanilla move name that follows a "TMxx" is replaced by the move the TM teaches now (FVX rewrites them).
+static u8 FoldChar(u8 ch)
+{
+    if (ch >= CHAR_a && ch <= CHAR_z)
+        return ch - CHAR_a + CHAR_A;
+    return ch;
+}
+
+static bool32 SkipChar(u8 ch)
+{
+    return ch == CHAR_SPACE || ch == CHAR_HYPHEN || ch == CHAR_NEWLINE;
+}
+
+// Length of the match of "name" at str (ignoring case, spaces and hyphens), 0 if none.
+static u32 MatchMoveName(const u8 *str, const u8 *name)
+{
+    const u8 *s = str;
+    if (SkipChar(*s))
+        return 0;
+    while (*name != EOS)
+    {
+        if (SkipChar(*name))
+        {
+            name++;
+            continue;
+        }
+        while (*s != EOS && SkipChar(*s))
+            s++;
+        if (*s == EOS || FoldChar(*s) != FoldChar(*name))
+            return 0;
+        s++;
+        name++;
+    }
+    return s - str;
+}
+
+void RH_FixTMText(u8 *str)
+{
+    u32 i, len;
+    if (!S->enabled || (!S->tmMoves && S->movesets != 3 && !S->moveNames))
+        return;
+    len = StringLength(str);
+    for (i = 0; i + 3 < len; i++)
+    {
+        u32 idx, j, k, m;
+        u16 oldMove, newMove;
+        const u8 *oldName;
+        u8 newName[MOVE_NAME_LENGTH + 1];
+        if (str[i] != CHAR_T || str[i + 1] != CHAR_M || str[i + 2] < CHAR_0 || str[i + 2] > CHAR_9
+         || str[i + 3] < CHAR_0 || str[i + 3] > CHAR_9)
+            continue;
+        idx = (str[i + 2] - CHAR_0) * 10 + (str[i + 3] - CHAR_0);
+        if (idx == 0 || idx > NUM_TECHNICAL_MACHINES)
+            continue;
+        oldMove = gTMHMItemMoveIds[idx].moveId;
+        newMove = GetTMHMMoveId(idx);
+        oldName = gMovesInfo[oldMove].name;
+        for (j = i + 4; j < len; j++)
+        {
+            m = MatchMoveName(&str[j], oldName);
+            if (m == 0)
+                continue;
+            StringCopy(newName, GetMoveName(newMove));
+            for (k = 0; newName[k] != EOS; k++)
+                newName[k] = FoldChar(newName[k]);           // the texts write move names in capitals
+            k = StringLength(newName);
+            if (len - m + k >= 900)
+                return;
+            memmove(&str[j + k], &str[j + m], len - (j + m) + 1);
+            memcpy(&str[j], newName, k);
+            len = len - m + k;
+            i = j + k - 1;
+            break;
+        }
+    }
+}
+
 // Script special: STR_VAR_2 = the move taught by the TM item in VAR_TEMP_1 (Game Corner prize list).
 void RH_BufferTMMoveFromItem(void)
 {
@@ -742,8 +1014,8 @@ static u32 BaseOdds(u32 mode, u16 species, u16 move)
     u8 type = GetMoveType(move);
     u32 odds;
     if (mode == 2)
-        return 50;
-    if (RH_SpeciesHasType(species, type))
+        odds = 50;
+    else if (RH_SpeciesHasType(species, type))
         odds = 90;
     else if (type == TYPE_NORMAL)
         odds = 50;
@@ -775,6 +1047,21 @@ static bool32 RandomCompat(u32 salt, u32 mode, bool32 followEvos, u16 species, u
     }
 }
 
+// TM/Tutor Levelup Move Sanity, and with Follow Evolutions also what a pre-evolution learns by level up (FVX).
+static bool32 LearnsByLevelUpOrAncestor(u16 species, u16 move, bool32 followEvos)
+{
+    u32 depth;
+    for (depth = 0; depth < 4 && species != SPECIES_NONE; depth++)
+    {
+        if (LearnsByLevelUp(species, move))
+            return TRUE;
+        if (!followEvos)
+            break;
+        species = RH_PreEvo(species);
+    }
+    return FALSE;
+}
+
 bool32 RH_CanLearnTeachable(enum Species species, enum Move move, bool32 (*vanillaCheck)(enum Species, enum Move))
 {
     s32 tm, tutor;
@@ -793,7 +1080,7 @@ bool32 RH_CanLearnTeachable(enum Species species, enum Move move, bool32 (*vanil
                 return vanillaCheck(species, move);
             return RandomCompat(SALT_TM_COMPAT, S->tmCompat, S->tmCompatFollowEvos, species, move, tm, 0);
         }
-        if (S->tmLevelupSanity && LearnsByLevelUp(species, move))
+        if (S->tmLevelupSanity && LearnsByLevelUpOrAncestor(species, move, S->tmCompatFollowEvos))
             return TRUE;
         if (S->tmCompat == 0)
             return vanillaCheck(species, gTMHMItemMoveIds[tm].moveId);   // the slot keeps its original compatibility
@@ -802,7 +1089,7 @@ bool32 RH_CanLearnTeachable(enum Species species, enum Move move, bool32 (*vanil
     tutor = TutorSlotOfMove(move);
     if (tutor >= 0)
     {
-        if (S->tutorLevelupSanity && LearnsByLevelUp(species, move))
+        if (S->tutorLevelupSanity && LearnsByLevelUpOrAncestor(species, move, S->tutorCompatFollowEvos))
             return TRUE;
         if (S->tutorCompat == 0)
             return vanillaCheck(species, sTutorMoves[tutor]);

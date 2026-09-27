@@ -29,6 +29,10 @@ u16 RH_PoolSpecies(u32 index);
 s32 RH_PoolIndexOf(u16 species);
 bool32 RH_PoolAllowed(u32 index);            // respects the Pokemon Pool setting (never megas)
 u16 RH_FamilyRoot(u16 species);
+struct RhPoolTraits { u16 species; u8 stage, chain, legendary, baseForm; };
+void RH_PoolTraits(u32 index, struct RhPoolTraits *out);
+u32 RH_SpeciesBST(u16 species);
+u32 RH_EstimateEvoLevel(u16 from, u16 to);   // FVX estimated evolution level              // current base stat total ("Base Stat Totals")
 u16 RH_TraitRoot(u16 species);             // family root, but split evolutions start their own branch
 u16 RH_PreEvo(u16 species);                  // direct pre-evolution (vanilla), SPECIES_NONE if basic
 struct RhMoveData { u8 power, accuracy, pp, type, category; };
@@ -64,6 +68,7 @@ struct RhFilter
     bool8 megasOnly;                         // with allowMegas: only Mega Evolutions
     bool8 allowVariants;                     // regional/alternate forms even if the pool setting excludes them
     bool8 noLeagueReserved;                  // never the Elite Four's unique Pokemon (never relaxed)
+    u8 legalAtLevel;                         // "No Premature Evolutions": 0 = off, else evolved no further than this level allows
     u8 excludeCount;
     u16 exclude[RH_MAX_EXCLUDE];
     bool32 (*extra)(u16 species);            // optional extra predicate
@@ -72,9 +77,11 @@ u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash);
 u16 RH_PickRanked(const struct RhFilter *f, u32 rank, u32 salt);    // rank-th accepted in a keyed order
 bool32 RH_FilterAccepts(const struct RhFilter *f, u32 poolIndex);
 u16 RH_PickSpecies(struct RhFilter *f, u32 hash, u16 similarTo);   // relaxes constraints when nothing fits
+u16 RH_PickSpeciesNearBstRanked(struct RhFilter *f, u32 rank, u32 salt, u32 bst);
 u16 RH_PickSpeciesNearBst(struct RhFilter *f, u32 hash, u32 bst);  // same, around a base stat total (0 = any)
 void RH_FilterExclude(struct RhFilter *f, u16 species);
 
+bool32 RH_IsLegalEvolutionAtLevel(u16 species, u32 level);
 u16 RH_EvolveOnce(u16 species, u32 salt);
 u16 RH_EvolveTimes(u16 species, u32 times);
 u16 RH_FullyEvolve(u16 species);

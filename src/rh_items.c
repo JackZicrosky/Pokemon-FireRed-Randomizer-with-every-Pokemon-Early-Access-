@@ -81,9 +81,10 @@ static u16 RandomPoolItem(u32 salt, u32 a, u32 b, bool32 banBad)
 // ---------------------------------------------------------------------------
 // Field items (item balls + hidden items)
 // ---------------------------------------------------------------------------
+// Shuffle keeps the game's own items (FVX: "Ban Bad Items" only affects the random modes).
 static bool32 FieldPoolItemOk(u16 it)
 {
-    return !ItemIsProtected(it) && GetItemTMHMIndex(it) == 0 && !RH_ItemBanned(it) && !(S->fieldBanBad && RH_ItemIsBad(it));
+    return !ItemIsProtected(it) && GetItemTMHMIndex(it) == 0 && !RH_ItemBanned(it);
 }
 
 // k-th field item (in a keyed order) that passes "ok": different k never share an entry.
@@ -125,6 +126,17 @@ static u32 FieldRank(u32 i, bool32 tm)
     return r;
 }
 
+// TM spots in the random modes (FVX getRequiredFieldTMs): the TMs found in the field are placed first, so none of
+// them becomes impossible to get; TM spots only ever hold TMs.
+static enum Item FieldTM(u32 i, enum Item item)
+{
+    s32 e;
+    if (i == RH_FIELD_ITEM_COUNT)
+        return item;
+    e = RankedFieldEntry(FieldRank(i, TRUE), TRUE);
+    return e >= 0 ? sRhFieldItems[e].item : item;
+}
+
 enum Item RH_FieldItem(enum Item item, u32 flag)
 {
     u32 i, x, guard;
@@ -144,9 +156,9 @@ enum Item RH_FieldItem(enum Item item, u32 flag)
         e = RankedFieldEntry(FieldRank(i, isTM), isTM);
         return e >= 0 ? sRhFieldItems[e].item : item;
     }
-    case 3:     // random, every item about equally often (TM spots: every TM before any repeats)
+    case 3:     // random, every item about equally often
         if (isTM)
-            return GetTMHMItemId(1 + RH_Permute(SALT_FIELD_ITEM, FieldRank(i, TRUE) % NUM_TECHNICAL_MACHINES, NUM_TECHNICAL_MACHINES));
+            return FieldTM(i, item);
         x = (i == RH_FIELD_ITEM_COUNT) ? flag % RH_ITEM_COUNT : i;
         for (guard = 0; guard < 128; guard++)
         {
@@ -157,7 +169,7 @@ enum Item RH_FieldItem(enum Item item, u32 flag)
         return item;
     default:    // random
         if (isTM)
-            return GetTMHMItemId(1 + RH_Permute(SALT_FIELD_ITEM, FieldRank(i, TRUE) % NUM_TECHNICAL_MACHINES, NUM_TECHNICAL_MACHINES));
+            return FieldTM(i, item);
         return RandomPoolItem(SALT_FIELD_ITEM, flag, 0, S->fieldBanBad);
     }
 }
@@ -189,9 +201,23 @@ static bool32 ShopItemAllowed(u16 item)
 }
 
 // Regular clerks: balls, medicine and repels stay; everything else follows the Shop Items setting.
+u16 RH_ShuffledShopItem(u16 item, u32 mart, u32 slot);
+
+// A shop slot the Shop Items option may change (not balls / medicine / repels, key items or guaranteed items).
+bool32 RH_ShopSlotRandomizable(u16 item)
+{
+    if (item == ITEM_NONE || IsRegularShopItem(item) || ItemIsProtected(item))
+        return FALSE;
+    if (S->shopGuaranteeEvo && IsEvolutionItem(item))
+        return FALSE;
+    if (S->shopGuaranteeX && IsXItem(item))
+        return FALSE;
+    return TRUE;
+}
+
 enum Item RH_ShopItem(enum Item item, u32 mart, u32 slot)
 {
-    u32 tries, x;
+    u32 tries;
     if (!S->enabled || S->shopItems == 0 || IsRegularShopItem(item) || ItemIsProtected(item))
         return item;
     if (S->shopGuaranteeEvo && IsEvolutionItem(item))
@@ -199,17 +225,7 @@ enum Item RH_ShopItem(enum Item item, u32 mart, u32 slot)
     if (S->shopGuaranteeX && IsXItem(item))
         return item;
     if (S->shopItems == 1)
-    {
-        // Shuffle: swap stock around between shops (keyed permutation of the item pool, shop items only)
-        x = RH_Hash(SALT_SHOP, item, 0) % RH_ITEM_COUNT;
-        for (tries = 0; tries < 64; tries++)
-        {
-            x = RH_Permute(SALT_SHOP, x, RH_ITEM_COUNT);
-            if (ShopItemAllowed(sRhItems[x].item) && GetItemPrice(sRhItems[x].item) != 0)
-                return sRhItems[x].item;
-        }
-        return item;
-    }
+        return RH_ShuffledShopItem(item, mart, slot);        // the shops' own items, moved around
     for (tries = 0; tries < 32; tries++)
     {
         u16 it = sRhItems[RH_Hash(SALT_SHOP, mart * 256 + slot, tries) % RH_ITEM_COUNT].item;

@@ -3,10 +3,43 @@
 #include "malloc.h"
 #include "constants/characters.h"
 #include "pokemon.h"
+#include "regions.h"
 #include "rh_internal.h"
 #include "constants/abilities.h"
 #include "constants/items.h"
 #include "constants/species.h"
+#include "data/rh_evo_levels.h"
+
+// Alternate forms (Megas, Rotom appliances, Unown letters, battle forms...) follow their base form, like FVX's
+// "Follow Mega Evolutions" / cosmetic forms. Regional forms are Pokemon of their own.
+static bool32 IsMegaLike(const struct SpeciesInfo *info)
+{
+    return info->isMegaEvolution || info->isPrimalReversion || info->isUltraBurst;
+}
+
+static u16 FormBaseEx(u16 species, bool32 followMegas)
+{
+    const struct SpeciesInfo *info = &gSpeciesInfo[species];
+    u16 base = GET_BASE_SPECIES_ID(species);
+    if (base == species || base == SPECIES_NONE || base >= NUM_SPECIES)
+        return species;
+    if (info->isAlolanForm || info->isGalarianForm || info->isHisuianForm || info->isPaldeanForm)
+        return species;
+    if (IsMegaLike(info) && !followMegas)
+        return species;                                      // FVX: Megas get their own rolls unless "Follow Mega Evolutions"
+    return base;
+}
+
+static u16 FormBase(u16 species)
+{
+    return FormBaseEx(species, TRUE);
+}
+
+// "Follow Evolutions" key: the line's root, as a base form (Basculegion evolves from a Basculin form).
+static u16 FollowRoot(u16 species)
+{
+    return FormBase(RH_TraitRoot(species));
+}
 
 // ---------------------------------------------------------------------------
 // Base stats
@@ -18,7 +51,8 @@ static EWRAM_DATA u8 sStatCacheNext = 0;
 static u32 SettingsKeyStats(void)
 {
     return S->seed ^ (S->enabled << 1) ^ (S->baseStats << 2) ^ (S->baseStatsFollowEvos << 4) ^ (S->baseStatsRandomAdded << 5)
-         ^ (RH_StatsGen() << 8) ^ 0x1234;
+         ^ (RH_StatsGen() << 8) ^ (S->bstMode << 12) ^ (S->bstChangePct << 14) ^ (S->bstFollowEvos << 22)
+         ^ (S->bstSeparateLegends << 23) ^ (S->statsFollowMegas << 24) ^ (S->speciesPool << 25) ^ 0x1234;
 }
 
 // Base stats of the chosen generation (gen 9 = the current data).
@@ -74,17 +108,204 @@ static void Distribute(u32 amount, u32 key, u32 salt2, u8 *out, const u8 *add, u
     }
 }
 
+// ---------------------------------------------------------------------------
+// Base stat totals (FVX "Base Stat Totals": random buff/nerf %, shuffle, random). The stats keep their proportions.
+// ---------------------------------------------------------------------------
+struct BstTable { u32 key; u16 bst[NUM_SPECIES]; };
+static EWRAM_DATA struct BstTable sBst = {0};
+
+static u32 GenBST(u16 species)
+{
+    u8 v[NUM_STATS];
+    GenStats(species, v);
+    return Total(v);
+}
+
+static u32 ShuffleGroup(const struct RhPoolTraits *m)
+{
+    u32 g = 0;
+    if (S->bstFollowEvos)
+        g = m->chain;                                        // families are shuffled with families of the same length
+    if (S->bstSeparateLegends)
+        g = g * 2 + m->legendary;
+    return g;
+}
+
+static u16 FirstVanillaEvolution(u16 species)
+{
+    const struct Evolution *e = GetSpeciesEvolutionsVanilla(species);
+    u32 i;
+    for (i = 0; e != NULL && e[i].method != EVOLUTIONS_END; i++)
+        if (e[i].method != EVO_NONE && e[i].targetSpecies != SPECIES_NONE && e[i].targetSpecies != species)
+            return e[i].targetSpecies;
+    return SPECIES_NONE;
+}
+
+static void ShuffleBsts(void)
+{
+    u32 g, i, n, k;
+    u32 poolCount = RH_PoolCount();
+    u16 *members = Alloc(poolCount * sizeof(u16));
+    if (members == NULL)
+        return;
+    for (g = 0; g < 8; g++)
+    {
+        n = 0;
+        for (i = 0; i < poolCount; i++)
+        {
+            struct RhPoolTraits m;
+            RH_PoolTraits(i, &m);
+            if (m.baseForm && ShuffleGroup(&m) == g && (!S->bstFollowEvos || m.stage == 1))
+                members[n++] = m.species;
+        }
+        for (k = 0; k < n; k++)
+        {
+            u16 donor = members[RH_Permute(SALT_STATS + 0x55 + g, k, n)];
+            u16 sp = members[k];
+            sBst.bst[sp] = GenBST(donor);
+            if (S->bstFollowEvos)
+            {
+                // evolutions take the BST of the donor family's evolution at the same stage
+                u32 depth;
+                for (depth = 0; depth < 2; depth++)
+                {
+                    const struct Evolution *e = GetSpeciesEvolutionsVanilla(sp);
+                    u16 dn = FirstVanillaEvolution(donor);
+                    u32 j;
+                    if (dn == SPECIES_NONE || e == NULL)
+                        break;
+                    for (j = 0; e[j].method != EVOLUTIONS_END; j++)
+                        if (e[j].method != EVO_NONE && e[j].targetSpecies != SPECIES_NONE && e[j].targetSpecies < NUM_SPECIES
+                         && IsSpeciesEnabled(e[j].targetSpecies) && FormBaseEx(e[j].targetSpecies, FALSE) == e[j].targetSpecies)
+                            sBst.bst[e[j].targetSpecies] = GenBST(dn);   // split evolutions all copy (FVX copySplitEvos)
+                    sp = FirstVanillaEvolution(sp);
+                    donor = dn;
+                    if (sp == SPECIES_NONE)
+                        break;
+                }
+            }
+        }
+    }
+    Free(members);
+}
+
+static u32 BstKey(void)
+{
+    return SettingsKeyStats() ^ 0xB57;
+}
+
+static EWRAM_DATA bool8 sBstBuilding = FALSE;
+
+static void BuildBsts(void)
+{
+    u32 s;
+    sBstBuilding = TRUE;                                     // lookups made while building (species sanitizing
+                                                             // reads base stats) get the plain totals
+    for (s = 0; s < NUM_SPECIES; s++)
+        sBst.bst[s] = IsSpeciesEnabled(s) ? GenBST(s) : 0;
+    switch (S->bstMode)
+    {
+    case 1:     // random buff / nerf: each (family, with Follow Evolutions) gets one modifier
+        for (s = 1; s < NUM_SPECIES; s++)
+        {
+            u32 pct = min(S->bstChangePct, 100), key, m;
+            if (!IsSpeciesEnabled(s) || FormBaseEx(s, FALSE) != s)
+                continue;
+            key = S->bstFollowEvos ? FollowRoot(s) : s;
+            m = 100 - pct + RH_Hash(SALT_STATS + 0x66, key, 0) % (2 * pct + 1);
+            sBst.bst[s] = min(GenBST(s) * m / 100, 255 * NUM_STATS);
+        }
+        break;
+    case 2:
+        ShuffleBsts();
+        break;
+    case 3:     // completely random: between Sunkern (180) and Arceus (720)
+        for (s = 1; s < NUM_SPECIES; s++)
+            if (IsSpeciesEnabled(s) && FormBaseEx(s, FALSE) == s)
+                sBst.bst[s] = 180 + RH_Hash(SALT_STATS + 0x77, s, 0) % (720 - 180);
+        break;
+    }
+    // alternate forms: Megas get the base form's new total + 100, others keep their proportion to the base form
+    for (s = 1; s < NUM_SPECIES; s++)
+    {
+        u16 base;
+        const struct SpeciesInfo *info = &gSpeciesInfo[s];
+        if (!IsSpeciesEnabled(s) || S->bstMode == 0)
+            continue;
+        base = FormBaseEx(s, TRUE);
+        if (base == s || !IsSpeciesEnabled(base))
+            continue;
+        if (IsMegaLike(info))
+            sBst.bst[s] = min(sBst.bst[base] + 100, 255 * NUM_STATS);
+        else if (GenBST(base) != 0)
+            sBst.bst[s] = min(sBst.bst[base] * GenBST(s) / GenBST(base), 255 * NUM_STATS);
+    }
+    sBst.key = BstKey();
+    sBstBuilding = FALSE;
+}
+
+// The Pokemon's current base stat total (after "Base Stat Totals"; before any shuffle, which keeps the total).
+u32 RH_SpeciesBST(u16 species)
+{
+    if (species == SPECIES_NONE || species >= NUM_SPECIES)
+        return 0;
+    if (!S->enabled || S->bstMode == 0 || sBstBuilding)
+        return RH_VanillaBST(species);
+    if (sBst.key != BstKey())
+        BuildBsts();
+    return sBst.bst[species];
+}
+
+// Scales the stats to a new total, keeping their proportions (Shedinja keeps 1 HP).
+static void ScaleToTotal(u8 *v, u32 target, u32 fixedMask)
+{
+    u32 i, total = 0, free = 0, given = 0;
+    u32 fixedSum = 0;
+    for (i = 0; i < NUM_STATS; i++)
+    {
+        total += v[i];
+        if (fixedMask & (1u << i))
+            fixedSum += v[i];
+    }
+    if (total == 0 || target == total)
+        return;
+    free = total - fixedSum;
+    target = target > fixedSum ? target - fixedSum : 0;
+    for (i = 0; i < NUM_STATS; i++)
+    {
+        u32 nv;
+        if (fixedMask & (1u << i))
+            continue;
+        nv = free ? v[i] * target / free : 0;
+        nv = max(1, min(nv, 255));
+        given += nv;
+        v[i] = nv;
+    }
+    for (i = 0; given < target && i < NUM_STATS * 64; i++)
+    {
+        u32 s = i % NUM_STATS;
+        if ((fixedMask & (1u << s)) || v[s] == 255)
+            continue;
+        v[s]++;
+        given++;
+    }
+}
+
 static void ComputeStats(u16 species, u8 *out, u32 depth)
 {
     u8 base[NUM_STATS];
     u32 key, i, fixed = 0;
     GenStats(species, base);
+    if (base[STAT_HP] == 1)
+        fixed = 1u << STAT_HP;                               // Shedinja keeps 1 HP
+    if (S->enabled && S->bstMode != 0)
+        ScaleToTotal(base, RH_SpeciesBST(species), fixed);
     memcpy(out, base, NUM_STATS);
     if (!S->enabled || S->baseStats == 0)
         return;
-    if (base[STAT_HP] == 1)
-        fixed = 1u << STAT_HP;                               // Shedinja keeps 1 HP
-    key = S->baseStatsFollowEvos ? RH_TraitRoot(species) : species;
+    key = FormBaseEx(species, S->statsFollowMegas);
+    if (S->baseStatsFollowEvos)
+        key = FollowRoot(key);
     if (S->baseStats == 1)
     {
         u8 perm[NUM_STATS] = {0, 1, 2, 3, 4, 5};
@@ -114,6 +335,8 @@ static void ComputeStats(u16 species, u8 *out, u32 depth)
         s32 diff;
         ComputeStats(preEvo, pre, depth + 1);
         GenStats(preEvo, preBase);
+        if (S->enabled && S->bstMode != 0)
+            ScaleToTotal(preBase, RH_SpeciesBST(preEvo), preBase[STAT_HP] == 1 ? 1u << STAT_HP : 0);
         diff = (s32)Total(base) - (s32)Total(preBase);
         if (diff > 0)
         {
@@ -147,7 +370,7 @@ u32 RH_SpeciesBaseStat(enum Species species, u32 stat, u32 vanilla)
     struct StatCache *c;
     if (species == SPECIES_NONE || species >= NUM_SPECIES || stat >= NUM_STATS)
         return vanilla;
-    if ((!S->enabled || S->baseStats == 0) && RH_StatsGen() >= 9)
+    if ((!S->enabled || (S->baseStats == 0 && S->bstMode == 0)) && RH_StatsGen() >= 9)
         return vanilla;
     key = SettingsKeyStats();
     for (i = 0; i < ARRAY_COUNT(sStatCache); i++)
@@ -190,6 +413,7 @@ enum GrowthRate RH_SpeciesGrowthRate(enum Species species, enum GrowthRate vanil
             return GROWTH_SLOW;
         break;
     case 1:
+        species = GET_BASE_SPECIES_ID(species);              // forms keep their base form's curve (Hoopa, Megas...)
         if (RH_IsLegendary(species) && RH_VanillaBST(FinalStage(species)) > 600)
             return GROWTH_SLOW;                              // judged by the final stage (Cosmog -> Solgaleo)
         break;
@@ -209,11 +433,27 @@ enum Type RH_SpeciesType(enum Species species, u32 slot, enum Type vanilla)
     if (!S->enabled || S->types == 0 || species == SPECIES_NONE || species >= NUM_SPECIES)
         return vanilla;
     info = &gSpeciesInfo[species];
+    if (FormBaseEx(species, S->typesFollowMegas) != species)
+    {
+        u16 base = FormBase(species);
+        const struct SpeciesInfo *baseInfo = &gSpeciesInfo[base];
+        t1 = RH_SpeciesType(base, 0, baseInfo->types[0]);
+        if (info->types[0] == baseInfo->types[0] && info->types[1] == baseInfo->types[1])
+            return RH_SpeciesType(base, slot, baseInfo->types[slot ? 1 : 0]);   // same typing as its base form
+        if (slot == 0)
+            return t1;
+        if (info->types[0] == info->types[1] && !S->forceDualTypes)
+            return t1;
+        t2 = RH_RandomMonType(RH_Hash(SALT_TYPE2, species, 7));  // the form's typing differs: a new second type
+        if (t2 == t1)
+            t2 = gRhMonTypes[(RH_TypeIndexOf(t1) + 1 + RH_Hash(SALT_TYPE2, species, 8) % 17) % 18];
+        return t2;
+    }
     if (S->types == 1)
     {
         // Follow evolutions: the family shares its first type; evolutions that gain a second type in the base game
         // gain a (family-wide) random second type.
-        key = RH_TraitRoot(species);
+        key = FollowRoot(species);
     }
     else
     {
@@ -280,8 +520,12 @@ static bool32 AbilityAllowed(u32 ability)
 {
     if (ability == ABILITY_NONE || ability >= ABILITIES_COUNT)
         return FALSE;
+    if (gAbilitiesInfo[ability].name[0] == CHAR_HYPHEN)
+        return FALSE;                                        // unused placeholder slots ("-------")
     switch (ability)
     {
+    case ABILITY_AURA_GUARD:                                 // not implemented in this engine
+        return FALSE;
     case ABILITY_WONDER_GUARD:
         return S->allowWonderGuard;
     case ABILITY_ARENA_TRAP: case ABILITY_SHADOW_TAG: case ABILITY_MAGNET_PULL:
@@ -328,9 +572,17 @@ enum Ability RH_SpeciesAbility(enum Species species, u32 slot, enum Ability vani
     info = &gSpeciesInfo[species];
     if (info->abilities[0] == ABILITY_WONDER_GUARD)
         return vanilla;                                      // Shedinja keeps Wonder Guard (FVX)
+    if (FormBaseEx(species, S->abilitiesFollowMegas) != species)
+    {
+        // Battle forms keep their form abilities (Zen Mode...); cosmetic forms and (with "Follow Mega Evolutions")
+        // Megas copy the base form's new abilities.
+        if (gAbilitiesInfo[info->abilities[0]].cantBeSwapped || (vanilla != ABILITY_NONE && gAbilitiesInfo[vanilla].cantBeSwapped))
+            return vanilla;
+        return RH_SpeciesAbility(FormBase(species), slot, gSpeciesInfo[FormBase(species)].abilities[slot]);
+    }
     if (vanilla == ABILITY_NONE && !(slot == 1 && S->ensureTwoAbilities))
         return ABILITY_NONE;
-    key = S->abilitiesFollowEvos ? RH_TraitRoot(species) : species;
+    key = S->abilitiesFollowEvos ? FollowRoot(species) : species;
     {
         // all three slots are rolled together so they always differ from each other
         u16 abil[3];
@@ -375,7 +627,7 @@ static u32 SettingsKeyEvos(void)
 
 static bool32 EvosActive(void)
 {
-    return S->enabled && (S->evolutions || S->evoChangeImpossible || S->evoMakeEasier || S->evoRemoveTimeBased);
+    return S->enabled && (S->evolutions || S->evoChangeImpossible || S->evoMakeEasier || S->evoRemoveTimeBased || S->evoAdjustLevels);
 }
 
 static u32 Remaining(u16 species)
@@ -406,7 +658,7 @@ static bool32 EvoTargetOk(u16 species)
         return FALSE;                                        // FVX: evolutions keep the EXP curve
     if (!sEvoRelaxed && S->evoSameTyping && !RH_SpeciesHasType(species, GetSpeciesType(sEvoSource, 0)) && !RH_SpeciesHasType(species, GetSpeciesType(sEvoSource, 1)))
         return FALSE;
-    if (!sEvoRelaxed && sEvoMinBst && RH_VanillaBST(species) < sEvoMinBst)
+    if (!sEvoRelaxed && sEvoMinBst && RH_SpeciesBST(species) < sEvoMinBst)
         return FALSE;
     if (sEvoRemaining >= 0 && (s32)Remaining(species) != sEvoRemaining)
         return FALSE;
@@ -421,7 +673,7 @@ static void SetEvoContext(u16 species, u16 original)
     sEvoGrowth = GetSpeciesGrowthRate(species);
     sEvoSourceRank = EvoRank(species);
     // Similar Strength / Limit to Three Stages / Force Growth only apply to "Random" (not "Every Level"), as in FVX
-    sEvoMinBst = (S->evoForceGrowth && S->evolutions == 1) ? RH_VanillaBST(species) + 1 : 0;
+    sEvoMinBst = (S->evoForceGrowth && S->evolutions == 1) ? RH_SpeciesBST(species) + 1 : 0;
     sEvoRemaining = (S->evoLimitThreeStages && S->evolutions == 1 && original != SPECIES_NONE) ? (s8)Remaining(original) : -1;
 }
 
@@ -443,119 +695,232 @@ static bool32 IsVanillaTarget(u16 species, u16 target)
     return FALSE;
 }
 
-// "No Convergence": no two evolutions share a target. Candidates are grouped by what doesn't depend on the source
-// (EXP curve, and the stages left with "Limit to Three Stages"). The original targets of a group are numbered
-// 0..m-1, and target number idx may only use candidate positions idx, idx+m, idx+2m... of a keyed order of the
-// group, so different original targets can never land on the same Pokemon, even when some candidates fail the
-// other rules. (Every Level: every Pokemon of the group is a source, so the map is a bijection.)
-#ifndef RELEASE
-s32 gRhDebugNoConv[4];
-#endif
+// Global No Convergence table (like FVX, which picks from the targets not used yet): every evolution of the
+// allowed Pokemon gets its target once per settings, in species order, never a target that was already taken.
+// Entries: source (11 bits) << 16 | vanilla entry (4 bits) << 11 | target (11 bits).
+#define NC_MAX 1400
+struct NoConvTable { u32 key; u16 count; u32 e[NC_MAX]; };
+static EWRAM_DATA struct NoConvTable sNoConv = {0};
+STATIC_ASSERT(NUM_SPECIES < 2048, NoConvSpeciesBits);
 
-static bool32 InEvoGroup(u16 sp)
+static bool32 RegionLocked(const struct Evolution *e);
+static bool32 TargetInPool(u16 species);
+static bool32 HasPoolSibling(const struct Evolution *vanilla, u16 target);
+
+// Build-time snapshot of every pool Pokemon (the per-candidate getters are far too slow to call ~100k times).
+struct NcMon { u16 species; u16 bst; u8 growth; u8 rem; u8 t1, t2; u8 allowed; u8 pad; };
+struct NcCtx
 {
-    return GetSpeciesGrowthRate(sp) == sEvoGrowth && (sEvoRemaining < 0 || (s32)Remaining(sp) == sEvoRemaining);
+    struct NcMon *mon;      // [pool count]
+    u16 *order;             // pool indexes grouped by (growth, stages left), shuffled inside each group
+    u16 start[6 * 4 + 1];   // group starts in order[]
+    u16 len[6 * 4];         // Pokemon left in each group (taken targets are swapped out)
+    u8 *used;               // targets already taken (bitset by species)
+    u32 n;
+};
+
+#define NC_GROUP(g, r) ((g) * 4 + (r))
+#define NC_USED(u, s) ((u)[(s) >> 3] & (1 << ((s) & 7)))
+
+static bool32 NcSharesType(const struct NcMon *m, u8 a, u8 b)
+{
+    return m->t1 == a || m->t1 == b || m->t2 == a || m->t2 == b;
 }
 
-static bool32 IsGroupSource(u16 sp)
+// A target for one evolution of "species" (original = its vanilla target, NONE for Every Level), never one that is
+// used already. Passes: similar-strength windows, then any strength, then without Same Typing / Force Growth.
+static u16 PickNoConv(struct NcCtx *x, u16 species, u16 original)
 {
-    u16 pre;
-    if (S->evolutions == 2)
-        return InEvoGroup(sp);
-    pre = RH_PreEvo(sp);                                     // an original evolution target of this group
-    return pre != SPECIES_NONE && GetSpeciesGrowthRate(pre) == sEvoGrowth
-        && (sEvoRemaining < 0 || (s32)Remaining(sp) == sEvoRemaining);
-}
-
-static bool32 NoConvergenceOk(u16 species, u16 target)
-{
-    if (target == SPECIES_NONE || target == species)
-        return FALSE;
-    if (S->evoForceChange && IsVanillaTarget(species, target))
-        return FALSE;
-    return EvoTargetOk(target);
-}
-
-static u16 NoConvergenceTarget(u16 species, u16 original)
-{
-    struct RhFilter any = {0};
-    u16 v = (S->evolutions == 2) ? species : original;
-    u32 p, n = RH_PoolCount(), m = 0, c = 0, attempt, pos;
-    s32 idx = -1;
-    u16 *cand, result = SPECIES_NONE;
-    // Random: the new target has as many stages left as the original one. That keeps every chain going "down"
-    // (no loops without the ranking rule, which would reject half of the few positions a target may use).
-    if (S->evolutions == 1)
-        sEvoRemaining = Remaining(original);
-    cand = AllocUnchecked(n * sizeof(u16));
-    if (cand == NULL)
+    static const u8 sWindows[] = { 10, 20, 35, 0, 0 };
+    u8 growth = GetSpeciesGrowthRate(species), st1 = GetSpeciesType(species, 0), st2 = GetSpeciesType(species, 1);
+    u32 srcBst = RH_SpeciesBST(species), pass, k, g, remLo, remHi;
+    u32 bst = (S->evoSimilarStrength && S->evolutions == 1 && original != SPECIES_NONE) ? RH_SpeciesBST(original) : 0;
+    if (growth >= 6)
         return SPECIES_NONE;
-    for (p = 0; p < n; p++)
+    if (S->evolutions == 1)
+        remLo = remHi = min(Remaining(original), 3u);       // chains keep their length: they can't loop
+    else
+        remLo = 0, remHi = 3;
+    for (pass = 0; pass < 5; pass++)
     {
-        u16 sp;
-        if (!RH_FilterAccepts(&any, p))
+        u32 window = sWindows[pass];
+        bool32 relaxed = (pass == 4);                       // last resort: no Same Typing / Force Growth
+        if (pass < 3 && bst == 0)
             continue;
-        sp = RH_PoolSpecies(p);
-        if (sp == v)
-            idx = m;
-        if (IsGroupSource(sp))
-            m++;
-        if (InEvoGroup(sp))
-            cand[c++] = sp;
-    }
-#ifndef RELEASE
-    gRhDebugNoConv[0] = idx; gRhDebugNoConv[1] = m; gRhDebugNoConv[2] = c;
-#endif
-    if (S->evolutions == 2 && idx >= 0 && c > 1)
-    {
-        // Every Level: the group in a keyed order is one big cycle, each Pokemon evolving into the next one
-        // (a bijection without fixed points)
-        u32 j;
-        for (j = 0; j < c && RH_Permute(SALT_EVO, j, c) != (u32)idx; j++)
-            ;
-        for (attempt = 1; attempt < c && result == SPECIES_NONE && attempt < 4; attempt++)
+        for (g = NC_GROUP(growth, remLo); g <= NC_GROUP(growth, remHi); g++)
         {
-            u16 t = cand[RH_Permute(SALT_EVO, (j + attempt) % c, c)];
-            if (NoConvergenceOk(species, t))
-                result = t;
+            u32 lo = x->start[g], cnt = x->len[g], off;
+            if (cnt == 0)
+                continue;
+            off = RH_Hash(SALT_EVO, species, original + pass) % cnt;
+            for (k = 0; k < cnt; k++)
+            {
+                u32 pos = lo + (off + k) % cnt;
+                const struct NcMon *m = &x->mon[x->order[pos]];
+                if (!m->allowed || m->species == species || NC_USED(x->used, m->species))
+                    continue;
+                if (window && (m->bst * 100 < bst * (100 - window) || m->bst * 100 > bst * (100 + window)))
+                    continue;
+                if (!relaxed && S->evoSameTyping && !NcSharesType(m, st1, st2))
+                    continue;
+                if (!relaxed && S->evoForceGrowth && S->evolutions == 1 && m->bst <= srcBst)
+                    continue;
+                if (S->evoForceChange && IsVanillaTarget(species, m->species))
+                    continue;
+                // taken: swap it out of its group so later searches don't walk over it
+                {
+                    u16 taken = m->species;
+                    u16 tmp = x->order[lo + cnt - 1];
+                    x->order[lo + cnt - 1] = (u16)(m - x->mon);
+                    x->order[pos] = tmp;
+                    x->len[g]--;
+                    return taken;
+                }
+            }
         }
     }
-    else if (idx >= 0 && m != 0 && c != 0)
+    return SPECIES_NONE;
+}
+
+static void BuildNoConv(void)
+{
+    struct NcCtx x;
+    u32 p, k, j, g;
+    u16 count[6 * 4] = {0};
+    sNoConv.count = 0;
+    sNoConv.key = SettingsKeyEvos();
+    x.n = RH_PoolCount();
+    x.mon = Alloc(x.n * sizeof(struct NcMon));
+    x.order = Alloc(x.n * sizeof(u16));
+    x.used = AllocZeroed((NUM_SPECIES + 7) / 8);
+    if (x.mon == NULL || x.order == NULL || x.used == NULL)
+        goto done;
+    for (p = 0; p < x.n; p++)
     {
-        // this target's own positions: idx, idx + m, idx + 2m...
-        for (attempt = 0; idx + attempt * m < c && result == SPECIES_NONE; attempt++)
+        struct NcMon *m = &x.mon[p];
+        m->species = RH_PoolSpecies(p);
+        m->allowed = RH_PoolAllowed(p);
+        m->bst = RH_SpeciesBST(m->species);
+        m->growth = GetSpeciesGrowthRate(m->species);
+        m->rem = min(Remaining(m->species), 3u);
+        m->t1 = GetSpeciesType(m->species, 0);
+        m->t2 = GetSpeciesType(m->species, 1);
+        if (m->growth < 6)
+            count[NC_GROUP(m->growth, m->rem)]++;
+    }
+    x.start[0] = 0;
+    for (g = 0; g < 6 * 4; g++)
+    {
+        x.start[g + 1] = x.start[g] + count[g];
+        x.len[g] = count[g];
+    }
+    memset(count, 0, sizeof(count));
+    for (p = 0; p < x.n; p++)
+        if (x.mon[p].growth < 6)
         {
-            u16 t = cand[RH_Permute(SALT_EVO, idx + attempt * m, c)];
-            if (NoConvergenceOk(species, t))
-                result = t;
+            g = NC_GROUP(x.mon[p].growth, x.mon[p].rem);
+            x.order[x.start[g] + count[g]++] = p;
         }
-        // none fits the other rules: spare positions (m and up are only second tries of other targets), each
-        // target starting somewhere else so they don't all take the same one
-        for (attempt = 0; c > m && attempt < min(c - m, 128u) && result == SPECIES_NONE; attempt++)
+    // shuffle each group (keyed)
+    for (g = 0; g < 6 * 4; g++)
+    {
+        u32 lo = x.start[g], cnt = x.start[g + 1] - lo;
+        for (k = cnt; k > 1; k--)
+        {
+            u32 r = RH_Hash(SALT_EVO + 0x77, g, k) % k;
+            u16 t = x.order[lo + k - 1];
+            x.order[lo + k - 1] = x.order[lo + r];
+            x.order[lo + r] = t;
+        }
+    }
+    for (p = 0; p < x.n && sNoConv.count < NC_MAX; p++)
+    {
+        u16 sp = x.mon[p].species;
+        const struct Evolution *v;
+        if (!x.mon[p].allowed)
+            continue;
+        if (S->evolutions == 2)
+        {
+            u16 t = PickNoConv(&x, sp, SPECIES_NONE);
+            if (t != SPECIES_NONE)
+                x.used[t >> 3] |= 1 << (t & 7);
+            sNoConv.e[sNoConv.count++] = (sp << 16) | t;
+            continue;
+        }
+        v = GetSpeciesEvolutionsVanilla(sp);
+        for (k = 0; v != NULL && k < 16 && v[k].method != EVOLUTIONS_END && sNoConv.count < NC_MAX; k++)
         {
             u16 t;
-            pos = m + (idx * 37 + attempt) % (c - m);
-            t = cand[RH_Permute(SALT_EVO, pos, c)];
-            if (NoConvergenceOk(species, t))
-                result = t;
+            bool32 shared = FALSE;
+            if (v[k].method == EVO_NONE || v[k].targetSpecies == SPECIES_NONE || RegionLocked(&v[k]))
+                continue;
+            if (!TargetInPool(v[k].targetSpecies) && HasPoolSibling(v, v[k].targetSpecies))
+                continue;
+            for (j = 0; j < k; j++)
+                shared |= (v[j].targetSpecies == v[k].targetSpecies);
+            if (shared)
+                continue;                                    // entries to the same Pokemon share one target
+            t = PickNoConv(&x, sp, v[k].targetSpecies);
+            if (t != SPECIES_NONE)
+                x.used[t >> 3] |= 1 << (t & 7);
+            sNoConv.e[sNoConv.count++] = (sp << 16) | (k << 11) | t;
         }
     }
-    Free(cand);
-    return result;
+done:
+    if (x.mon != NULL)
+        Free(x.mon);
+    if (x.order != NULL)
+        Free(x.order);
+    if (x.used != NULL)
+        Free(x.used);
+}
+
+// TRUE if the table has the entry; *target = SPECIES_NONE when no free target fitted.
+static bool32 NoConvLookup(u16 species, u32 entry, u16 *target)
+{
+    s32 lo = 0, hi;
+    if (sNoConv.key != SettingsKeyEvos())
+        BuildNoConv();
+    hi = sNoConv.count - 1;
+    while (lo <= hi)
+    {
+        s32 mid = (lo + hi) / 2;
+        u32 e = sNoConv.e[mid];
+        u32 s = e >> 16;
+        if (s == species)
+        {
+            // few entries per species: scan around mid
+            while (mid > 0 && (sNoConv.e[mid - 1] >> 16) == species)
+                mid--;
+            for (; mid < sNoConv.count && (sNoConv.e[mid] >> 16) == species; mid++)
+            {
+                if (S->evolutions == 2 || ((sNoConv.e[mid] >> 11) & 0xF) == entry)
+                {
+                    *target = sNoConv.e[mid] & 0x7FF;
+                    return TRUE;
+                }
+            }
+            return FALSE;
+        }
+        if (s < species)
+            lo = mid + 1;
+        else
+            hi = mid - 1;
+    }
+    return FALSE;
 }
 
 static u16 RandomEvoTarget(u16 species, u16 original, u32 n, const u16 *chosen, u32 chosenCount)
 {
     struct RhFilter f = {0};
     u32 i;
-    SetEvoContext(species, original);
     if (S->evoNoConvergence)
     {
-        u16 t = NoConvergenceTarget(species, original);
-        if (t != SPECIES_NONE)
+        u16 t;
+        if (NoConvLookup(species, n, &t) && t != SPECIES_NONE)
             return t;
-        SetEvoContext(species, original);                    // rare: no free position fits -> a normal pick
     }
+    SetEvoContext(species, original);
     f.extra = EvoTargetOk;
     RH_FilterExclude(&f, species);
     for (i = 0; i < chosenCount; i++)
@@ -573,18 +938,33 @@ static u16 RandomEvoTarget(u16 species, u16 original, u32 n, const u16 *chosen, 
     }
 }
 
-static u32 EstimatedLevel(u16 target)
+// FVX estimated evolution level (findEvolutionLevel over all level-up evolutions, precomputed by BST pair) with its
+// post-processing: at least 25% above the previous evolution, at most 80% of the next one.
+static u32 RawEstimate(u16 from, u16 to)
 {
-    s32 bst = RH_VanillaBST(target);
-    s32 level = 18 + (bst - 400) * 138 / 1000;
-    if (level < 10) level = 10;
-    if (level > 55) level = 55;
-    return level;
+    s32 i = ((s32)RH_SpeciesBST(from) - RH_EVO_BST_LO + RH_EVO_BST_STEP / 2) / RH_EVO_BST_STEP;
+    s32 j = ((s32)RH_SpeciesBST(to) - RH_EVO_BST_LO + RH_EVO_BST_STEP / 2) / RH_EVO_BST_STEP;
+    i = max(0, min(i, RH_EVO_BST_N - 1));
+    j = max(0, min(j, RH_EVO_BST_N - 1));
+    return sRhEvoLevelEstimate[i][j];
 }
+
+u32 RH_EstimateEvoLevel(u16 from, u16 to)
+{
+    u32 est = RawEstimate(from, to);
+    u16 pre = RH_PreEvo(from), next = FirstVanillaEvolution(to);
+    if (pre != SPECIES_NONE)
+        est = max(est, (RawEstimate(pre, from) * 5 + 3) / 4);
+    if (next != SPECIES_NONE)
+        est = min(est, (RawEstimate(to, next) * 4 + 4) / 5);
+    return max(2, min(est, 100));
+}
+
+static EWRAM_DATA u16 sAdjustFrom = 0;                        // the Pokemon whose evolutions are being adjusted
 
 static u32 ImpossibleLevel(u16 target)
 {
-    return S->evoEstimatedLevels ? EstimatedLevel(target) : 37;
+    return S->evoEstimatedLevels ? RH_EstimateEvoLevel(sAdjustFrom, target) : 37;
 }
 
 static bool32 ConditionImpossible(const struct EvolutionParam *p)
@@ -594,8 +974,10 @@ static bool32 ConditionImpossible(const struct EvolutionParam *p)
     case IF_IN_MAP: case IF_IN_MAPSEC: case IF_MIN_BEAUTY: case IF_MIN_COOLNESS: case IF_MIN_SMARTNESS:
     case IF_MIN_TOUGHNESS: case IF_MIN_CUTENESS: case IF_TRADE_PARTNER_SPECIES: case IF_DEFEAT_X_WITH_ITEMS:
         return TRUE;
-    case IF_KNOWS_MOVE: case IF_KNOWS_MOVE_TYPE:
+    case IF_KNOWS_MOVE: case IF_KNOWS_MOVE_TYPE: case IF_USED_MOVE_X_TIMES:
         return S->movesets != 0;                             // the move may never be learned
+    case IF_BAG_ITEM_COUNT:
+        return TRUE;                                         // Gimmighoul's 999 coins
     default:
         return FALSE;
     }
@@ -764,6 +1146,9 @@ static void AdjustEvolution(struct Evolution *e, struct EvolutionParam *buf, con
             e->param = ImpossibleLevel(e->targetSpecies);
         }
     }
+    // "Adjust Evolution Levels" (FVX): level-up evolutions happen at a level that fits the two Pokemon
+    if (S->evoAdjustLevels && (e->method == EVO_LEVEL || e->method == EVO_LEVEL_BATTLE_ONLY) && e->param > 1)
+        e->param = RH_EstimateEvoLevel(sAdjustFrom, e->targetSpecies);
     if (S->evoMakeEasier && S->evoMakeEasier < 55 && (e->method == EVO_LEVEL || e->method == EVO_LEVEL_BATTLE_ONLY))
     {
         u32 cap = S->evoMakeEasier;
@@ -773,6 +1158,20 @@ static void AdjustEvolution(struct Evolution *e, struct EvolutionParam *buf, con
             e->param = cap;
     }
     e->params = (n > 0) ? buf : NULL;
+}
+
+// An entry that can never trigger in Kanto (Alolan Raichu, Hisuian Typhlosion...).
+static bool32 RegionLocked(const struct Evolution *e)
+{
+    u32 i;
+    for (i = 0; e->params != NULL && e->params[i].condition != CONDITIONS_END && i < EVO_PARAMS; i++)
+    {
+        if (e->params[i].condition == IF_REGION && e->params[i].arg1 != GetCurrentRegion())
+            return TRUE;
+        if (e->params[i].condition == IF_NOT_REGION && e->params[i].arg1 == GetCurrentRegion())
+            return TRUE;
+    }
+    return FALSE;
 }
 
 static bool32 TargetInPool(u16 species)
@@ -823,10 +1222,16 @@ const struct Evolution *RH_Evolutions(enum Species species, const struct Evoluti
     }
     else
     {
+        sAdjustFrom = species;
         for (n = 0; n < EVO_MAX && vanilla[n].method != EVOLUTIONS_END; n++)
         {
             c->evos[n] = vanilla[n];
             chosen[n] = SPECIES_NONE;
+            if (S->evolutions == 1 && RegionLocked(&vanilla[n]))
+            {
+                c->evos[n].method = EVO_NONE;                // never happens here: don't waste a random target on it
+                continue;
+            }
             if (S->evolutions == 1 && vanilla[n].method != EVO_NONE && vanilla[n].targetSpecies != SPECIES_NONE
              && !TargetInPool(vanilla[n].targetSpecies) && HasPoolSibling(vanilla, vanilla[n].targetSpecies))
             {

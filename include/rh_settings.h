@@ -162,7 +162,17 @@ struct RhSettings
     u8 starterAllowAltFormes, staticAllowAltFormes, wildAllowAltFormes, trainerAllowAltFormes;
     u8 trainerRandomShiny;        // 1/256 shiny trainer Pokemon
     u8 shopAddCheapRareCandy;     // FVX "Add Cheap Rare Candies"
-    u8 reserved[21];
+    // ---- Added in v0.3 build 2 ----
+    u8 noPrematureEvos;           // FVX "No Premature Evolutions" (wild + trainer picks)
+    u8 randomIntroMon;            // the Pokemon in Oak's intro is random (FVX default)
+    u8 bstMode;                   // FVX Base Stat Totals: 0 unchanged, 1 random buff/nerf %, 2 shuffle, 3 random
+    u8 bstChangePct;              // buff/nerf: maximum change in %
+    u8 bstFollowEvos, bstSeparateLegends;
+    u8 statsFollowMegas, typesFollowMegas, abilitiesFollowMegas;   // FVX "Follow Mega Evolutions"
+    u8 evoAdjustLevels;           // FVX "Adjust Evolution Levels"
+    u8 paletteMode;               // FVX Pokemon Palettes: 0 unchanged, 1 random
+    u8 paletteFollowTypes, paletteFollowEvos, paletteShinyFromNormal;
+    u8 reserved[7];
 };
 
 #define RH_SETTINGS_VERSION 2

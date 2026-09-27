@@ -42,7 +42,9 @@ void RH_SetDefaultSettings(struct RhSettings *s)
     s->movesetNoGameBreaking = TRUE;
     s->movesetGoodDamaging = 50;
     s->noEarlyWonderGuard = TRUE;
-    s->trainersEvolveLevel = 40;
+    s->trainersEvolveLevel = 55;
+    s->trainerNoLegends = TRUE;                             // FVX defaults
+    s->wildNoLegends = TRUE;
     s->wildZone = 2;
     s->wildCatchRate = 1;
     s->wildMegas = TRUE;
@@ -58,6 +60,12 @@ void RH_SetDefaultSettings(struct RhSettings *s)
     s->evoMakeEasier = 0;
     s->lowerCaseNames = TRUE;
     s->runWithoutShoes = FALSE;
+    s->randomIntroMon = TRUE;
+    s->bstChangePct = 20;
+    s->bstFollowEvos = TRUE;
+    s->statsFollowMegas = TRUE;
+    s->typesFollowMegas = TRUE;
+    s->abilitiesFollowMegas = TRUE;
 }
 
 void RH_ApplyPendingSettings(void)
@@ -145,7 +153,7 @@ u32 RH_Permute(u32 salt, u32 x, u32 n)
 
 s32 RH_ApplyPercent(s32 value, s16 percent)
 {
-    s32 v = value * (100 + percent) / 100;
+    s32 v = (value * (100 + percent) + 50) / 100;          // rounded (FVX)
     return v < 1 ? 1 : v;
 }
 
@@ -155,6 +163,17 @@ s32 RH_ApplyPercent(s32 value, s16 percent)
 const struct RhPoolMon *RH_PoolAt(u32 index)
 {
     return &sRhPool[index];
+}
+
+// Pool entry details for other modules (the pool struct is private to this file).
+void RH_PoolTraits(u32 index, struct RhPoolTraits *out)
+{
+    const struct RhPoolMon *m = &sRhPool[index];
+    out->species = m->species;
+    out->stage = m->stage;
+    out->chain = m->chain;
+    out->legendary = m->legendary;
+    out->baseForm = !m->variant && !m->mega;
 }
 
 u16 RH_PoolSpecies(u32 index)
@@ -445,10 +464,19 @@ static bool32 FilterOk(const struct RhPoolMon *m, const struct RhFilter *f)
         return FALSE;
     if (f->legend == 2 && !m->legendary)
         return FALSE;
-    if (f->minBst && m->bst < f->minBst)
-        return FALSE;
-    if (f->maxBst && m->bst > f->maxBst)
-        return FALSE;
+    if ((f->minBst || f->maxBst) && S->enabled && S->bstMode != 0)
+    {
+        u32 bst = RH_SpeciesBST(m->species);                 // "Base Stat Totals" changed it
+        if ((f->minBst && bst < f->minBst) || (f->maxBst && bst > f->maxBst))
+            return FALSE;
+    }
+    else
+    {
+        if (f->minBst && m->bst < f->minBst)
+            return FALSE;
+        if (f->maxBst && m->bst > f->maxBst)
+            return FALSE;
+    }
     if (f->stage && m->stage != f->stage)
         return FALSE;
     if (f->threeStageBasic && !(m->stage == 1 && m->chain == 3))
@@ -461,6 +489,8 @@ static bool32 FilterOk(const struct RhPoolMon *m, const struct RhFilter *f)
     if (f->primaryType != TYPE_NONE && GetSpeciesType(m->species, 0) != f->primaryType)
         return FALSE;
     if (f->type != TYPE_NONE && !RH_SpeciesHasType(m->species, f->type))
+        return FALSE;
+    if (f->legalAtLevel && !RH_IsLegalEvolutionAtLevel(m->species, f->legalAtLevel))
         return FALSE;
     if (f->extra != NULL && !f->extra(m->species))
         return FALSE;
@@ -479,9 +509,25 @@ bool32 RH_FilterAccepts(const struct RhFilter *f, u32 poolIndex)
 static EWRAM_DATA u16 sPickBuffer[RH_POOL_COUNT] = {0};
 static EWRAM_DATA u8 sPickDepth = 0;
 
+// Ranked picking (see RH_PickSpeciesNearBstRanked): the pick is the rank-th accepted Pokemon in a keyed order.
+static EWRAM_DATA bool8 sRankedPick = FALSE;
+static EWRAM_DATA u32 sRankedSalt = 0;
+
 u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash)
 {
     u32 i, count = 0, target;
+    if (sRankedPick && sPickDepth == 0)
+    {
+        u16 result = SPECIES_NONE;
+        sPickDepth++;
+        for (i = 0; i < RH_POOL_COUNT; i++)
+            if (FilterOk(&sRhPool[i], f))
+                sPickBuffer[count++] = i;
+        if (count != 0)
+            result = sRhPool[sPickBuffer[RH_Permute(sRankedSalt, hash % count, count)]].species;
+        sPickDepth--;
+        return result;
+    }
     // Random candidates first: uniform among the accepted ones, and far cheaper than scanning the whole pool
     // (each filter check costs ~20 us on the GBA). Only strict filters get to the full scan.
     for (i = 0; i < 48; i++)
@@ -553,7 +599,7 @@ u16 RH_PickRanked(const struct RhFilter *f, u32 rank, u32 salt)
 // type, stage, exclusion and legendary rules (in that order) rather than failing.
 u16 RH_PickSpecies(struct RhFilter *f, u32 hash, u16 similarTo)
 {
-    return RH_PickSpeciesNearBst(f, hash, similarTo != SPECIES_NONE ? RH_VanillaBST(similarTo) : 0);
+    return RH_PickSpeciesNearBst(f, hash, similarTo != SPECIES_NONE ? RH_SpeciesBST(similarTo) : 0);
 }
 
 u16 RH_PickSpeciesNearBst(struct RhFilter *f, u32 hash, u32 bst)
@@ -584,11 +630,12 @@ u16 RH_PickSpeciesNearBst(struct RhFilter *f, u32 hash, u32 bst)
         if ((result = RH_PickWithFilter(f, hash)) != SPECIES_NONE)
             return result;
     }
-    if (f->stage || f->threeStageBasic || f->minBst || f->maxBst)
+    if (f->stage || f->threeStageBasic || f->minBst || f->maxBst || f->legalAtLevel)
     {
         f->stage = 0;
         f->threeStageBasic = FALSE;
         f->minBst = f->maxBst = 0;
+        f->legalAtLevel = 0;
         if ((result = RH_PickWithFilter(f, hash)) != SPECIES_NONE)
             return result;
     }
@@ -601,9 +648,53 @@ u16 RH_PickSpeciesNearBst(struct RhFilter *f, u32 hash, u32 bst)
     return RH_PickWithFilter(f, hash);
 }
 
+// Like RH_PickSpeciesNearBst, but different ranks with the same filter and salt never give the same Pokemon
+// (wild 1-to-1 zones: the Pokemon of one zone all get different replacements, as in FVX).
+u16 RH_PickSpeciesNearBstRanked(struct RhFilter *f, u32 rank, u32 salt, u32 bst)
+{
+    u16 result;
+    sRankedPick = TRUE;
+    sRankedSalt = salt;
+    result = RH_PickSpeciesNearBst(f, rank, bst);
+    sRankedPick = FALSE;
+    return result;
+}
+
 // ---------------------------------------------------------------------------
 // Evolution helpers (use the possibly randomized evolution data)
 // ---------------------------------------------------------------------------
+// FVX isLegalEvolutionAtLevel: could this Pokemon already have evolved at this level? Level-up evolutions use their
+// level; other methods an estimated level from the target's base stat total.
+bool32 RH_IsLegalEvolutionAtLevel(u16 species, u32 level)
+{
+    u32 depth;
+    for (depth = 0; depth < 3; depth++)
+    {
+        u16 pre = RH_PreEvo(species);
+        const struct Evolution *e;
+        u32 i, need = 0;
+        if (pre == SPECIES_NONE)
+            return TRUE;
+        e = GetSpeciesEvolutions(pre);
+        for (i = 0; e != NULL && e[i].method != EVOLUTIONS_END; i++)
+        {
+            if (e[i].targetSpecies != species)
+                continue;
+            if (e[i].method == EVO_LEVEL || e[i].method == EVO_LEVEL_BATTLE_ONLY)
+                need = e[i].param;
+            else
+            {
+                need = RH_EstimateEvoLevel(pre, species);    // FVX: estimated evolution level
+            }
+            break;
+        }
+        if (need > level)
+            return FALSE;
+        species = pre;
+    }
+    return TRUE;
+}
+
 u16 RH_EvolveOnce(u16 species, u32 salt)
 {
     const struct Evolution *e = GetSpeciesEvolutions(species);

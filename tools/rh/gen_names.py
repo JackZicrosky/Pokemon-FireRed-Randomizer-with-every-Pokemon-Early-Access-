@@ -31,6 +31,10 @@ c += 'static const u8 *const *const sRhMoveTypeWords[] = { ' + ', '.join(f'sRhMo
 c += 'static const u8 sRhMoveTypeWordCounts[] = { ' + ', '.join(f'ARRAY_COUNT(sRhMoveWords_{t})' for t in TYPES) + ' };\n'
 for k in ['PHYSICAL', 'SPECIAL', 'STATUS']:
     c += carr(f'sRhMoveWords_{k}', [w for w in cat[k] if len(w) <= 8])
+sub = section(FVX + 'move_names/SubCatMoveNames.txt')
+for k in ['STATUS_HEAL', 'STATUS_BUFF', 'STATUS_DEBUFF', 'STATUS_TRAP', 'INFLICT_POISON', 'INFLICT_BURN', 'INFLICT_FREEZE',
+          'INFLICT_PARALYZE', 'INFLICT_SLEEP', 'INFLICT_CONFUSION', 'DRAIN', 'PUNCH', 'SOUND']:
+    c += carr(f'sRhMoveWords_{k}', [w for w in sub[k] if len(w) <= 8])
 c += carr('sRhTrainerClassNames', plain(FVX + 'trainer_and_mon_names/TrainerClasses.txt', 12))
 c += carr('sRhTrainerNames', plain(FVX + 'trainer_and_mon_names/TrainerNames.txt', 10))
 c += carr('sRhNicknames', plain(FVX + 'trainer_and_mon_names/PokemonNicknames.txt', 10))
