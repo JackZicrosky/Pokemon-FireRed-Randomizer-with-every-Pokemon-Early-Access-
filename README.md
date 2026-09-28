@@ -13,11 +13,18 @@ compiled as FireRed.
 
 ---
 
+## Download
+
+**[⬇ Download the latest version](https://github.com/JackZicrosky/Pokemon-FireRed-Randomizer-with-every-Pokemon-Early-Access-/releases/latest)**
+(recommended). Every older version is also available on the
+[Releases page](https://github.com/JackZicrosky/Pokemon-FireRed-Randomizer-with-every-Pokemon-Early-Access-/releases)
+if you'd like to play one of those instead.
+
 ## How to play
 
 1. Get a clean **Pokémon FireRed (USA) v1.0** ROM that you dumped yourself
    (SHA-1 `dd5945db9b930750cb39d00c84da8571feebf417`). No ROMs are provided here.
-2. Apply the `FireRed Expansion Randomizer vX.Y.Z.bps` patch to it. The easiest way is
+2. Apply the `FireRed Expansion Randomizer vX.Y.Z.bps` patch from the release to it. The easiest way is
    [Rom Patcher JS](https://www.marcrobledo.com/RomPatcher.js/): pick the ROM, pick the `.bps`, then
    click **Apply patch**. Floating IPS (Flips) also works.
 3. Play the patched `.gba` in **mGBA** (recommended). Leave the save type on auto / Flash 128K.
@@ -102,7 +109,8 @@ file. It asks twice, with the cursor on NO both times. Your presets are kept.
 | v0.5.1 | Clearer Randomizer Settings description; new Infinite Candy and HM Kit icons |
 | v0.5.2 | New Healing Kit icon |
 
-Each version is tagged in this repository (`v0.3` … `v0.5.2`).
+Each version is tagged in this repository and has its own download on the
+[Releases page](https://github.com/JackZicrosky/Pokemon-FireRed-Randomizer-with-every-Pokemon-Early-Access-/releases).
 
 ## Known limitations
 - Settings that only act when a game starts (Nuzlocke key items, National Dex at start, random PC

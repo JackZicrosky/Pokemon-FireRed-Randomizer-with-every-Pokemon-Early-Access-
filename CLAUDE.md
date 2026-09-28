@@ -100,8 +100,16 @@
     screens may be changed and reorganised when needed. Still bump `CODE_VERSION` when rows change, and
     mention it in the release notes.
 14. **Don't change default settings or options** beyond what the owner has specifically asked for.
-15. **Public releases:** every version gets a GitHub Release on the owner's repo, with the `.bps` patch
-    and the README attached, marked as Latest (see §5c).
+15. **Public releases:** every version gets a public GitHub Release on the owner's repo, with the `.bps`
+    patch and the README attached (see §5c). The owner: *"I value player choice… If someone wants to
+    download build 0.3, they should be allowed to do so. Please publish all builds, but (for now and in
+    the future:) recommend the latest one, always."* So:
+    - keep **every** older release published; never delete them;
+    - mark the newest as **Latest** and start its notes with "This is the latest version and the
+      recommended download";
+    - start older releases' notes with "This is an older version", linking to `/releases/latest`;
+    - when publishing a new version, edit the previous Latest's notes to the "older version" wording.
+    Copy the wording of the existing releases.
 
 ---
 
