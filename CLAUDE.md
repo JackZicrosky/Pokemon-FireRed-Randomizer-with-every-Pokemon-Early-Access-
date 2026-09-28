@@ -94,6 +94,14 @@
     - The previous session committed as `Claude <noreply@anthropic.com>`.
 12. **Communication:** the owner is friendly and direct. They report bugs from real play (they play in
     mGBA on PC). Keep replies clear. Say what changed, what was tested and where the files are.
+13. **Only the latest version matters** (owner, 2026-09-28): *"My goal for this project is to have the
+    current version be the only one a player chooses. Old versions are just that, and are outdated."*
+    Compatibility between versions (old settings codes, presets, saves) is **not** a priority. Options
+    screens may be changed and reorganised when needed. Still bump `CODE_VERSION` when rows change, and
+    mention it in the release notes.
+14. **Don't change default settings or options** beyond what the owner has specifically asked for.
+15. **Public releases:** every version gets a GitHub Release on the owner's repo, with the `.bps` patch
+    and the README attached, marked as Latest (see §5c).
 
 ---
 
@@ -370,7 +378,10 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
    commit on GitHub (formerly `aa3ac162~1`).
 6. Copy the three files to `D:\AI shit\Claude\Pokemon Romhack Stuff\Fire Red\` with versioned names.
 7. Push `main` + tags to the owner's GitHub.
-8. Tell the owner, in plain language, what changed, what was tested and where the files are.
+8. Create a public GitHub Release for tag `vX` on the owner's repo, marked Latest. Attach the `.bps` and
+   the README. In the public README, remove lines addressed to the owner (e.g. "your design",
+   "the one in this folder").
+9. Tell the owner, in plain language, what changed, what was tested and where the files are.
 
 ---
 
@@ -408,6 +419,11 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 - New-game-only settings don't apply when changed mid-run with the key item.
 - Codes/presets may not load after option rows change (see §6).
 - The Emerald version is not started.
+- **Future idea: follower Pokémon** (HGSS-style, built into pokeemerald-expansion). Currently off:
+  `OW_FOLLOWERS_ENABLED FALSE` in `include/config/overworld.h`. `B_FLAG_FOLLOWERS_DISABLED` can toggle
+  them at runtime, so a settings option is possible. RHH warns that extra scripting may be needed, so
+  FireRed cutscenes must be checked. EWRAM is tight. The owner said to keep it off for now if it breaks a
+  significant part of the game, and to reconsider it later. Don't start it unless asked.
 - The owner may continue reporting bugs from play; fix exactly what they report and ask before extra
   changes.
 
