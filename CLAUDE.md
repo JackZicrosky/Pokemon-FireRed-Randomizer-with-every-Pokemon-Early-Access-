@@ -321,7 +321,7 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
   `TestSettingsCodes`, `TestSpecialShops`, `TestNewGameItems`).
 
 ### 5b. Emulator screenshots (headless mGBA harness)
-- The tools are in `rh_test_tools.zip`. Put them in `tools/rh/test/` if the owner agrees.
+- The tools are in `tools/rh/test/` in the repository (the owner agreed to commit them there).
   - `harness.c`: build with `gcc -O2 harness.c -o harness -lmgba -lpng`, after
     `apt install libmgba-dev libpng-dev`.
   - Usage: `./harness ROM script.txt [savefile.sav]`.
