@@ -7,6 +7,8 @@
 #include "gpu_regs.h"
 #include "international_string_util.h"
 #include "main.h"
+#include "malloc.h"
+#include "save.h"
 #include "menu.h"
 #include "naming_screen.h"
 #include "oak_speech.h"
@@ -23,6 +25,7 @@
 #include "data.h"
 #include "window.h"
 #include "rh.h"
+#include "rh_internal.h"
 #include "constants/rgb.h"
 #include "constants/songs.h"
 #include "constants/species.h"
@@ -36,6 +39,8 @@ enum { WIN_HEADER, WIN_LIST, WIN_DESC, WIN_MENU };
 
 enum RowKind { RK_HEADER, RK_CHOICE, RK_TOGGLE, RK_SLIDER, RK_TEXT, RK_ACTION };
 enum TextField { TF_SEED, TF_STARTER1, TF_STARTER2, TF_STARTER3, TF_TYPE, TF_BST_MIN, TF_BST_MAX };
+enum Action { ACT_BEGIN, ACT_SHOW_CODE, ACT_ENTER_CODE, ACT_SAVE_1, ACT_SAVE_2, ACT_SAVE_3, ACT_LOAD_1, ACT_LOAD_2, ACT_LOAD_3,
+              ACT_DEFAULTS };
 enum SliderFmt { SF_PLAIN, SF_PERCENT, SF_SIGNED_PERCENT, SF_LEVEL, SF_GEN, SF_OFF_GEN };
 
 struct RhRow
@@ -57,7 +62,7 @@ struct RhRow
 enum
 {
     SEC_GENERAL, SEC_TRAITS, SEC_TYPES, SEC_STARTERS, SEC_MOVES, SEC_FOES, SEC_WILD, SEC_TMS, SEC_ITEMS,
-    SEC_GRAPHICS, SEC_MISC, SEC_BEGIN, SEC_COUNT
+    SEC_GRAPHICS, SEC_MISC, SEC_CODES, SEC_BEGIN, SEC_COUNT
 };
 
 static const u8 *const sSectionNames[SEC_COUNT] =
@@ -73,6 +78,7 @@ static const u8 *const sSectionNames[SEC_COUNT] =
     [SEC_ITEMS]    = COMPOUND_STRING("Items"),
     [SEC_GRAPHICS] = COMPOUND_STRING("Custom Player Graphics"),
     [SEC_MISC]     = COMPOUND_STRING("Misc. Tweaks"),
+    [SEC_CODES]    = COMPOUND_STRING("Settings Codes & Presets"),
     [SEC_BEGIN]    = COMPOUND_STRING("Begin Run"),
 };
 
@@ -183,6 +189,7 @@ VIS(visPickup, s->pickupItems != 0)
 #define TOGGLE(sec, ind, f, text, d, vis) CHOICE(sec, ind, f, sOffOn, text, d, vis)
 #define SLIDER(sec, ind, f, lo, hi, st, fm, text, d, vis) { .kind = RK_SLIDER, .section = sec, .indent = ind, .offset = OFS(f), .size = SZ(f), \
     .min = lo, .max = hi, .step = st, .fmt = fm, .label = CS(text), .desc = CS(d), .visible = vis }
+#define ACTION(sec, act, text, d) { .kind = RK_ACTION, .section = sec, .fmt = act, .label = CS(text), .desc = CS(d) }
 #define TEXT(sec, ind, tf, text, d, vis) { .kind = RK_TEXT, .section = sec, .indent = ind, .fmt = tf, .label = CS(text), .desc = CS(d), .visible = vis }
 
 static const struct RhRow sRows[] =
@@ -318,6 +325,7 @@ static const struct RhRow sRows[] =
     CHOICE(SEC_FOES, 2, battleStyleDoubles, sSinglesDoubles, "Style", "Every trainer battle uses this style.", visSingleStyle),
     HDR(SEC_FOES, "Other"),
     TOGGLE(SEC_FOES, 1, rivalCarriesTeam, "Rival Carries Starter", "The rival always uses the starter you\ndidn't pick (evolved); the rest random.", visTrainersRandom),
+    TOGGLE(SEC_FOES, 1, rivalSameTeam, "Rival Keeps Same Team", "The rival uses one team all game; his\nPokémon evolve as his levels rise.", visTrainersRandom),
     TOGGLE(SEC_FOES, 1, trainerSimilarStrength, "Similar Strength", "Replacements have a similar base stat\ntotal (other rules come first).", NULL),
     TOGGLE(SEC_FOES, 1, trainerAvoidDuplicates, "Try to Avoid Duplicates", "A trainer's Pokémon are all different\n(no two from one family).", NULL),
     TOGGLE(SEC_FOES, 1, trainerWeightTypes, "Weight Types by Count", "Types with more Pokémon are picked\nmore often for themes.", visTrainerWeight),
@@ -386,11 +394,11 @@ static const struct RhRow sRows[] =
     TOGGLE(SEC_ITEMS, 1, shopBanBad, "Ban Bad Items", "No berries, mail or other weak items.", visShopFilters),
     TOGGLE(SEC_ITEMS, 1, shopBanRegular, "Ban Regular Shop Items", "Random stock never includes normal\nmart items (Potions, Repels...).", visShopFilters),
     TOGGLE(SEC_ITEMS, 1, shopBanOverpowered, "Ban Overpowered Items", "No Lucky Egg, Rare Candy, Master Ball\nor items that sell for a fortune.", visShopFilters),
-    TOGGLE(SEC_ITEMS, 1, shopGuaranteeEvo, "Guarantee Evolution Items", "Evolution items keep being sold where\nthey were (also in special shops).", visShopFilters),
+    TOGGLE(SEC_ITEMS, 1, shopGuaranteeEvo, "Guarantee Evolution Items", "Evolution items stay in regular shops,\nand each is sold in some special shop.", visShopFilters),
     TOGGLE(SEC_ITEMS, 1, shopGuaranteeX, "Guarantee X Items", "X items, Guard Spec. and Dire Hit keep\nbeing sold where they were.", visShopFilters),
     TOGGLE(SEC_ITEMS, 0, shopBalancePrices, "Balance Shop Prices", "Use FVX's balanced prices for items\nthat are far too cheap or expensive.", NULL),
     TOGGLE(SEC_ITEMS, 0, shopAddCheapRareCandy, "Add Cheap Rare Candies", "Poké Marts and the Celadon counters\nsell Rare Candies for ¥10.", NULL),
-    TOGGLE(SEC_ITEMS, 0, shopSpecial, "Randomize Special Shops", "Evolution, herb, competitive and other\nspecial shops: random, no duplicates.", NULL),
+    TOGGLE(SEC_ITEMS, 0, shopSpecial, "Randomize Special Shops", "Every special seller (evolution items,\nherbs...): random stock, no duplicates.", NULL),
     CHOICE(SEC_ITEMS, 0, pickupItems, sUR, "Pickup Items", "Items found by the Pickup ability are\nrandomized.", NULL),
     TOGGLE(SEC_ITEMS, 1, pickupBanBad, "Ban Bad Items", "No berries, mail or other weak items.", visPickup),
 
@@ -419,8 +427,22 @@ static const struct RhRow sRows[] =
     TOGGLE(SEC_MISC, 0, forgettableTMs, "Forgettable HMs", "HM moves can be forgotten like any\nother move. Careful not to softlock!", NULL),
     TOGGLE(SEC_MISC, 0, noEVs, "No EVs From Pokémon", "Defeated Pokémon give 0 EVs (vitamins\nand Power items still work).", NULL),
 
+    // ---------------- Codes & presets ----------------
+    HDR(SEC_CODES, "Settings Code"),
+    ACTION(SEC_CODES, ACT_SHOW_CODE, "Show Settings Code", "Shows these settings as a code you can\nwrite down or share with friends."),
+    ACTION(SEC_CODES, ACT_ENTER_CODE, "Enter Settings Code", "Type in a code to load someone's\nsettings (seed included)."),
+    HDR(SEC_CODES, "Presets (kept on this cartridge)"),
+    ACTION(SEC_CODES, ACT_SAVE_1, "Save as Preset 1", "Saves these settings. Presets stay\nwhen you start a new game."),
+    ACTION(SEC_CODES, ACT_SAVE_2, "Save as Preset 2", "Saves these settings. Presets stay\nwhen you start a new game."),
+    ACTION(SEC_CODES, ACT_SAVE_3, "Save as Preset 3", "Saves these settings. Presets stay\nwhen you start a new game."),
+    ACTION(SEC_CODES, ACT_LOAD_1, "Load Preset 1", "Replaces the current settings with\nthe saved ones."),
+    ACTION(SEC_CODES, ACT_LOAD_2, "Load Preset 2", "Replaces the current settings with\nthe saved ones."),
+    ACTION(SEC_CODES, ACT_LOAD_3, "Load Preset 3", "Replaces the current settings with\nthe saved ones."),
+    HDR(SEC_CODES, "Other"),
+    ACTION(SEC_CODES, ACT_DEFAULTS, "Reset to Defaults", "Every option goes back to its default\n(the seed is kept)."),
+
     // ---------------- Begin ----------------
-    { .kind = RK_ACTION, .section = SEC_BEGIN, .label = CS("Begin Run"), .desc = CS("Start the adventure with these\nsettings. Press A.") },
+    { .kind = RK_ACTION, .section = SEC_BEGIN, .fmt = ACT_BEGIN, .label = CS("Begin Run"), .desc = CS("Start the adventure with these\nsettings. Press A.") },
 };
 
 // ---------------------------------------------------------------------------
@@ -482,6 +504,13 @@ static EWRAM_DATA u8 sInitialized = 0;
 static EWRAM_DATA u8 sTextBuf[16] = {0};
 static EWRAM_DATA const u8 *sMessage = NULL;  // one-shot status line (e.g. "Pokémon not found")
 
+static EWRAM_DATA u8 sCodeMode = 0;          // 0 off, 1 showing the code, 2 typing a code
+static EWRAM_DATA u8 sCodeLen = 0;
+static EWRAM_DATA u8 sCodeCursor = 0;        // character grid cursor (0-31)
+static EWRAM_DATA u8 sPresetUsed = 0;        // bit per preset slot
+static EWRAM_DATA u8 sPendingAction = 0;     // action waiting for the YES/NO box (ACT_BEGIN = Begin Run)
+
+#undef S
 #define S (&gRhPendingSettings)
 
 static bool32 RowVisible(const struct RhRow *r)
@@ -670,6 +699,10 @@ static void FormatValue(const struct RhRow *r, u8 *dst)
     }
 }
 
+static const u8 *ActionValueText(u32 act);
+static void DrawCodeScreen(void);
+static void DrawCodeDesc(void);
+
 static void DrawHeader(void)
 {
     u8 buf[48];
@@ -688,7 +721,8 @@ static void DrawList(void)
 {
     const struct RhRow *rows[ARRAY_COUNT(sRows)];
     u32 n = VisibleRows(sSection, rows), i;
-    bool32 dimAll = !S->enabled && sSection != SEC_GENERAL && sSection != SEC_MISC && sSection != SEC_GRAPHICS && sSection != SEC_BEGIN;
+    bool32 dimAll = !S->enabled && sSection != SEC_GENERAL && sSection != SEC_MISC && sSection != SEC_GRAPHICS && sSection != SEC_BEGIN
+                   && sSection != SEC_CODES;
 
     FillWindowPixelBuffer(WIN_LIST, PIXEL_FILL(C_PANEL));
     for (i = 0; i < LIST_ROWS && sScroll + i < n; i++)
@@ -710,7 +744,16 @@ static void DrawList(void)
         }
         if (r->kind == RK_ACTION)
         {
-            AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, 88, y + 1, sColOk, TEXT_SKIP_DRAW, CS("▶ BEGIN RUN"));
+            if (r->fmt == ACT_BEGIN)
+                AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, 88, y + 1, sColOk, TEXT_SKIP_DRAW, CS("▶ BEGIN RUN"));
+            else
+            {
+                const u8 *v = ActionValueText(r->fmt);
+                AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, x, y + 1, sColText, TEXT_SKIP_DRAW, r->label);
+                AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, GetStringRightAlignXOffset(FONT_NORMAL, v, 228), y + 1,
+                                             (r->fmt >= ACT_LOAD_1 && r->fmt <= ACT_LOAD_3 && v[0] == CHAR_E) ? sColDim : sColValue,
+                                             TEXT_SKIP_DRAW, v);
+            }
             continue;
         }
         AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, x, y + 1, dimAll ? sColDim : sColText, TEXT_SKIP_DRAW, r->label);
@@ -796,8 +839,14 @@ static void DrawDesc(void)
     FillWindowPixelBuffer(WIN_DESC, PIXEL_FILL(C_HEADBAR));
     if (sConfirm)
     {
-        AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 8, 1, sColText, TEXT_SKIP_DRAW,
-            S->enabled ? CS("Begin a RANDOMIZED run?") : CS("Begin a normal (not randomized) run?"));
+        const u8 *q;
+        if (sPendingAction >= ACT_SAVE_1 && sPendingAction <= ACT_SAVE_3)
+            q = CS("Overwrite this preset?");
+        else if (sPendingAction == ACT_DEFAULTS)
+            q = CS("Reset every option to its default?");
+        else
+            q = S->enabled ? CS("Begin a RANDOMIZED run?") : CS("Begin a normal (not randomized) run?");
+        AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 8, 1, sColText, TEXT_SKIP_DRAW, q);
         FillWindowPixelRect(WIN_DESC, PIXEL_FILL(sConfirm == 1 ? C_SEL : C_HEADBAR), 60, 16, 48, 14);
         FillWindowPixelRect(WIN_DESC, PIXEL_FILL(sConfirm == 2 ? C_SEL : C_HEADBAR), 132, 16, 48, 14);
         AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 72, 17, sConfirm == 1 ? sColOk : sColDim, TEXT_SKIP_DRAW, CS("YES"));
@@ -841,6 +890,14 @@ static void DrawMenu(void)
 
 static void DrawAll(void)
 {
+    if (sCodeMode)
+    {
+        DrawHeader();
+        DrawCodeScreen();
+        DrawCodeDesc();
+        DrawMenu();
+        return;
+    }
     DrawHeader();
     DrawList();
     DrawDesc();
@@ -943,6 +1000,571 @@ static u16 ParseNumber(const u8 *s)
         if (*s >= CHAR_0 && *s <= CHAR_9)
             v = v * 10 + (*s - CHAR_0);
     return min(v, 999);
+}
+
+
+// ---------------------------------------------------------------------------
+// Settings codes and presets
+// A code is every option row's value bit-packed in row order, plus the seed, the custom starters / type / BST
+// fields, a format version and a checksum, written with 32 unambiguous characters (5 bits each).
+// Presets keep the same packed bits in a spare flash sector (the Trainer Hill sector, unused in FireRed), so
+// they are independent of the save file and survive starting a new game.
+// ---------------------------------------------------------------------------
+#define CODE_VERSION      1
+#define CODE_MAX_BYTES    96
+#define CODE_MAX_CHARS    (CODE_MAX_BYTES * 8 / 5)
+#define CODE_CHECK_BITS   10
+#define PRESET_COUNT      3
+#define PRESET_MAGIC      0x52485053   // "RHPS"
+
+static const u8 sCodeChars[] = _("ABCDEFGHJKLMNPQRSTUVWXYZ23456789");
+
+struct RhPresetSector
+{
+    u32 magic;
+    u16 bits[PRESET_COUNT];            // 0 = empty slot
+    u8 data[PRESET_COUNT][CODE_MAX_BYTES];
+};
+
+static EWRAM_DATA u8 sCode[CODE_MAX_CHARS + 1] = {0};
+
+static u32 BitsFor(u32 maxValue)
+{
+    u32 b = 0;
+    while ((1u << b) <= maxValue)
+        b++;
+    return b;
+}
+
+static void PutBits(u8 *buf, u32 *pos, u32 value, u32 n)
+{
+    u32 i;
+    for (i = 0; i < n; i++, (*pos)++)
+    {
+        if (*pos >= CODE_MAX_BYTES * 8)
+            return;
+        if (value & (1u << i))
+            buf[*pos / 8] |= 1 << (*pos % 8);
+        else
+            buf[*pos / 8] &= ~(1 << (*pos % 8));
+    }
+}
+
+static u32 GetBits(const u8 *buf, u32 *pos, u32 n)
+{
+    u32 i, v = 0;
+    for (i = 0; i < n; i++, (*pos)++)
+        if (*pos < CODE_MAX_BYTES * 8 && (buf[*pos / 8] & (1 << (*pos % 8))))
+            v |= 1u << i;
+    return v;
+}
+
+// Encoded range of an option row: its value is stored as (value - base) in BitsFor(span) bits.
+static bool32 RowRange(const struct RhRow *r, s32 *base, u32 *span)
+{
+    switch (r->kind)
+    {
+    case RK_CHOICE:
+    case RK_TOGGLE:
+        *base = 0;
+        *span = (IsGenRow(r) && !GenRowHasOff(r)) ? 9 : ChoiceCount(r) - 1;
+        return TRUE;
+    case RK_SLIDER:
+        *base = min(r->min, 0);
+        *span = r->max - *base;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static s32 RowGet(const struct RhRow *r, const struct RhSettings *st)
+{
+    const u8 *p = ((const u8 *)st) + r->offset;
+    return r->size == 2 ? *(const s16 *)p : *p;
+}
+
+static void RowSet(const struct RhRow *r, struct RhSettings *st, s32 v)
+{
+    u8 *p = ((u8 *)st) + r->offset;
+    if (r->size == 2)
+        *(s16 *)p = v;
+    else
+        *p = v;
+}
+
+static bool32 SeedTextIsCode(const u8 *t)
+{
+    u32 i, k;
+    for (i = 0; t[i] != EOS; i++)
+    {
+        for (k = 0; k < 32 && sCodeChars[k] != t[i]; k++)
+            ;
+        if (k == 32)
+            return FALSE;
+    }
+    return i > 0 && i <= RH_SEED_TEXT_LENGTH;
+}
+
+static u32 CodeCheck(const u8 *buf, u32 bits)
+{
+    u32 h = 2166136261u, i, pos = 0;
+    for (i = 0; i < bits; i++)
+        h = (h ^ GetBits(buf, &pos, 1) ^ (i << 1)) * 16777619u;
+    return (h ^ (h >> 13)) & ((1 << CODE_CHECK_BITS) - 1);
+}
+
+static bool32 ExtrasAreDefault(const struct RhSettings *st, const struct RhSettings *def)
+{
+    return st->customStarters[0] == SPECIES_NONE && st->customStarters[1] == SPECIES_NONE && st->customStarters[2] == SPECIES_NONE
+        && st->starterSingleType == def->starterSingleType
+        && st->starterBstMin == def->starterBstMin && st->starterBstMax == def->starterBstMax;
+}
+
+static u32 RowCode(const struct RhRow *r, const struct RhSettings *st, s32 base, u32 span)
+{
+    return min((u32)(RowGet(r, st) - base), span);
+}
+
+// Packs st into buf; returns the number of bits (payload + checksum).
+// Rows are stored either all in order, or (usually shorter) as a list of the rows that differ from the defaults.
+static u32 PackSettings(const struct RhSettings *st, u8 *buf)
+{
+    u32 pos = 0, i, fullBits = 0, sparseBits, changed = 0;
+    const u32 idxBits = BitsFor(ARRAY_COUNT(sRows) - 1);
+    struct RhSettings *def = AllocZeroed(sizeof(*def));
+    s32 base;
+    u32 span;
+    if (def == NULL)
+        return 0;
+    RH_SetDefaultSettings(def);
+    memset(buf, 0, CODE_MAX_BYTES);
+    PutBits(buf, &pos, CODE_VERSION, 3);
+    if (SeedTextIsCode(st->seedText))
+    {
+        // the usual random seed text: keep the text itself (the seed is its hash)
+        u32 len = StringLength(st->seedText);
+        PutBits(buf, &pos, 1, 1);
+        PutBits(buf, &pos, len - 1, 4);
+        for (i = 0; i < len; i++)
+        {
+            u32 k;
+            for (k = 0; sCodeChars[k] != st->seedText[i]; k++)
+                ;
+            PutBits(buf, &pos, k, 5);
+        }
+    }
+    else
+    {
+        PutBits(buf, &pos, 0, 1);
+        PutBits(buf, &pos, st->seed, 32);
+    }
+    for (i = 0; i < ARRAY_COUNT(sRows); i++)
+    {
+        if (!RowRange(&sRows[i], &base, &span))
+            continue;
+        fullBits += BitsFor(span);
+        if (RowCode(&sRows[i], st, base, span) != RowCode(&sRows[i], def, base, span))
+            changed++;
+    }
+    sparseBits = idxBits;
+    for (i = 0; i < ARRAY_COUNT(sRows); i++)
+        if (RowRange(&sRows[i], &base, &span) && RowCode(&sRows[i], st, base, span) != RowCode(&sRows[i], def, base, span))
+            sparseBits += idxBits + BitsFor(span);
+    if (sparseBits < fullBits)
+    {
+        PutBits(buf, &pos, 1, 1);
+        PutBits(buf, &pos, changed, idxBits);
+        for (i = 0; i < ARRAY_COUNT(sRows); i++)
+        {
+            if (RowRange(&sRows[i], &base, &span) && RowCode(&sRows[i], st, base, span) != RowCode(&sRows[i], def, base, span))
+            {
+                PutBits(buf, &pos, i, idxBits);
+                PutBits(buf, &pos, RowCode(&sRows[i], st, base, span), BitsFor(span));
+            }
+        }
+    }
+    else
+    {
+        PutBits(buf, &pos, 0, 1);
+        for (i = 0; i < ARRAY_COUNT(sRows); i++)
+            if (RowRange(&sRows[i], &base, &span))
+                PutBits(buf, &pos, RowCode(&sRows[i], st, base, span), BitsFor(span));
+    }
+    if (ExtrasAreDefault(st, def))
+    {
+        PutBits(buf, &pos, 0, 1);
+    }
+    else
+    {
+        PutBits(buf, &pos, 1, 1);
+        for (i = 0; i < 3; i++)
+            PutBits(buf, &pos, st->customStarters[i] < NUM_SPECIES ? st->customStarters[i] : 0, BitsFor(NUM_SPECIES - 1));
+        PutBits(buf, &pos, st->starterSingleType, BitsFor(NUMBER_OF_MON_TYPES - 1));
+        PutBits(buf, &pos, min(st->starterBstMin, 1023), 10);
+        PutBits(buf, &pos, min(st->starterBstMax, 1023), 10);
+    }
+    Free(def);
+    i = CodeCheck(buf, pos);
+    PutBits(buf, &pos, i, CODE_CHECK_BITS);
+    return pos;
+}
+
+// Unpacks buf (bits long) into st (which keeps its other fields). Returns FALSE for a wrong or damaged code.
+static bool32 UnpackSettings(struct RhSettings *st, const u8 *buf, u32 bits)
+{
+    u32 pos = 0, i, payload, v;
+    const u32 idxBits = BitsFor(ARRAY_COUNT(sRows) - 1);
+    struct RhSettings *tmp, *def;
+    s32 base;
+    u32 span;
+    if (bits < 3 + CODE_CHECK_BITS || GetBits(buf, &pos, 3) != CODE_VERSION)
+        return FALSE;
+    tmp = AllocZeroed(sizeof(*tmp));
+    def = AllocZeroed(sizeof(*def));
+    if (tmp == NULL || def == NULL)
+    {
+        TRY_FREE_AND_SET_NULL(tmp);
+        TRY_FREE_AND_SET_NULL(def);
+        return FALSE;
+    }
+    RH_SetDefaultSettings(def);
+    *tmp = *st;
+    if (GetBits(buf, &pos, 1))
+    {
+        u32 len = GetBits(buf, &pos, 4) + 1;
+        for (i = 0; i < len && i < RH_SEED_TEXT_LENGTH; i++)
+            tmp->seedText[i] = sCodeChars[GetBits(buf, &pos, 5)];
+        tmp->seedText[i] = EOS;
+        tmp->seed = HashText(tmp->seedText);
+    }
+    else
+    {
+        tmp->seed = GetBits(buf, &pos, 32);
+        if (tmp->seed == 0)
+            tmp->seed = 1;
+        StringCopy(tmp->seedText, CS("(code)"));
+    }
+    // every option starts from its default (sparse codes only list the changed ones)
+    for (i = 0; i < ARRAY_COUNT(sRows); i++)
+        if (RowRange(&sRows[i], &base, &span))
+            RowSet(&sRows[i], tmp, RowGet(&sRows[i], def));
+    if (GetBits(buf, &pos, 1))
+    {
+        u32 count = GetBits(buf, &pos, idxBits), k;
+        for (k = 0; k < count && pos < bits; k++)
+        {
+            i = GetBits(buf, &pos, idxBits);
+            if (i >= ARRAY_COUNT(sRows) || !RowRange(&sRows[i], &base, &span))
+            {
+                pos = bits + 1;       // damaged
+                break;
+            }
+            v = GetBits(buf, &pos, BitsFor(span));
+            RowSet(&sRows[i], tmp, base + min(v, span));
+        }
+    }
+    else
+    {
+        for (i = 0; i < ARRAY_COUNT(sRows); i++)
+        {
+            if (RowRange(&sRows[i], &base, &span))
+            {
+                v = GetBits(buf, &pos, BitsFor(span));    // (min() would read the bits twice)
+                RowSet(&sRows[i], tmp, base + min(v, span));
+            }
+        }
+    }
+    for (i = 0; i < 3; i++)
+        tmp->customStarters[i] = SPECIES_NONE;
+    tmp->starterSingleType = def->starterSingleType;
+    tmp->starterBstMin = def->starterBstMin;
+    tmp->starterBstMax = def->starterBstMax;
+    if (GetBits(buf, &pos, 1))
+    {
+        for (i = 0; i < 3; i++)
+        {
+            v = GetBits(buf, &pos, BitsFor(NUM_SPECIES - 1));
+            tmp->customStarters[i] = (v < NUM_SPECIES && IsSpeciesEnabled(v)) ? v : SPECIES_NONE;
+        }
+        v = GetBits(buf, &pos, BitsFor(NUMBER_OF_MON_TYPES - 1));
+        tmp->starterSingleType = v < NUMBER_OF_MON_TYPES ? v : TYPE_NONE;
+        v = GetBits(buf, &pos, 10);
+        tmp->starterBstMin = min(v, 999);
+        v = GetBits(buf, &pos, 10);
+        tmp->starterBstMax = min(v, 999);
+    }
+    payload = pos;
+    Free(def);
+    // the checksum covers the payload; a code must be exactly as long as its payload + checksum (+ padding)
+    if (payload + CODE_CHECK_BITS > bits || bits - (payload + CODE_CHECK_BITS) >= 5
+     || GetBits(buf, &pos, CODE_CHECK_BITS) != CodeCheck(buf, payload))
+    {
+        Free(tmp);
+        return FALSE;
+    }
+    tmp->version = RH_SETTINGS_VERSION;
+    *st = *tmp;
+    Free(tmp);
+    return TRUE;
+}
+
+static u32 SettingsToCode(const struct RhSettings *st, u8 *chars)
+{
+    u8 buf[CODE_MAX_BYTES];
+    u32 bits = PackSettings(st, buf), n = (bits + 4) / 5, i, pos = 0;
+    for (i = 0; i < n; i++)
+        chars[i] = GetBits(buf, &pos, 5);
+    return n;
+}
+
+static bool32 CodeToSettings(struct RhSettings *st, const u8 *chars, u32 n)
+{
+    u8 buf[CODE_MAX_BYTES];
+    u32 i, pos = 0;
+    if (n == 0 || n > CODE_MAX_CHARS)
+        return FALSE;
+    memset(buf, 0, sizeof(buf));
+    for (i = 0; i < n; i++)
+        PutBits(buf, &pos, chars[i], 5);
+    return UnpackSettings(st, buf, n * 5);
+}
+
+#ifndef RELEASE
+// Self-test hooks: code round trip on any settings struct.
+u32 RH_DebugSettingsToCode(const struct RhSettings *st, u8 *chars) { return SettingsToCode(st, chars); }
+bool32 RH_DebugCodeToSettings(struct RhSettings *st, const u8 *chars, u32 n) { return CodeToSettings(st, chars, n); }
+u32 RH_DebugSettingsCodeMaxChars(void) { return CODE_MAX_CHARS; }
+// Every option row gets a random legal value; returns how many rows differ between a and b.
+void RH_DebugRandomSettings(struct RhSettings *st, u32 salt)
+{
+    u32 i;
+    for (i = 0; i < ARRAY_COUNT(sRows); i++)
+    {
+        s32 base;
+        u32 span;
+        if (RowRange(&sRows[i], &base, &span))
+            RowSet(&sRows[i], st, base + (RH_Hash(0x5E77, salt, i) % (span + 1)));
+    }
+}
+u32 RH_DebugCompareSettings(const struct RhSettings *a, const struct RhSettings *b)
+{
+    u32 i, diff = 0;
+    s32 base;
+    u32 span;
+    for (i = 0; i < ARRAY_COUNT(sRows); i++)
+        if (RowRange(&sRows[i], &base, &span) && RowGet(&sRows[i], a) != RowGet(&sRows[i], b))
+            diff++;
+    return diff;
+}
+#endif
+
+// Presets ------------------------------------------------------------------
+static struct RhPresetSector *ReadPresets(void)
+{
+    u8 *sector = Alloc(SECTOR_SIZE);
+    struct RhPresetSector *p = (struct RhPresetSector *)sector;
+    if (sector == NULL)
+        return NULL;
+    if (TryReadSpecialSaveSector(SECTOR_ID_TRAINER_HILL, sector) != SAVE_STATUS_OK || p->magic != PRESET_MAGIC)
+    {
+        memset(sector, 0, SECTOR_SIZE);
+        p->magic = PRESET_MAGIC;
+    }
+    return p;
+}
+
+static void RefreshPresetFlags(void)
+{
+    struct RhPresetSector *p = ReadPresets();
+    u32 i;
+    sPresetUsed = 0;
+    if (p == NULL)
+        return;
+    for (i = 0; i < PRESET_COUNT; i++)
+        if (p->bits[i] != 0)
+            sPresetUsed |= 1 << i;
+    Free(p);
+}
+
+static bool32 SavePreset(u32 slot)
+{
+    struct RhPresetSector *p = ReadPresets();
+    bool32 ok;
+    if (p == NULL)
+        return FALSE;
+    p->bits[slot] = PackSettings(S, p->data[slot]);
+    ok = (TryWriteSpecialSaveSector(SECTOR_ID_TRAINER_HILL, (u8 *)p) == SAVE_STATUS_OK);
+    Free(p);
+    RefreshPresetFlags();
+    return ok;
+}
+
+static bool32 LoadPreset(u32 slot)
+{
+    struct RhPresetSector *p = ReadPresets();
+    bool32 ok;
+    if (p == NULL)
+        return FALSE;
+    ok = p->bits[slot] != 0 && UnpackSettings(S, p->data[slot], p->bits[slot]);
+    Free(p);
+    return ok;
+}
+
+// Code screens -------------------------------------------------------------
+#define CODE_PER_LINE 20
+
+static void DrawCodeChars(u32 y0, bool32 cursor)
+{
+    u32 i;
+    for (i = 0; i <= sCodeLen && i < CODE_MAX_CHARS; i++)
+    {
+        u32 line = i / CODE_PER_LINE, col = i % CODE_PER_LINE;
+        u32 x = 10 + col * 10 + (col / 5) * 8, y = y0 + line * 15;
+        u8 str[2];
+        if (i == sCodeLen)
+        {
+            if (cursor)
+                AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, x, y, sColAccent, TEXT_SKIP_DRAW, CS("_"));
+            break;
+        }
+        str[0] = sCodeChars[sCode[i] & 31];
+        str[1] = EOS;
+        AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, x, y, sColValue, TEXT_SKIP_DRAW, str);
+    }
+}
+
+static void DrawCodeScreen(void)
+{
+    u32 i;
+    FillWindowPixelBuffer(WIN_LIST, PIXEL_FILL(C_PANEL));
+    if (sCodeMode == 1)
+    {
+        AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, 6, 1, sColHeader, TEXT_SKIP_DRAW, CS("Settings Code"));
+        DrawCodeChars(24, FALSE);
+    }
+    else
+    {
+        AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, 6, 1, sColHeader, TEXT_SKIP_DRAW, CS("Enter Settings Code"));
+        DrawCodeChars(18, TRUE);
+        for (i = 0; i < 32; i++)
+        {
+            u32 x = 8 + (i % 16) * 14, y = 80 + (i / 16) * 16;
+            u8 str[2];
+            if (i == sCodeCursor)
+                FillWindowPixelRect(WIN_LIST, PIXEL_FILL(C_SEL), x - 3, y, 13, 15);
+            str[0] = sCodeChars[i];
+            str[1] = EOS;
+            AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, x, y + 1, i == sCodeCursor ? sColAccent : sColText, TEXT_SKIP_DRAW, str);
+        }
+    }
+    CopyWindowToVram(WIN_LIST, COPYWIN_GFX);
+}
+
+static void DrawCodeDesc(void)
+{
+    FillWindowPixelBuffer(WIN_DESC, PIXEL_FILL(C_HEADBAR));
+    if (sMessage != NULL)
+        AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 8, 1, sColWarn, TEXT_SKIP_DRAW, sMessage);
+    else if (sCodeMode == 1)
+        AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 8, 1, sColText, TEXT_SKIP_DRAW,
+                                     CS("Write it down or share it. Friends can\ntype it in to play the same game. B: back"));
+    else
+        AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 8, 1, sColText, TEXT_SKIP_DRAW,
+                                     CS("A: type  B: delete  START: load code\nSELECT: cancel"));
+    CopyWindowToVram(WIN_DESC, COPYWIN_GFX);
+}
+
+static void OpenCodeScreen(u32 mode)
+{
+    sCodeMode = mode;
+    sMessage = NULL;
+    if (mode == 1)
+        sCodeLen = SettingsToCode(S, sCode);
+    else
+        sCodeLen = 0;
+    sCodeCursor = 0;
+    DrawCodeScreen();
+    DrawCodeDesc();
+}
+
+static void DrawAll(void);
+
+// Returns TRUE while the code screen handles the input.
+static bool32 CodeScreenInput(void)
+{
+    if (sCodeMode == 0)
+        return FALSE;
+    if (sMessage != NULL && JOY_NEW(A_BUTTON | B_BUTTON | START_BUTTON | SELECT_BUTTON | DPAD_ANY))
+    {
+        sMessage = NULL;
+        DrawCodeDesc();
+        return TRUE;
+    }
+    if (sCodeMode == 1)
+    {
+        if (JOY_NEW(A_BUTTON | B_BUTTON | START_BUTTON | SELECT_BUTTON))
+        {
+            sCodeMode = 0;
+            PlaySE(SE_SELECT);
+            DrawAll();
+        }
+        return TRUE;
+    }
+    if (JOY_REPEAT(DPAD_LEFT))
+        sCodeCursor = (sCodeCursor & 16) | ((sCodeCursor + 15) & 15);
+    else if (JOY_REPEAT(DPAD_RIGHT))
+        sCodeCursor = (sCodeCursor & 16) | ((sCodeCursor + 1) & 15);
+    else if (JOY_REPEAT(DPAD_UP | DPAD_DOWN))
+        sCodeCursor ^= 16;
+    else if (JOY_REPEAT(A_BUTTON))
+    {
+        if (sCodeLen < CODE_MAX_CHARS)
+            sCode[sCodeLen++] = sCodeCursor;
+    }
+    else if (JOY_REPEAT(B_BUTTON))
+    {
+        if (sCodeLen > 0)
+            sCodeLen--;
+    }
+    else if (JOY_NEW(SELECT_BUTTON))
+    {
+        sCodeMode = 0;
+        PlaySE(SE_SELECT);
+        DrawAll();
+        return TRUE;
+    }
+    else if (JOY_NEW(START_BUTTON))
+    {
+        if (CodeToSettings(S, sCode, sCodeLen))
+        {
+            sCodeMode = 0;
+            PlaySE(SE_SUCCESS);
+            DrawAll();
+            sMessage = CS("Code loaded! Check the options, then\nBegin Run.");
+            DrawDesc();
+        }
+        else
+        {
+            PlaySE(SE_FAILURE);
+            sMessage = CS("That code doesn't work. Check every\ncharacter (and its length) and retry.");
+            DrawCodeDesc();
+        }
+        return TRUE;
+    }
+    else
+        return TRUE;
+    PlaySE(SE_SELECT);
+    DrawCodeScreen();
+    return TRUE;
+}
+
+static const u8 *ActionValueText(u32 act)
+{
+    if (act >= ACT_SAVE_1 && act <= ACT_SAVE_3)
+        return (sPresetUsed & (1 << (act - ACT_SAVE_1))) ? CS("In use") : CS("");
+    if (act >= ACT_LOAD_1 && act <= ACT_LOAD_3)
+        return (sPresetUsed & (1 << (act - ACT_LOAD_1))) ? CS("Saved") : CS("Empty");
+    return CS("");
 }
 
 void CB2_InitRandomizerMenu(void);
@@ -1070,12 +1692,92 @@ static void Redraw(void)
     DrawDesc();
 }
 
+// Runs a Codes & Presets action; confirmed = the YES/NO box was already answered.
+static void DoAction(u32 act, bool32 confirmed)
+{
+    sMessage = NULL;
+    switch (act)
+    {
+    case ACT_SHOW_CODE:
+        PlaySE(SE_SELECT);
+        OpenCodeScreen(1);
+        DrawHeader();
+        return;
+    case ACT_ENTER_CODE:
+        PlaySE(SE_SELECT);
+        OpenCodeScreen(2);
+        DrawHeader();
+        return;
+    case ACT_SAVE_1: case ACT_SAVE_2: case ACT_SAVE_3:
+        if (!confirmed && (sPresetUsed & (1 << (act - ACT_SAVE_1))))
+        {
+            sPendingAction = act;
+            sConfirm = 2;                 // default NO for overwriting
+            PlaySE(SE_SELECT);
+            DrawDesc();
+            return;
+        }
+        if (SavePreset(act - ACT_SAVE_1))
+        {
+            PlaySE(SE_SAVE);
+            sMessage = CS("Preset saved.");
+        }
+        else
+        {
+            PlaySE(SE_FAILURE);
+            sMessage = CS("Couldn't save. Is the save type set\nto Flash 128K in your emulator?");
+        }
+        break;
+    case ACT_LOAD_1: case ACT_LOAD_2: case ACT_LOAD_3:
+        if (!(sPresetUsed & (1 << (act - ACT_LOAD_1))))
+        {
+            PlaySE(SE_FAILURE);
+            sMessage = CS("This preset is empty.");
+        }
+        else if (LoadPreset(act - ACT_LOAD_1))
+        {
+            PlaySE(SE_SUCCESS);
+            sMessage = CS("Preset loaded.");
+        }
+        else
+        {
+            PlaySE(SE_FAILURE);
+            sMessage = CS("This preset is from another version\nand can't be loaded.");
+        }
+        break;
+    case ACT_DEFAULTS:
+        if (!confirmed)
+        {
+            sPendingAction = act;
+            sConfirm = 2;
+            PlaySE(SE_SELECT);
+            DrawDesc();
+            return;
+        }
+        {
+            u8 seedText[RH_SEED_TEXT_LENGTH + 1];
+            u32 seed = S->seed;
+            StringCopy(seedText, S->seedText);
+            RH_SetDefaultSettings(S);
+            S->seed = seed;
+            StringCopy(S->seedText, seedText);
+        }
+        PlaySE(SE_SELECT);
+        sMessage = CS("Every option is back to its default.");
+        break;
+    }
+    FixCursor(1);
+    DrawAll();
+}
+
 static void Task_Input(u8 taskId)
 {
     const struct RhRow *rows[ARRAY_COUNT(sRows)];
     u32 n = VisibleRows(sSection, rows);
     const struct RhRow *r = (sRow < n) ? rows[sRow] : NULL;
 
+    if (CodeScreenInput())
+        return;
     if (sMenuOpen)
     {
         if (JOY_NEW(DPAD_UP))
@@ -1109,15 +1811,23 @@ static void Task_Input(u8 taskId)
         }
         else if (JOY_NEW(A_BUTTON))
         {
-            if (sConfirm == 1)
+            if (sConfirm == 1 && sPendingAction == ACT_BEGIN)
             {
                 PlaySE(SE_SELECT);
                 BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
                 gTasks[taskId].func = Task_Begin;
                 return;
             }
-            sConfirm = 0;
-            DrawDesc();
+            if (sConfirm == 1)
+            {
+                sConfirm = 0;
+                DoAction(sPendingAction, TRUE);
+            }
+            else
+            {
+                sConfirm = 0;
+                DrawDesc();
+            }
         }
         else if (JOY_NEW(B_BUTTON))
         {
@@ -1144,6 +1854,7 @@ static void Task_Input(u8 taskId)
     {
         GoToSection(SEC_BEGIN);
         sConfirm = 1;
+        sPendingAction = ACT_BEGIN;
         PlaySE(SE_SELECT);
         DrawAll();
     }
@@ -1200,9 +1911,17 @@ static void Task_Input(u8 taskId)
             StartTextEntry(taskId, r->fmt);
             break;
         case RK_ACTION:
-            sConfirm = 1;
-            PlaySE(SE_SELECT);
-            DrawDesc();
+            if (r->fmt == ACT_BEGIN)
+            {
+                sConfirm = 1;
+                sPendingAction = ACT_BEGIN;
+                PlaySE(SE_SELECT);
+                DrawDesc();
+            }
+            else
+            {
+                DoAction(r->fmt, FALSE);
+            }
             break;
         }
     }
@@ -1275,6 +1994,8 @@ void CB2_InitRandomizerMenu(void)
         }
         sMenuOpen = FALSE;
         sConfirm = 0;
+        sCodeMode = 0;
+        RefreshPresetFlags();
         FixCursor(1);
         PutWindowTilemap(WIN_HEADER);
         PutWindowTilemap(WIN_LIST);

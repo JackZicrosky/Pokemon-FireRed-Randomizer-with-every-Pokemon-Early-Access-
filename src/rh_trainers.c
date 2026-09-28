@@ -382,10 +382,12 @@ bool32 RH_IsLeagueReserved(u16 species)
 // ---------------------------------------------------------------------------
 static EWRAM_DATA u8 sEvolveKeepType = TYPE_NONE;             // type theme the evolution must keep
 
+static EWRAM_DATA bool8 sForceEvolve = FALSE;                // evolve as far as the level allows (rival's team)
+
 static u16 EvolveForLevelEx(u16 species, u32 level, u32 salt, u32 *steps)
 {
     u32 i, guard;
-    u32 fullBy = S->trainersEvolveOn ? S->trainersEvolveLevel : 0;
+    u32 fullBy = sForceEvolve ? 100 : (S->trainersEvolveOn ? S->trainersEvolveLevel : 0);
     for (guard = 0; guard < 3; guard++)
     {
         const struct Evolution *e = GetSpeciesEvolutions(species);
@@ -789,6 +791,65 @@ static bool32 CarriesStarter(void)
     return S->rivalCarriesTeam;
 }
 
+// ---------------------------------------------------------------------------
+// "Rival Carries Same Team": one roster of basic Pokemon for the whole game. Each of the rival's battles uses the
+// roster in order (his starter keeps its own slot), every member evolved as far as its level allows.
+// ---------------------------------------------------------------------------
+#define ROSTER_SIZE 6
+struct RivalRoster { u32 key; u16 species[ROSTER_SIZE]; };
+static EWRAM_DATA struct RivalRoster sRoster = {0};
+
+static bool32 NotRosterConflict(u16 species)
+{
+    u32 i;
+    for (i = 0; i < 3; i++)
+        if (RH_FamilyRoot(RH_StarterForSlot(i)) == RH_FamilyRoot(species))
+            return FALSE;                                    // not one of the starters' families
+    return !RH_IsLeagueReserved(species);
+}
+
+static void BuildRoster(void)
+{
+    u32 i, j;
+    sRoster.key = (RH_SettingsHash() + 17) | 1;
+    for (i = 0; i < ROSTER_SIZE; i++)
+    {
+        struct RhFilter f = {0};
+        if (S->trainerNoLegends)
+            f.legend = 1;
+        f.stage = 1;                                         // basic Pokemon: they grow with him
+        f.allowVariants = S->trainerAllowAltFormes;
+        f.extra = NotRosterConflict;
+        for (j = 0; j < i; j++)
+            RH_FilterExclude(&f, sRoster.species[j]);
+        sRoster.species[i] = RH_PickSpecies(&f, RH_Hash(SALT_TRAINER, 0xA17A1, i), SPECIES_NONE);
+    }
+}
+
+static bool32 UsesRivalRoster(const struct Trainer *trainer, s32 trainerId)
+{
+    return S->rivalSameTeam && S->trainers != 0 && IsRivalClass(trainer->trainerClass) && !IsFirstRivalBattle(trainerId);
+}
+
+// Roster index of a party slot: the rival's non-starter slots in order (slots past the party are added Pokemon).
+static u32 RosterIndex(const struct Trainer *trainer, u32 slot)
+{
+    u32 i, j = 0;
+    for (i = 0; i < slot && i < trainer->partySize; i++)
+        if (!IsCarriedStarterSlot(trainer, i))
+            j++;
+    if (slot >= trainer->partySize)
+        j += slot - trainer->partySize;
+    return min(j, ROSTER_SIZE - 1);
+}
+
+u16 RH_RivalRosterSpecies(u32 index)
+{
+    if (sRoster.key != ((RH_SettingsHash() + 17) | 1))
+        BuildRoster();
+    return sRoster.species[min(index, ROSTER_SIZE - 1)];
+}
+
 void RH_ModifyTrainerMon(struct TrainerMon *mon, const struct Trainer *trainer, u32 slot)
 {
     s32 trainerId, member;
@@ -821,6 +882,15 @@ void RH_ModifyTrainerMon(struct TrainerMon *mon, const struct Trainer *trainer, 
             newSpecies = EvolveForLevelEx(newSpecies, mon->lvl, 0, &steps);
         if (steps < stage)
             newSpecies = RH_EvolveTimes(newSpecies, stage - steps);
+        changed = TRUE;
+    }
+    else if (UsesRivalRoster(trainer, trainerId))
+    {
+        u32 steps = 0;
+        sForceEvolve = TRUE;
+        { u32 ri = RosterIndex(trainer, slot);
+          newSpecies = EvolveForLevelEx(RH_RivalRosterSpecies(ri), mon->lvl, ri, &steps); }   // same branch every battle
+        sForceEvolve = FALSE;
         changed = TRUE;
     }
     else if (member >= 0 && slot < trainer->partySize && LevelRank(trainer, slot) < S->leagueUnique)

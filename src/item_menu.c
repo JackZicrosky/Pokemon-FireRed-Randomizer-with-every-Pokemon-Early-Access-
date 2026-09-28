@@ -1220,6 +1220,9 @@ void DisplayItemMessage(u8 taskId, u8 fontId, const u8 *str, TaskFunc callback)
 {
     s16 *data = gTasks[taskId].data;
 
+    // romhack: blank the item description first, so its top line doesn't peek out above the message box
+    FillWindowPixelBuffer(WIN_DESCRIPTION, PIXEL_FILL(0));
+    CopyWindowToVram(WIN_DESCRIPTION, COPYWIN_GFX);
     tMsgWindowId = AddItemMessageWindow(ITEMWIN_MESSAGE);
     FillWindowPixelBuffer(tMsgWindowId, PIXEL_FILL(1));
     DisplayMessageAndContinueTask(taskId, tMsgWindowId, 10, 13, fontId, GetPlayerTextSpeedDelay(), str, callback);

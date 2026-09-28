@@ -166,6 +166,24 @@ void RH_TestSetup(void)
     AddBagItem(ITEM_MASTER_BALL, 5);
 }
 #endif
+#ifdef RH_TEST_EXTRA
+// Test builds only: a plain party and the romhack's key items (for field tests).
+void RH_TestSetupLight(void)
+{
+    struct Pokemon mon;
+    CreateMon(&mon, SPECIES_BULBASAUR, 20, 0, OTID_STRUCT_PLAYER_ID);
+    GiveMonInitialMoveset(&mon);
+    CalculateMonStats(&mon);
+    GiveScriptedMonToPlayer(&mon, PARTY_SIZE);
+    CreateMon(&mon, SPECIES_PIDGEY, 18, 0, OTID_STRUCT_PLAYER_ID);
+    GiveMonInitialMoveset(&mon);
+    CalculateMonStats(&mon);
+    GiveScriptedMonToPlayer(&mon, PARTY_SIZE);
+    AddBagItem(ITEM_INFINITE_CANDY, 1);
+    AddBagItem(ITEM_HEALING_KIT, 1);
+    AddBagItem(ITEM_HM_CUT, 1);
+}
+#endif
 #ifdef RH_TEST_MENU_PRESET
 // Test builds only: a broad "normal play" preset for the settings screen (instant text and graphics are left to the
 // test to set through the menu).

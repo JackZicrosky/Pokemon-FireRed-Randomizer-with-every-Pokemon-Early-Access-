@@ -270,12 +270,14 @@ static bool32 SpecialItemOk(u16 item)
     return TRUE;
 }
 
+// The evolution sellers are always randomized with the other special shops; "Guarantee Evolution Items" then
+// places every evolution item somewhere in the special shops instead.
 static bool32 SpecialListKept(u32 list)
 {
-    return (list == RH_SPECIAL_EVO && S->shopGuaranteeEvo) || (list == RH_SPECIAL_TRAINING && S->shopGuaranteeX);
+    return list == RH_SPECIAL_TRAINING && S->shopGuaranteeX;
 }
 
-// Can every evolution item still be bought? (The evolution sellers keep their stock.)
+// Can every evolution item still be bought?
 bool32 RH_EvoItemsForSale(void)
 {
     return !S->enabled || !S->shopSpecial || S->shopGuaranteeEvo;
@@ -295,6 +297,10 @@ static bool32 IsKeptSpecialItem(u16 item)
     return FALSE;
 }
 
+u16 RH_DebugPoolItem(u32 i) { return i < RH_ITEM_COUNT ? sRhItems[i].item : ITEM_NONE; }
+bool32 RH_DebugIsEvolutionItem(u16 item) { return IsEvolutionItem(item); }
+bool32 RH_DebugSpecialItemOk(u16 item) { return SpecialItemOk(item) && !IsKeptSpecialItem(item); }
+
 // Stock of special shop "list" (RH_SPECIAL_*) into out (ITEM_NONE-terminated); returns the item count.
 u32 RH_BuildSpecialShop(u32 list, u16 *out, u32 max)
 {
@@ -309,40 +315,50 @@ u32 RH_BuildSpecialShop(u32 list, u16 *out, u32 max)
     if (S->enabled && S->shopSpecial && !SpecialListKept(list))
     {
         // Global slot j gets accepted item number perm(j) (a keyed bijection), so no item is ever sold by two
-        // special shops (FVX-style no-duplicates).
-        u32 len, accepted = 0, p, j;
+        // special shops (FVX-style no-duplicates). With "Guarantee Evolution Items", the evolution items are
+        // numbered first and the permutation runs over all special-shop slots, so each of them lands in one slot.
+        u32 len, accepted = 0, p, j, evoCount = 0, total = 0;
         u16 *acc = AllocUnchecked(RH_ITEM_COUNT * sizeof(u16));
         for (len = 0; items[len] != ITEM_NONE && len < max - 1; len++)
             ;
+        for (l = 0; l < ARRAY_COUNT(sSpecialLists); l++)
+            if (!SpecialListKept(l))
+                for (i = 0; sSpecialLists[l][i] != ITEM_NONE; i++)
+                    total++;
         for (p = 0; p < RH_ITEM_COUNT; p++)
         {
             u16 it = sRhItems[p].item;
-            if (SpecialItemOk(it) && !IsKeptSpecialItem(it))
+            if (SpecialItemOk(it) && !IsKeptSpecialItem(it) && S->shopGuaranteeEvo && IsEvolutionItem(it))
+            {
+                if (acc != NULL)
+                    acc[accepted] = it;
+                accepted++;
+                evoCount++;
+            }
+        }
+        for (p = 0; p < RH_ITEM_COUNT; p++)
+        {
+            u16 it = sRhItems[p].item;
+            if (SpecialItemOk(it) && !IsKeptSpecialItem(it) && !(S->shopGuaranteeEvo && IsEvolutionItem(it)))
             {
                 if (acc != NULL)
                     acc[accepted] = it;
                 accepted++;
             }
         }
-        for (j = 0; j < len && accepted != 0; j++)
+        for (j = 0; j < len && accepted != 0 && acc != NULL; j++)
         {
-            u32 k = RH_Permute(SALT_SPECIAL_SHOP, (offset + j) % accepted, accepted);
-            if (acc != NULL)
+            u32 k;
+            if (evoCount != 0 && total >= evoCount && accepted > evoCount)
             {
-                out[n++] = acc[k];
+                u32 r = RH_Permute(SALT_SPECIAL_SHOP, (offset + j) % total, total);
+                k = (r < evoCount) ? r : evoCount + (r - evoCount) % (accepted - evoCount);
             }
             else
             {
-                for (p = 0; p < RH_ITEM_COUNT; p++)          // no memory: find it the slow way
-                {
-                    u16 it = sRhItems[p].item;
-                    if (SpecialItemOk(it) && !IsKeptSpecialItem(it) && k-- == 0)
-                    {
-                        out[n++] = it;
-                        break;
-                    }
-                }
+                k = RH_Permute(SALT_SPECIAL_SHOP, (offset + j) % accepted, accepted);
             }
+            out[n++] = acc[k];
         }
         if (acc != NULL)
             Free(acc);

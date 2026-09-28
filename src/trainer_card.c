@@ -1,4 +1,5 @@
 #include "global.h"
+#include "mail.h"
 #include "scanline_effect.h"
 #include "palette.h"
 #include "task.h"
@@ -762,6 +763,16 @@ static void SetPlayerCardData(struct TrainerCard *trainerCard, u8 cardType)
         trainerCard->monSpecies[3] = VarGet(VAR_TRAINER_CARD_MON_ICON_4);
         trainerCard->monSpecies[4] = VarGet(VAR_TRAINER_CARD_MON_ICON_5);
         trainerCard->monSpecies[5] = VarGet(VAR_TRAINER_CARD_MON_ICON_6);
+        // romhack: drop values that aren't Pokemon (unset/foreign vars), which would index past the icon tables
+        {
+            u32 k;
+            for (k = 0; k < PARTY_SIZE; k++)
+            {
+                u16 unused, sp = MailSpeciesToSpecies(trainerCard->monSpecies[k], &unused);
+                if (sp == SPECIES_NONE || sp >= NUM_SPECIES || !IsSpeciesEnabled(sp))
+                    trainerCard->monSpecies[k] = SPECIES_NONE;
+            }
+        }
         break;
     }
 }

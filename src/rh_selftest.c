@@ -1007,6 +1007,42 @@ static void TestSpecialShops(void)
     }
     Note("items", n);
     End();
+    // Guarantee Evolution Items: the evolution seller is randomized too, but every evolution item is still sold.
+    Reset();
+    S->shopSpecial = TRUE;
+    S->shopGuaranteeEvo = TRUE;
+    Begin("special shops evo");
+    n = 0;
+    for (list = 0; list < 9; list++)
+    {
+        u32 c = RH_BuildSpecialShop(list, buf, 128);
+        for (i = 0; i < c && n < 600; i++)
+        {
+            for (j = 0; j < n; j++)
+                Check(all[j] != buf[i], "duplicate", list, buf[i]);
+            all[n++] = buf[i];
+        }
+    }
+    {
+        u32 evoSame = 0, c = RH_BuildSpecialShop(RH_SPECIAL_EVO, buf, 128);
+        for (i = 0; RH_DebugPoolItem(i) != ITEM_NONE; i++)
+        {
+            u16 it = RH_DebugPoolItem(i);
+            bool32 found = FALSE;
+            if (!RH_DebugIsEvolutionItem(it) || !RH_DebugSpecialItemOk(it))
+                continue;
+            for (j = 0; j < n; j++)
+                if (all[j] == it)
+                    found = TRUE;
+            Check(found, "evo missing", it, 0);
+        }
+        for (i = 0; i < c; i++)
+            if (RH_DebugIsEvolutionItem(buf[i]))
+                evoSame++;
+        Check(evoSame < c, "evo shop unchanged", evoSame, c);
+        Note("evo in evo shop", evoSame);
+    }
+    End();
     Free(buf);
     Free(all);
 }
@@ -1747,10 +1783,137 @@ static void TestPalettesAndText(void)
     End();
 }
 
+static void TestRivalSameTeam(void)
+{
+    u32 id, k, battles = 0, mons = 0;
+    u16 roots[6];
+    Reset();
+    S->trainers = 1;
+    S->starters = 2;
+    S->rivalCarriesTeam = TRUE;
+    S->rivalSameTeam = TRUE;
+    S->trainersEvolveOn = TRUE;
+    S->additionalMons[1] = 1;
+    RH_InvalidateSettingsHash();
+    Begin("rival same team");
+    for (k = 0; k < 6; k++)
+    {
+        roots[k] = RH_FamilyRoot(RH_RivalRosterSpecies(k));
+        Check(roots[k] != SPECIES_NONE, "roster", k, 0);
+    }
+    for (id = 1; id < TRAINERS_COUNT; id++)
+    {
+        const struct Trainer *t = GetTrainerStructFromId(id);
+        struct Pokemon *party = gParties[B_TRAINER_OPPONENT_A];
+        u32 i;
+        if (t->partySize < 2 || t->party == NULL || (t->trainerClass != TRAINER_CLASS_RIVAL_EARLY_FRLG
+         && t->trainerClass != TRAINER_CLASS_RIVAL_LATE_FRLG && t->trainerClass != TRAINER_CLASS_CHAMPION_FRLG))
+            continue;
+        CreateNPCTrainerPartyFromTrainer(party, t);
+        battles++;
+        for (i = 0; i < PARTY_SIZE; i++)
+        {
+            u16 sp = GetMonData(&party[i], MON_DATA_SPECIES), r;
+            bool32 ok = FALSE, starter = FALSE;
+            if (sp == SPECIES_NONE)
+                continue;
+            r = RH_FamilyRoot(sp);
+            for (k = 0; k < 3; k++)
+                if (r == RH_FamilyRoot(RH_StarterForSlot(k)))
+                    ok = starter = TRUE;     // his starter keeps the vanilla stage
+            for (k = 0; k < 6; k++)
+                if (r == roots[k])
+                    ok = TRUE;
+            Check(ok, "off roster", id, sp);
+            Check(RH_IsLegalEvolutionAtLevel(sp, GetMonData(&party[i], MON_DATA_LEVEL)) || r == sp || starter, "too evolved", id, sp);
+            mons++;
+        }
+    }
+    Check(battles > 5, "battles", battles, 0);
+    Note("mons", mons);
+    End();
+}
+
+u32 RH_DebugSettingsToCode(const struct RhSettings *st, u8 *chars);
+bool32 RH_DebugCodeToSettings(struct RhSettings *st, const u8 *chars, u32 n);
+u32 RH_DebugSettingsCodeMaxChars(void);
+void RH_DebugRandomSettings(struct RhSettings *st, u32 salt);
+u32 RH_DebugCompareSettings(const struct RhSettings *a, const struct RhSettings *b);
+
+static void TestSettingsCodes(void)
+{
+    struct RhSettings *a = AllocZeroed(sizeof(*a)), *b = AllocZeroed(sizeof(*b));
+    u8 *code = Alloc(RH_DebugSettingsCodeMaxChars() + 8);
+    u32 it, n, maxLen = 0;
+    Begin("settings codes");
+    for (it = 0; it < 24; it++)
+    {
+        RH_SetDefaultSettings(a);
+        if (it > 0 && it < 12)
+            RH_DebugRandomSettings(a, it);
+        else if (it >= 12)
+        {
+            a->trainers = it % 6;
+            a->wild = TRUE;
+            a->wildLevelMod = -50 + it;
+            a->instantText = TRUE;
+            a->rivalSameTeam = it & 1;
+        }
+        if (it & 1)
+        {
+            StringCopy(a->seedText, COMPOUND_STRING("Hello Wrld"));
+            a->seedText[RH_SEED_TEXT_LENGTH] = EOS;
+            a->seed = 0xDEADBEE0 + it;
+        }
+        else
+        {
+            StringCopy(a->seedText, COMPOUND_STRING("K7QX2MZA"));
+            a->seed = 12345;       // hash of the text is used for code-style seed texts
+        }
+        if (it >= 16)
+        {
+            n = RH_DebugSettingsToCode(a, code);
+            Note("typical", n);
+            RH_SetDefaultSettings(b);
+            Check(RH_DebugCodeToSettings(b, code, n) && RH_DebugCompareSettings(a, b) == 0, "sparse", it, n);
+            continue;
+        }
+        a->customStarters[0] = SPECIES_PIKACHU + it;
+        a->customStarters[2] = (it & 2) ? SPECIES_MEW : SPECIES_NONE;
+        a->starterSingleType = it % 18 + 1;
+        a->starterBstMin = 300 + it;
+        a->starterBstMax = 600 - it;
+        n = RH_DebugSettingsToCode(a, code);
+        maxLen = max(maxLen, n);
+        Check(n > 0 && n <= RH_DebugSettingsCodeMaxChars(), "length", it, n);
+        RH_SetDefaultSettings(b);
+        Check(RH_DebugCodeToSettings(b, code, n), "decode", it, n);
+        Check(RH_DebugCompareSettings(a, b) == 0, "rows differ", it, RH_DebugCompareSettings(a, b));
+        if (it & 1)
+            Check(b->seed == a->seed, "raw seed", it, b->seed);
+        else
+            Check(StringCompare(b->seedText, a->seedText) == 0, "seed text", it, 0);
+        Check(b->customStarters[0] == a->customStarters[0] && b->customStarters[2] == a->customStarters[2], "starters", it, b->customStarters[0]);
+        Check(b->starterSingleType == a->starterSingleType && b->starterBstMin == a->starterBstMin && b->starterBstMax == a->starterBstMax, "fields", it, 0);
+        // a typo is caught
+        code[n / 2] = (code[n / 2] + 1 + it % 30) & 31;
+        Check(!RH_DebugCodeToSettings(b, code, n), "typo accepted", it, 0);
+        Check(!RH_DebugCodeToSettings(b, code, n - 1), "short accepted", it, 0);
+    }
+    Note("code chars", maxLen);
+    End();
+    Free(a);
+    Free(b);
+    Free(code);
+}
+
 // ---------------------------------------------------------------------------
 static void RunSuite(void)
 {
 #ifdef RH_SELFTEST_NEW_ONLY
+    TestSettingsCodes();
+    TestRivalSameTeam();
+    TestSpecialShops();
     TestBstModes();
     TestEvoLevels();
     TestGoodDamagingCounts();
@@ -1805,6 +1968,8 @@ static void RunSuite(void)
     TestWildWith("wild per map+catch all", 5, TRUE, 0, FALSE);
     TestWildWith("wild max possible", 3, FALSE, 0, TRUE);
     TestSpecialShops();
+    TestRivalSameTeam();
+    TestSettingsCodes();
     TestPrices();
     TestFieldItems();
     TestShopItems();

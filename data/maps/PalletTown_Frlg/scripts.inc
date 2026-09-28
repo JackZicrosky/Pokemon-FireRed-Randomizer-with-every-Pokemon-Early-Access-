@@ -28,10 +28,8 @@ PalletTown_EventScript_SetSignLadyPos::
 	setobjectmovementtype LOCALID_PALLET_SIGN_LADY, MOVEMENT_TYPE_FACE_UP
 	return
 
+@ romhack: after the starter the sign lady (START menu tutorial) is gone (her object is hidden by this flag)
 PalletTown_EventScript_MoveSignLadyToRouteEntrance::
-	setobjectxyperm LOCALID_PALLET_SIGN_LADY, 12, 2
-	setobjectmovementtype LOCALID_PALLET_SIGN_LADY, MOVEMENT_TYPE_FACE_DOWN
-	setvar SIGN_LADY_READY, TRUE
 	return
 
 PalletTown_OnFrame::

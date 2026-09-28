@@ -172,7 +172,8 @@ struct RhSettings
     u8 evoAdjustLevels;           // FVX "Adjust Evolution Levels"
     u8 paletteMode;               // FVX Pokemon Palettes: 0 unchanged, 1 random
     u8 paletteFollowTypes, paletteFollowEvos, paletteShinyFromNormal;
-    u8 reserved[7];
+    u8 rivalSameTeam;             // the rival keeps one team all game (evolving with his levels)
+    u8 reserved[6];
 };
 
 #define RH_SETTINGS_VERSION 2

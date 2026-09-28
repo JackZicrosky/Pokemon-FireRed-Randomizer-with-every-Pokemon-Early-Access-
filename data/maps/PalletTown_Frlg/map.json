@@ -40,7 +40,7 @@
       "trainer_type": "TRAINER_TYPE_NONE",
       "trainer_sight_or_berry_tree_id": "0",
       "script": "PalletTown_EventScript_SignLady",
-      "flag": "0"
+      "flag": "FLAG_PALLET_LADY_NOT_BLOCKING_SIGN"
     },
     {
       "local_id": "LOCALID_PALLET_FAT_MAN",

@@ -1468,8 +1468,8 @@ void BattleSetup_StartTrainerBattle(void)
         }
     }
 
-    if (TRAINER_BATTLE_PARAM.earlyRival && GetRivalBattleFlags() & RIVAL_BATTLE_TUTORIAL)
-        gBattleTypeFlags |= BATTLE_TYPE_FIRST_BATTLE;
+    // romhack: no Prof. Oak battle tutorial in the first rival battle (it stays a normal trainer battle; losing
+    // it is still handled by the early-rival flags)
 
     if (CurrentBattlePyramidLocation() != PYRAMID_LOCATION_NONE)
     {

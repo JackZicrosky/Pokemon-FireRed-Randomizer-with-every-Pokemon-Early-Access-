@@ -43,8 +43,6 @@ void RH_SetDefaultSettings(struct RhSettings *s)
     s->movesetGoodDamaging = 50;
     s->noEarlyWonderGuard = TRUE;
     s->trainersEvolveLevel = 55;
-    s->trainerNoLegends = TRUE;                             // FVX defaults
-    s->wildNoLegends = TRUE;
     s->wildZone = 2;
     s->wildCatchRate = 1;
     s->wildMegas = TRUE;
@@ -58,7 +56,7 @@ void RH_SetDefaultSettings(struct RhSettings *s)
     s->shopBanBad = TRUE;
     s->pickupBanBad = TRUE;
     s->evoMakeEasier = 0;
-    s->lowerCaseNames = TRUE;
+    s->lowerCaseNames = FALSE;
     s->runWithoutShoes = FALSE;
     s->randomIntroMon = TRUE;
     s->bstChangePct = 20;
