@@ -1,0 +1,77 @@
+#ifndef GUARD_FIELD_PLAYER_AVATAR_H
+#define GUARD_FIELD_PLAYER_AVATAR_H
+
+void PlayerStep(enum Direction direction, u16 newKeys, u16 heldKeys);
+bool8 TryDoMetatileBehaviorForcedMovement();
+void ClearPlayerAvatarInfo(void);
+void SetPlayerAvatarExtraStateTransition(u16 graphicsId, u8 transitionFlag);
+enum Gender GetPlayerAvatarGenderByGraphicsId(u16 gfxId);
+u8 TestPlayerAvatarFlags(u8 flag);
+u8 GetPlayerAvatarSpriteId(void);
+void PlayerGetDestCoords(s16 *x, s16 *y);
+enum Direction GetPlayerFacingDirection(void);
+enum Direction GetPlayerMovementDirection(void);
+enum CopyMovement PlayerGetCopyableMovement(void);
+void PlayerWalkNormal(enum Direction direction);
+void PlayerWalkFast(enum Direction direction);
+void PlayerRideWaterCurrent(enum Direction direction);
+void PlayerWalkFaster(enum Direction direction);
+void PlayerOnBikeCollide(enum Direction direction);
+void PlayerFaceDirection(enum Direction direction);
+void PlayerTurnInPlace(enum Direction direction);
+void PlayerJumpLedge(enum Direction direction);
+void PlayerIdleWheelie(enum Direction direction);
+void PlayerStartWheelie(enum Direction direction);
+void PlayerEndWheelie(enum Direction direction);
+void PlayerStandingHoppingWheelie(enum Direction direction);
+void PlayerMovingHoppingWheelie(enum Direction direction);
+void PlayerLedgeHoppingWheelie(enum Direction direction);
+void PlayerAcroTurnJump(enum Direction direction);
+void PlayerSetAnimId(u8 movementActionId, enum CopyMovement copyableMovement);
+bool8 IsPlayerCollidingWithFarawayIslandMew(enum Direction direction);
+void PlayerOnBikeCollideWithFarawayIslandMew(enum Direction direction);
+enum Collision CheckForObjectEventCollision(struct ObjectEvent *objectEvent, s16 x, s16 y, enum Direction direction, u8 metatileBehavior);
+u8 PlayerGetElevation(void);
+void SetPlayerAvatarTransitionFlags(u16 transitionFlags);
+void CancelPlayerForcedMovement(void);
+void InitPlayerAvatar(s16 x, s16 y, enum Direction direction, enum Gender gender);
+void PlayerFreeze(void);
+void StopPlayerAvatar(void);
+void SetSpinStartFacingDir(enum Direction direction);
+void GetXYCoordsOneStepInFrontOfPlayer(s16 *xPtr, s16 *yPtr);
+u16 GetRivalAvatarGraphicsIdByStateIdAndGender(u8 state, enum Gender gender);
+u16 GetPlayerAvatarGraphicsIdByStateIdAndGender(u8 state, enum Gender gender);
+void SetPlayerAvatarFieldMove(void);
+u16 GetPlayerAvatarGraphicsIdByCurrentState(void);
+void SetPlayerAvatarStateMask(u8 flags);
+u16 GetPlayerAvatarGraphicsIdByStateId(u8 state);
+u8 GetJumpSpecialMovementAction(u32);
+bool8 PartyHasMonWithSurf(void);
+bool8 IsPlayerFacingSurfableFishableWater(void);
+bool8 IsPlayerSurfingNorth(void);
+void SetPlayerAvatarWatering(enum Direction direction);
+u8 GetPlayerAvatarFlags(void);
+void UpdatePlayerAvatarTransitionState(void);
+u16 GetFRLGAvatarGraphicsIdByGender(enum Gender gender);
+u16 GetRSAvatarGraphicsIdByGender(enum Gender gender);
+void PlayerWheelieInPlace(enum Direction direction);
+void PlayerWheelieMove(enum Direction direction);
+void PlayerPopWheelieWhileMoving(enum Direction direction);
+void PlayerUseAcroBikeOnBumpySlope(enum Direction direction);
+void PlayerEndWheelieWhileMoving(enum Direction direction);
+void DoPlayerSpinEntrance(void);
+void DoPlayerSpinExit(void);
+bool32 IsPlayerSpinEntranceActive(void);
+bool32 IsPlayerSpinExitActive(void);
+void SetPlayerInvisibility(bool8 invisible);
+u8 player_get_pos_including_state_based_drift(s16 *x, s16 *y);
+void SetPlayerAvatarFishing(enum Direction direction);
+bool8 ObjectMovingOnRockStairs(struct ObjectEvent *objectEvent, enum Direction direction);
+//sideways stairs
+enum Direction GetRightSideStairsDirection(enum Direction direction);
+enum Direction GetLeftSideStairsDirection(enum Direction direction);
+void UpdateSpinData(void);
+void ResetSpinTimer(void);
+bool32 CanTriggerSpinEvolution();
+
+#endif // GUARD_FIELD_PLAYER_AVATAR_H
