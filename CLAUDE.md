@@ -49,6 +49,13 @@
    **Never push to `rh-hideout/pokeemerald-expansion`** (the upstream). It's public and not theirs.
    The old session could not push because the repo wasn't attached to that session. A session started with
    the repo selected can push.
+   On the owner's Windows PC (since 2026-09-28): the local clone is `D:\rhwork\upstream` (remote `mine`
+   = the owner's repo; `origin` = upstream, never push there). The GitHub CLI is at
+   `C:\Program Files\GitHub CLI\gh.exe` and is logged in as JackZicrosky. Release staging files are in
+   `D:\rhwork\release\` (`publish_releases.ps1`, `notes vX.md`). GitHub turns spaces in uploaded file
+   names into dots (`FireRed.Expansion.Randomizer.vX.bps`), so release notes use the dotted names.
+   This PC has no GBA toolchain (no `arm-none-eabi-gcc`, `make` or WSL), so building must be set up
+   before a new version can be made here.
 4. **Exact scope.** If told "change nothing else", don't slip in extra fixes. If you notice a bug, *tell*
    the owner and ask, or list it as a known issue. The owner cares a lot about this.
 5. **Follow UPR FVX behaviour and descriptions.** The owner asked to *"re-check the Universal Pokemon
