@@ -1,0 +1,9 @@
+wait 300
+press A 4
+wait 300
+press A 4
+wait 400
+wait 400
+press s 10
+wait 500
+savestate v2/route1.ss
