@@ -1847,6 +1847,11 @@ const u16 gItemIconPalette_TownMap[] = INCGFX_U16("graphics/items/icon_palettes/
 const u32 gItemIcon_VsSeeker[] = INCGFX_U32("graphics/items/icons/vs_seeker.png", ".4bpp.smol");
 const u16 gItemIconPalette_VsSeeker[] = INCGFX_U16("graphics/items/icon_palettes/vs_seeker.pal", ".gbapal");
 
+const u32 gItemIcon_RhRainbowCandy[] = INCGFX_U32("graphics/items/icons/rh_rainbow_candy.png", ".4bpp.smol");
+const u16 gItemIconPalette_RhRainbowCandy[] = INCGFX_U16("graphics/items/icon_palettes/rh_rainbow_candy.pal", ".gbapal");
+const u32 gItemIcon_RhMedkit[] = INCGFX_U32("graphics/items/icons/rh_medkit.png", ".4bpp.smol");
+const u16 gItemIconPalette_RhMedkit[] = INCGFX_U16("graphics/items/icon_palettes/rh_medkit.pal", ".gbapal");
+const u16 gItemIconPalette_RhHMKit[] = INCGFX_U16("graphics/items/icon_palettes/rh_hm_kit.pal", ".gbapal");
 const u32 gItemIcon_GbaSp[] = INCGFX_U32("graphics/items/icons/gba_sp.png", ".4bpp.smol");
 const u16 gItemIconPalette_GbaSp[] = INCGFX_U16("graphics/items/icon_palettes/gba_sp.pal", ".gbapal");
 const u32 gItemIcon_TMCase[] = INCGFX_U32("graphics/items/icons/tm_case.png", ".4bpp.smol");

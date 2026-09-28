@@ -14121,8 +14121,8 @@ const struct ItemInfo gItemsInfo[] =
         .type = ITEM_USE_PARTY_MENU,
         .fieldUseFunc = ItemUseOutOfBattle_RareCandy,
         .effect = gItemEffect_RareCandy,
-        .iconPic = gItemIcon_RareCandy,
-        .iconPalette = gItemIconPalette_RareCandy,
+        .iconPic = gItemIcon_RhRainbowCandy,
+        .iconPalette = gItemIconPalette_RhRainbowCandy,
     },
 
     [ITEM_HEALING_KIT] =
@@ -14137,8 +14137,8 @@ const struct ItemInfo gItemsInfo[] =
         .pocket = POCKET_KEY_ITEMS,
         .type = ITEM_USE_BAG_MENU,
         .fieldUseFunc = ItemUseOutOfBattle_HealingKit,
-        .iconPic = gItemIcon_LargePotion,
-        .iconPalette = gItemIconPalette_FullRestore,
+        .iconPic = gItemIcon_RhMedkit,
+        .iconPalette = gItemIconPalette_RhMedkit,
     },
 
     [ITEM_HM_KIT] =
@@ -14154,7 +14154,7 @@ const struct ItemInfo gItemsInfo[] =
         .type = ITEM_USE_BAG_MENU,
         .fieldUseFunc = ItemUseOutOfBattle_HMKit,
         .iconPic = gItemIcon_TMCase,
-        .iconPalette = gItemIconPalette_TMCase,
+        .iconPalette = gItemIconPalette_RhHMKit,
     },
 
     [ITEM_RANDOMIZER_SETTINGS] =
@@ -14162,9 +14162,9 @@ const struct ItemInfo gItemsInfo[] =
         .name = ITEM_NAME("Randomizer Settings"),
         .price = 0,
         .description = COMPOUND_STRING(
-            "A GBA SP holding\n"
-            "the randomizer's\n"
-            "settings. Careful!"),
+            "Opens randomizer\n"
+            "settings to change\n"
+            "or reset your run."),
         .importance = 1,
         .pocket = POCKET_KEY_ITEMS,
         .type = ITEM_USE_BAG_MENU,
