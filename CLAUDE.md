@@ -49,11 +49,23 @@
    **Never push to `rh-hideout/pokeemerald-expansion`** (the upstream). It's public and not theirs.
    The old session could not push because the repo wasn't attached to that session. A session started with
    the repo selected can push.
-   On the owner's Windows PC (since 2026-09-28): the local clone is `D:\rhwork\upstream` (remote `mine`
-   = the owner's repo; `origin` = upstream, never push there). The GitHub CLI is at
-   `C:\Program Files\GitHub CLI\gh.exe` and is logged in as JackZicrosky. Release staging files are in
-   `D:\rhwork\release\` (`publish_releases.ps1`, `notes vX.md`). GitHub turns spaces in uploaded file
-   names into dots (`FireRed.Expansion.Randomizer.vX.bps`), so release notes use the dotted names.
+   **Project folder on the owner's Windows PC: `D:\AI shit\Claude`.** The owner wants *all* work for this
+   project there, and no files created anywhere else unless absolutely necessary.
+   - The git repository's root **is** `D:\AI shit\Claude` (remote `mine` = the owner's repo; `origin` =
+     upstream, never push there).
+   - The owner's own files live in the same folder: `Pokemon Romhack Stuff\` (Fire Red release files, both
+     clean ROMs, the Emerald folder) and `notes.txt`. `.git/info/exclude` keeps git from ever tracking
+     them. **Never commit them.**
+   - The GitHub CLI is at `C:\Program Files\GitHub CLI\gh.exe`, logged in as JackZicrosky.
+   - Releases: `python tools/rh/release/make_release_files.py` (add the new version to `CHANGES` first)
+     writes the public READMEs and notes to `build/release/`. Then run
+     `powershell -ExecutionPolicy Bypass -File tools/rh/release/publish_releases.ps1` (add the version to
+     `$versions`). It skips versions that already exist. Then run
+     `gh release edit v<previous> --notes-file "build/release/notes v<previous>.md"` so the old Latest gets
+     the "older version" wording.
+   - `python tools/rh/release/bpscheck.py clean.gba patch.bps` applies a BPS and checks all its CRCs.
+   - GitHub turns spaces in uploaded file names into dots (`FireRed.Expansion.Randomizer.vX.bps`), so
+     release notes use the dotted names.
    This PC has no GBA toolchain (no `arm-none-eabi-gcc`, `make` or WSL), so building must be set up
    before a new version can be made here.
 4. **Exact scope.** If told "change nothing else", don't slip in extra fixes. If you notice a bug, *tell*
