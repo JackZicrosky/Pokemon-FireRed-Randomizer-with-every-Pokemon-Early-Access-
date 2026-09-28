@@ -1372,6 +1372,12 @@ static void TestNewGameItems(void)
     Check(CheckBagHasItem(ITEM_HM_KIT, 1), "hm kit", 0, 0);
     Check(CheckBagHasItem(ITEM_INFINITE_CANDY, 1), "infinite candy", 0, 0);
     Check(CheckBagHasItem(ITEM_HEALING_KIT, 1), "healing kit", 0, 0);
+    Check(CheckBagHasItem(ITEM_RANDOMIZER_SETTINGS, 1), "randomizer settings", 0, 0);
+    RemoveBagItem(ITEM_RANDOMIZER_SETTINGS, 1);
+    RH_OnContinue();                                   // old saves get it when loaded
+    Check(CheckBagHasItem(ITEM_RANDOMIZER_SETTINGS, 1), "settings on continue", 0, 0);
+    RH_OnContinue();
+    Check(CountTotalItemQuantityInBag(ITEM_RANDOMIZER_SETTINGS) == 1, "only one", CountTotalItemQuantityInBag(ITEM_RANDOMIZER_SETTINGS), 0);
     Check(gSaveBlock1Ptr->pcItems[0].itemId != ITEM_NONE, "pc item", 0, 0);
     Check(RH_CatchTutorialSpecies(SPECIES_WEEDLE) != SPECIES_NONE, "tutorial", 0, 0);
     End();

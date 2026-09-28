@@ -1582,6 +1582,8 @@ extern const u32 gItemIcon_TownMap[];
 extern const u16 gItemIconPalette_TownMap[];
 extern const u32 gItemIcon_VsSeeker[];
 extern const u16 gItemIconPalette_VsSeeker[];
+extern const u32 gItemIcon_GbaSp[];
+extern const u16 gItemIconPalette_GbaSp[];
 extern const u32 gItemIcon_TMCase[];
 extern const u16 gItemIconPalette_TMCase[];
 extern const u32 gItemIcon_BerryPouch[];

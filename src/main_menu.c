@@ -262,7 +262,7 @@ static const u8 gText_SaveFileErased[] = _("The save file has been erased\ndue t
 static const u8 gJPText_No1MSubCircuit[] = _("1Mサブきばんが ささっていません！");
 static const u8 gText_BatteryRunDry[] = _("The internal battery has run dry.\nThe game can be played.\pHowever, clock-based events will\nno longer occur.");
 
-static const u8 gText_MainMenuNewGame[] = _("NEW GAME");
+static const u8 gText_MainMenuNewGame[] = _("RANDOMIZE GAME");   // romhack: New Game opens the randomizer
 static const u8 gText_MainMenuContinue[] = _("CONTINUE");
 static const u8 gText_MainMenuOption[] = _("OPTION");
 static const u8 gText_MainMenuMysteryGift[] = _("MYSTERY GIFT");
@@ -428,6 +428,7 @@ static const u16 sMainMenuBgPal[] = INCGFX_U16("graphics/interface/main_menu_bg.
 static const u16 sMainMenuTextPal[] = INCGFX_U16("graphics/interface/main_menu_text.pal", ".gbapal");
 
 static const u8 sTextColor_Headers[] = {TEXT_DYNAMIC_COLOR_1, TEXT_DYNAMIC_COLOR_2, TEXT_DYNAMIC_COLOR_3};
+static const u8 sTextColor_NewGame[] = {TEXT_DYNAMIC_COLOR_1, TEXT_DYNAMIC_COLOR_4, TEXT_DYNAMIC_COLOR_3};
 static const u8 sTextColor_MenuInfo[] = {TEXT_DYNAMIC_COLOR_1, TEXT_COLOR_WHITE, TEXT_DYNAMIC_COLOR_3};
 
 static const struct BgTemplate sMainMenuBgTemplates[] = {
@@ -558,6 +559,44 @@ static void CB2_MainMenu(void)
     UpdatePaletteFade();
 }
 
+// romhack: the main menu uses the randomizer screen's dark colours and sits in the middle of the screen.
+static EWRAM_DATA u8 sMainMenuYOffset = 0;
+
+static void RH_DarkenMainMenuPalettes(void)
+{
+    static const u16 sDarkFrame[] = { RGB(20, 13, 31), RGB(13, 14, 16), RGB(7, 9, 13), RGB(5, 6, 9) };
+    u32 i;
+    u16 bg = RGB(2, 3, 4);
+    LoadPalette(&bg, BG_PLTT_ID(0), PLTT_SIZEOF(1));
+    // window frame (palette 2): by brightness, outline = purple accent, body = dark panels
+    for (i = 1; i < 16; i++)
+    {
+        u16 c = gPlttBufferUnfaded[BG_PLTT_ID(2) + i];
+        u32 lum = (GET_R(c) * 3 + GET_G(c) * 6 + GET_B(c)) / 10;
+        u16 d = sDarkFrame[lum < 8 ? 0 : lum < 16 ? 1 : lum < 24 ? 2 : 3];
+        LoadPalette(&d, BG_PLTT_ID(2) + i, PLTT_SIZEOF(1));
+    }
+}
+
+// Pixels the menu is moved down so it's centred (the tall mystery menus use the whole screen).
+static u32 MainMenuYOffset(u32 menuType)
+{
+    switch (menuType)
+    {
+    case HAS_NO_SAVED_GAME:
+        return 48;
+    case HAS_SAVED_GAME:
+        return 16;
+    default:
+        return 0;
+    }
+}
+
+static void SetMainMenuWin0V(u16 v)
+{
+    SetGpuReg(REG_OFFSET_WIN0V, v + sMainMenuYOffset * 257);
+}
+
 static void VBlankCB_MainMenu(void)
 {
     LoadOam();
@@ -604,7 +643,7 @@ static u32 InitMainMenu(bool8 returningFromOptionsMenu)
     if (returningFromOptionsMenu)
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0x10, 0, RGB_BLACK); // fade to black
     else
-        BeginNormalPaletteFade(PALETTES_ALL, 0, 0x10, 0, RGB_WHITEALPHA); // fade to white
+        BeginNormalPaletteFade(PALETTES_ALL, 0, 0x10, 0, RGB_BLACK); // romhack: fade in from black (dark menu)
     ResetBgsAndClearDma3BusyFlags(0);
     InitBgsFromTemplates(0, sMainMenuBgTemplates, ARRAY_COUNT(sMainMenuBgTemplates));
     ChangeBgX(0, 0, BG_COORD_SET);
@@ -614,6 +653,8 @@ static u32 InitMainMenu(bool8 returningFromOptionsMenu)
     InitWindows(sWindowTemplates_MainMenu);
     DeactivateAllTextPrinters();
     LoadMainMenuWindowFrameTiles(0, MAIN_MENU_BORDER_TILE);
+    RH_DarkenMainMenuPalettes();
+    sMainMenuYOffset = 0;
 
     SetGpuReg(REG_OFFSET_WIN0H, 0);
     SetGpuReg(REG_OFFSET_WIN0V, 0);
@@ -776,25 +817,28 @@ static void Task_DisplayMainMenu(u8 taskId)
         palette = RGB_BLACK;
         LoadPalette(&palette, BG_PLTT_ID(15) + 14, PLTT_SIZEOF(1));
 
-        palette = RGB_WHITE;
+        palette = RGB(5, 6, 9);          // romhack: dark panel
         LoadPalette(&palette, BG_PLTT_ID(15) + 10, PLTT_SIZEOF(1));
 
-        palette = RGB(12, 12, 12);
+        palette = RGB(28, 28, 29);       // light text
         LoadPalette(&palette, BG_PLTT_ID(15) + 11, PLTT_SIZEOF(1));
 
-        palette = RGB(26, 26, 25);
+        palette = RGB(7, 8, 10);         // text shadow
         LoadPalette(&palette, BG_PLTT_ID(15) + 12, PLTT_SIZEOF(1));
+
+        palette = RGB(12, 26, 31);       // cyan (RANDOMIZE GAME)
+        LoadPalette(&palette, BG_PLTT_ID(15) + 13, PLTT_SIZEOF(1));
 
         // Note: If there is no save file, the save block is zeroed out,
         // so the default gender is MALE.
         if (gSaveBlock2Ptr->playerGender == MALE)
         {
-            palette = RGB(4, 16, 31);
+            palette = RGB(12, 20, 31);
             LoadPalette(&palette, BG_PLTT_ID(15) + 1, PLTT_SIZEOF(1));
         }
         else
         {
-            palette = RGB(31, 3, 21);
+            palette = RGB(31, 12, 24);
             LoadPalette(&palette, BG_PLTT_ID(15) + 1, PLTT_SIZEOF(1));
         }
 
@@ -804,8 +848,8 @@ static void Task_DisplayMainMenu(u8 taskId)
         default:
             FillWindowPixelBuffer(0, PIXEL_FILL(0xA));
             FillWindowPixelBuffer(1, PIXEL_FILL(0xA));
-            AddTextPrinterParameterized3(0, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
-            AddTextPrinterParameterized3(1, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
+            AddTextPrinterParameterized3(0, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuNewGame, MENU_WIDTH * 8), 1, sTextColor_NewGame, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
+            AddTextPrinterParameterized3(1, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuOption, MENU_WIDTH * 8), 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
             PutWindowTilemap(0);
             PutWindowTilemap(1);
             CopyWindowToVram(0, COPYWIN_GFX);
@@ -817,9 +861,9 @@ static void Task_DisplayMainMenu(u8 taskId)
             FillWindowPixelBuffer(2, PIXEL_FILL(0xA));
             FillWindowPixelBuffer(3, PIXEL_FILL(0xA));
             FillWindowPixelBuffer(4, PIXEL_FILL(0xA));
-            AddTextPrinterParameterized3(2, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuContinue);
-            AddTextPrinterParameterized3(3, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
-            AddTextPrinterParameterized3(4, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
+            AddTextPrinterParameterized3(2, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuContinue, MENU_WIDTH * 8), 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuContinue);
+            AddTextPrinterParameterized3(3, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuNewGame, MENU_WIDTH * 8), 1, sTextColor_NewGame, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
+            AddTextPrinterParameterized3(4, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuOption, MENU_WIDTH * 8), 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
             MainMenu_FormatSavegameText();
             PutWindowTilemap(2);
             PutWindowTilemap(3);
@@ -836,10 +880,10 @@ static void Task_DisplayMainMenu(u8 taskId)
             FillWindowPixelBuffer(3, PIXEL_FILL(0xA));
             FillWindowPixelBuffer(4, PIXEL_FILL(0xA));
             FillWindowPixelBuffer(5, PIXEL_FILL(0xA));
-            AddTextPrinterParameterized3(2, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuContinue);
-            AddTextPrinterParameterized3(3, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
-            AddTextPrinterParameterized3(4, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryGift);
-            AddTextPrinterParameterized3(5, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
+            AddTextPrinterParameterized3(2, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuContinue, MENU_WIDTH * 8), 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuContinue);
+            AddTextPrinterParameterized3(3, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuNewGame, MENU_WIDTH * 8), 1, sTextColor_NewGame, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
+            AddTextPrinterParameterized3(4, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuMysteryGift, MENU_WIDTH * 8), 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryGift);
+            AddTextPrinterParameterized3(5, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuOption, MENU_WIDTH * 8), 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
             MainMenu_FormatSavegameText();
             PutWindowTilemap(2);
             PutWindowTilemap(3);
@@ -860,11 +904,11 @@ static void Task_DisplayMainMenu(u8 taskId)
             FillWindowPixelBuffer(4, PIXEL_FILL(0xA));
             FillWindowPixelBuffer(5, PIXEL_FILL(0xA));
             FillWindowPixelBuffer(6, PIXEL_FILL(0xA));
-            AddTextPrinterParameterized3(2, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuContinue);
-            AddTextPrinterParameterized3(3, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
-            AddTextPrinterParameterized3(4, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryGift2);
-            AddTextPrinterParameterized3(5, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryEvents);
-            AddTextPrinterParameterized3(6, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
+            AddTextPrinterParameterized3(2, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuContinue, MENU_WIDTH * 8), 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuContinue);
+            AddTextPrinterParameterized3(3, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuNewGame, MENU_WIDTH * 8), 1, sTextColor_NewGame, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
+            AddTextPrinterParameterized3(4, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuMysteryGift2, MENU_WIDTH * 8), 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryGift2);
+            AddTextPrinterParameterized3(5, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuMysteryEvents, MENU_WIDTH * 8), 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryEvents);
+            AddTextPrinterParameterized3(6, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, gText_MainMenuOption, MENU_WIDTH * 8), 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
             MainMenu_FormatSavegameText();
             PutWindowTilemap(2);
             PutWindowTilemap(3);
@@ -892,6 +936,8 @@ static void Task_DisplayMainMenu(u8 taskId)
             }
             break;
         }
+        sMainMenuYOffset = MainMenuYOffset(gTasks[taskId].tMenuType);
+        ChangeBgY(0, -(s32)(sMainMenuYOffset << 8), BG_COORD_ADD);
         gTasks[taskId].func = Task_HighlightSelectedMainMenuItem;
     }
 }
@@ -1213,10 +1259,10 @@ static void HighlightSelectedMainMenuItem(enum PartyMenuType menuType, u8 select
         {
         case 0:
         default:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(0));
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(0));
             break;
         case 1:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(1));
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(1));
             break;
         }
         break;
@@ -1225,13 +1271,13 @@ static void HighlightSelectedMainMenuItem(enum PartyMenuType menuType, u8 select
         {
         case 0:
         default:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(2));
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(2));
             break;
         case 1:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(3));
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(3));
             break;
         case 2:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(4));
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(4));
             break;
         }
         break;
@@ -1240,16 +1286,16 @@ static void HighlightSelectedMainMenuItem(enum PartyMenuType menuType, u8 select
         {
         case 0:
         default:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(2));
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(2));
             break;
         case 1:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(3));
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(3));
             break;
         case 2:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(4));
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(4));
             break;
         case 3:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(5));
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(5));
             break;
         }
         break;
@@ -1258,28 +1304,28 @@ static void HighlightSelectedMainMenuItem(enum PartyMenuType menuType, u8 select
         {
         case 0:
         default:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(2));
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(2));
             break;
         case 1:
             if (isScrolled)
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(3) - MENU_SCROLL_SHIFT);
+                SetMainMenuWin0V(MENU_WIN_VCOORDS(3) - MENU_SCROLL_SHIFT);
             else
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(3));
+                SetMainMenuWin0V(MENU_WIN_VCOORDS(3));
             break;
         case 2:
             if (isScrolled)
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(4) - MENU_SCROLL_SHIFT);
+                SetMainMenuWin0V(MENU_WIN_VCOORDS(4) - MENU_SCROLL_SHIFT);
             else
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(4));
+                SetMainMenuWin0V(MENU_WIN_VCOORDS(4));
             break;
         case 3:
             if (isScrolled)
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(5) - MENU_SCROLL_SHIFT);
+                SetMainMenuWin0V(MENU_WIN_VCOORDS(5) - MENU_SCROLL_SHIFT);
             else
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(5));
+                SetMainMenuWin0V(MENU_WIN_VCOORDS(5));
             break;
         case 4:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(6) - MENU_SCROLL_SHIFT);
+            SetMainMenuWin0V(MENU_WIN_VCOORDS(6) - MENU_SCROLL_SHIFT);
             break;
         }
         break;

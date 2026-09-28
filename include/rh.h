@@ -32,6 +32,8 @@ void RH_SetDefaultSettings(struct RhSettings *s);
 void RH_ApplyPendingSettings(void);
 void RH_FixTMText(u8 *str);                       // NPC texts naming a randomized TM's old move
 void RH_OnNewGame(void);
+void RH_OnContinue(void);
+void RH_OpenRandomizerSettings(void);
 u16 RH_IntroSpecies(u16 vanilla);
 const u16 *RH_MonPalette(u16 species, bool32 isShiny, const u16 *normal, const u16 *vanilla);
 

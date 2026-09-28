@@ -1,5 +1,31 @@
 @ Romhack additions that are not shops.
 
+@ Randomizer Settings key item (GBA SP): warning, then the settings screen (special waits until it closes).
+RH_EventScript_RandomizerSettings::
+	lockall
+	textcolor NPC_TEXT_COLOR_NEUTRAL
+	msgbox RH_Text_RandomizerSettingsWarning, MSGBOX_DEFAULT
+	msgbox RH_Text_RandomizerSettingsOpen, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, RH_EventScript_RandomizerSettingsEnd
+	closemessage
+	fadescreen FADE_TO_BLACK
+	special RH_OpenRandomizerSettings
+	waitstate
+RH_EventScript_RandomizerSettingsEnd:
+	releaseall
+	end
+
+RH_Text_RandomizerSettingsWarning::
+	.string "WARNING!\n"
+	.string "Changing the settings mid-run\p"
+	.string "can BREAK your current playthrough.\n"
+	.string "POKéMON, trainers and items may\l"
+	.string "all change.\p"
+	.string "Be careful when using this!$"
+
+RH_Text_RandomizerSettingsOpen::
+	.string "Open the RANDOMIZER SETTINGS?$"
+
 RH_EventScript_MomGivesRings::
 	lockall
 	textcolor NPC_TEXT_COLOR_FEMALE

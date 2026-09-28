@@ -7,6 +7,10 @@
 #include "gpu_regs.h"
 #include "international_string_util.h"
 #include "main.h"
+#include "m4a.h"
+#include "new_game.h"
+#include "overworld.h"
+#include "gba/flash_internal.h"
 #include "malloc.h"
 #include "save.h"
 #include "menu.h"
@@ -40,7 +44,7 @@ enum { WIN_HEADER, WIN_LIST, WIN_DESC, WIN_MENU };
 enum RowKind { RK_HEADER, RK_CHOICE, RK_TOGGLE, RK_SLIDER, RK_TEXT, RK_ACTION };
 enum TextField { TF_SEED, TF_STARTER1, TF_STARTER2, TF_STARTER3, TF_TYPE, TF_BST_MIN, TF_BST_MAX };
 enum Action { ACT_BEGIN, ACT_SHOW_CODE, ACT_ENTER_CODE, ACT_SAVE_1, ACT_SAVE_2, ACT_SAVE_3, ACT_LOAD_1, ACT_LOAD_2, ACT_LOAD_3,
-              ACT_DEFAULTS };
+              ACT_DEFAULTS, ACT_EXIT, ACT_RESET_RUN, ACT_RESET_RUN_2 };
 enum SliderFmt { SF_PLAIN, SF_PERCENT, SF_SIGNED_PERCENT, SF_LEVEL, SF_GEN, SF_OFF_GEN };
 
 struct RhRow
@@ -124,6 +128,15 @@ extern const u8 gRhPlayerGraphicsCount;
 // Visibility rules
 // ---------------------------------------------------------------------------
 #define VIS(name, expr) static bool32 name(const struct RhSettings *s) { return (expr); }
+
+// Opened from the Randomizer Settings key item during a run (instead of from New Game).
+static EWRAM_DATA u8 sInGame = 0;
+static bool32 visInGame(const struct RhSettings *s) { return sInGame; }
+// "Reset The Run" only when there is a game to reset.
+static bool32 visResetRun(const struct RhSettings *s)
+{
+    return sInGame || gSaveFileStatus == SAVE_STATUS_OK || gSaveFileStatus == SAVE_STATUS_CORRUPT;
+}
 VIS(visPlayerGraphics, s->playerGraphics != 0)
 VIS(visPalettes, s->paletteMode != 0)
 VIS(visStatsRandomized, s->baseStats != 0)
@@ -190,11 +203,13 @@ VIS(visPickup, s->pickupItems != 0)
 #define SLIDER(sec, ind, f, lo, hi, st, fm, text, d, vis) { .kind = RK_SLIDER, .section = sec, .indent = ind, .offset = OFS(f), .size = SZ(f), \
     .min = lo, .max = hi, .step = st, .fmt = fm, .label = CS(text), .desc = CS(d), .visible = vis }
 #define ACTION(sec, act, text, d) { .kind = RK_ACTION, .section = sec, .fmt = act, .label = CS(text), .desc = CS(d) }
+#define ACTION_VIS(sec, act, text, d, vis) { .kind = RK_ACTION, .section = sec, .fmt = act, .label = CS(text), .desc = CS(d), .visible = vis }
 #define TEXT(sec, ind, tf, text, d, vis) { .kind = RK_TEXT, .section = sec, .indent = ind, .fmt = tf, .label = CS(text), .desc = CS(d), .visible = vis }
 
 static const struct RhRow sRows[] =
 {
     // ---------------- General ----------------
+    ACTION_VIS(SEC_GENERAL, ACT_RESET_RUN, "Reset The Run", "Erases your saved game and starts over\nwith these settings. Presets are kept.", visResetRun),
     CHOICE(SEC_GENERAL, 0, mechanicsGen, sMechGen, "Battle Mechanics", "Which generation's battle rules apply.\nPhys./Special split + Fairy always on.", NULL),
     TOGGLE(SEC_GENERAL, 0, enabled, "Randomizer", "Master switch. Off = nothing is\nrandomized (Misc. Tweaks still apply).", NULL),
     CHOICE(SEC_GENERAL, 0, speciesPool, sPool, "Pokémon Pool", "Which Pokémon the randomizer may use.\n+ Forms adds regional/alt. forms.", NULL),
@@ -443,6 +458,7 @@ static const struct RhRow sRows[] =
 
     // ---------------- Begin ----------------
     { .kind = RK_ACTION, .section = SEC_BEGIN, .fmt = ACT_BEGIN, .label = CS("Begin Run"), .desc = CS("Start the adventure with these\nsettings. Press A.") },
+    ACTION_VIS(SEC_BEGIN, ACT_EXIT, "Exit Without Changes", "Back to your game. Nothing you changed\nhere is kept. (B does this too.)", visInGame),
 };
 
 // ---------------------------------------------------------------------------
@@ -464,7 +480,7 @@ static const struct BgTemplate sBgTemplates[] =
 };
 
 // Dark theme palette.
-enum { C_TRANSPARENT, C_PANEL, C_TEXT, C_SHADOW, C_VALUE, C_VALUE_SH, C_DIM, C_HEADER, C_SEL, C_ACCENT, C_HEADBAR, C_OK, C_WARN };
+enum { C_TRANSPARENT, C_PANEL, C_TEXT, C_SHADOW, C_VALUE, C_VALUE_SH, C_DIM, C_HEADER, C_SEL, C_ACCENT, C_HEADBAR, C_OK, C_WARN, C_BLOOD };
 static const u16 sPal[16] = {
     [C_TRANSPARENT] = RGB(2, 3, 4),
     [C_PANEL]       = RGB(3, 4, 5),      // near-black panel
@@ -479,6 +495,7 @@ static const u16 sPal[16] = {
     [C_HEADBAR]     = RGB(5, 6, 9),
     [C_OK]          = RGB(10, 27, 12),
     [C_WARN]        = RGB(31, 11, 9),
+    [C_BLOOD]       = RGB(31, 2, 3),     // "Reset The Run"
 };
 static const u16 sBgColor[] = { RGB(2, 3, 4) };
 
@@ -489,6 +506,7 @@ static const u8 sColHeader[]  = { C_TRANSPARENT, C_HEADER, C_SHADOW };
 static const u8 sColAccent[]  = { C_TRANSPARENT, C_ACCENT, C_SHADOW };
 static const u8 sColOk[]      = { C_TRANSPARENT, C_OK, C_SHADOW };
 static const u8 sColWarn[]    = { C_TRANSPARENT, C_WARN, C_SHADOW };
+static const u8 sColBlood[]   = { C_TRANSPARENT, C_BLOOD, C_SHADOW };
 
 // ---------------------------------------------------------------------------
 // State (kept across the naming screen)
@@ -701,6 +719,13 @@ static void FormatValue(const struct RhRow *r, u8 *dst)
 
 static const u8 *ActionValueText(u32 act);
 static void DrawCodeScreen(void);
+
+static const u8 *SectionName(u32 sec)
+{
+    if (sec == SEC_BEGIN && sInGame)
+        return CS("Apply or Exit");
+    return sSectionNames[sec];
+}
 static void DrawCodeDesc(void);
 
 static void DrawHeader(void)
@@ -709,10 +734,10 @@ static void DrawHeader(void)
     FillWindowPixelBuffer(WIN_HEADER, PIXEL_FILL(C_TRANSPARENT));
     FillWindowPixelRect(WIN_HEADER, PIXEL_FILL(C_HEADBAR), 0, 0, 240, 15);
     AddTextPrinterParameterized3(WIN_HEADER, FONT_NORMAL, 4, 1, sColAccent, TEXT_SKIP_DRAW, CS("="));
-    AddTextPrinterParameterized3(WIN_HEADER, FONT_NORMAL, 14, 1, sColText, TEXT_SKIP_DRAW, sSectionNames[sSection]);
-    StringCopy(buf, CS("SELECT Menu  START Begin"));
-    if (14 + GetStringWidth(FONT_NORMAL, sSectionNames[sSection], 0) + 6 > GetStringRightAlignXOffset(FONT_SMALL, buf, 236))
-        StringCopy(buf, CS("SELECT Menu"));
+    AddTextPrinterParameterized3(WIN_HEADER, FONT_NORMAL, 14, 1, sColText, TEXT_SKIP_DRAW, SectionName(sSection));
+    StringCopy(buf, sInGame ? CS("SELECT Menu  B Exit") : CS("SELECT Menu  START Begin"));
+    if (14 + GetStringWidth(FONT_NORMAL, SectionName(sSection), 0) + 6 > GetStringRightAlignXOffset(FONT_SMALL, buf, 236))
+        StringCopy(buf, sInGame ? CS("B Exit") : CS("SELECT Menu"));
     AddTextPrinterParameterized3(WIN_HEADER, FONT_SMALL, GetStringRightAlignXOffset(FONT_SMALL, buf, 236), 3, sColDim, TEXT_SKIP_DRAW, buf);
     CopyWindowToVram(WIN_HEADER, COPYWIN_FULL);
 }
@@ -735,7 +760,7 @@ static void DrawList(void)
         if (selected)
         {
             FillWindowPixelRect(WIN_LIST, PIXEL_FILL(C_SEL), 0, y, 240, ROW_H);
-            FillWindowPixelRect(WIN_LIST, PIXEL_FILL(C_ACCENT), 0, y, 3, ROW_H);
+            FillWindowPixelRect(WIN_LIST, PIXEL_FILL(r->fmt == ACT_RESET_RUN && r->kind == RK_ACTION ? C_BLOOD : C_ACCENT), 0, y, 3, ROW_H);
         }
         if (r->kind == RK_HEADER)
         {
@@ -745,7 +770,14 @@ static void DrawList(void)
         if (r->kind == RK_ACTION)
         {
             if (r->fmt == ACT_BEGIN)
-                AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, 88, y + 1, sColOk, TEXT_SKIP_DRAW, CS("▶ BEGIN RUN"));
+            {
+                const u8 *t = sInGame ? CS("▶ APPLY & RETURN") : CS("▶ BEGIN RUN");
+                AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, GetStringCenterAlignXOffset(FONT_NORMAL, t, 240), y + 1, sColOk, TEXT_SKIP_DRAW, t);
+            }
+            else if (r->fmt == ACT_RESET_RUN)
+            {
+                AddTextPrinterParameterized3(WIN_LIST, FONT_NORMAL, x, y + 1, sColBlood, TEXT_SKIP_DRAW, r->label);
+            }
             else
             {
                 const u8 *v = ActionValueText(r->fmt);
@@ -840,13 +872,22 @@ static void DrawDesc(void)
     if (sConfirm)
     {
         const u8 *q;
+        const u8 *col = sColText;
         if (sPendingAction >= ACT_SAVE_1 && sPendingAction <= ACT_SAVE_3)
             q = CS("Overwrite this preset?");
         else if (sPendingAction == ACT_DEFAULTS)
             q = CS("Reset every option to its default?");
+        else if (sPendingAction == ACT_EXIT)
+            q = CS("Leave without changing anything?");
+        else if (sPendingAction == ACT_RESET_RUN)
+            q = CS("Reset the run? Your save gets ERASED."), col = sColBlood;
+        else if (sPendingAction == ACT_RESET_RUN_2)
+            q = CS("Are you REALLY sure? No undo!"), col = sColBlood;
+        else if (sInGame)
+            q = CS("Apply these settings to your run?");
         else
             q = S->enabled ? CS("Begin a RANDOMIZED run?") : CS("Begin a normal (not randomized) run?");
-        AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 8, 1, sColText, TEXT_SKIP_DRAW, q);
+        AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 8, 1, col, TEXT_SKIP_DRAW, q);
         FillWindowPixelRect(WIN_DESC, PIXEL_FILL(sConfirm == 1 ? C_SEL : C_HEADBAR), 60, 16, 48, 14);
         FillWindowPixelRect(WIN_DESC, PIXEL_FILL(sConfirm == 2 ? C_SEL : C_HEADBAR), 132, 16, 48, 14);
         AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 72, 17, sConfirm == 1 ? sColOk : sColDim, TEXT_SKIP_DRAW, CS("YES"));
@@ -855,6 +896,11 @@ static void DrawDesc(void)
     else if (sMessage != NULL)
     {
         AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 8, 1, sColWarn, TEXT_SKIP_DRAW, sMessage);
+    }
+    else if (sInGame && sRow < n && rows[sRow]->kind == RK_ACTION && rows[sRow]->fmt == ACT_BEGIN)
+    {
+        AddTextPrinterParameterized3(WIN_DESC, FONT_NORMAL, 8, 1, sColText, TEXT_SKIP_DRAW,
+                                     CS("Use these settings from now on. Save\nyour game to keep them. Press A."));
     }
     else if (sRow < n && rows[sRow]->desc != NULL)
     {
@@ -882,7 +928,7 @@ static void DrawMenu(void)
         if (sec == sMenuCursor)
             FillWindowPixelRect(WIN_MENU, PIXEL_FILL(C_SEL), 0, y - 1, 176, 15);
         AddTextPrinterParameterized3(WIN_MENU, FONT_NORMAL, 8, y, sec == SEC_BEGIN ? sColOk : (sec == sSection ? sColValue : sColText),
-                                     TEXT_SKIP_DRAW, sSectionNames[sec]);
+                                     TEXT_SKIP_DRAW, SectionName(sec));
     }
     PutWindowTilemap(WIN_MENU);
     CopyWindowToVram(WIN_MENU, COPYWIN_FULL);
@@ -930,10 +976,17 @@ static void FixCursor(s32 dir)
 
 static void GoToSection(u32 sec)
 {
+    const struct RhRow *rows[ARRAY_COUNT(sRows)];
+    u32 n;
     sSection = sec;
     sRow = 0;
     sScroll = 0;
+    sMessage = NULL;
     FixCursor(1);
+    // the cursor starts below "Reset The Run", never on it
+    n = VisibleRows(sSection, rows);
+    if (n > 1 && rows[sRow]->kind == RK_ACTION && rows[sRow]->fmt == ACT_RESET_RUN)
+        sRow++;
 }
 
 // ---------------------------------------------------------------------------
@@ -1679,6 +1732,19 @@ static void VBlankCB(void)
 
 static void Task_Input(u8 taskId);
 static void Task_Begin(u8 taskId);
+static void Task_LeaveApply(u8 taskId);
+static void Task_LeaveNoChange(u8 taskId);
+static void Task_ResetRunInGame(u8 taskId);
+
+// Reset The Run: erase the saved game (both save slots and the Hall of Fame), but not the preset sector.
+static void EraseGameSave(void)
+{
+    u32 i;
+    for (i = 0; i <= SECTOR_ID_HOF_2; i++)
+        EraseFlashSector(i);
+    Save_ResetSaveCounters();
+    gSaveFileStatus = SAVE_STATUS_EMPTY;
+}
 
 static void Task_FadeIn(u8 taskId)
 {
@@ -1745,6 +1811,18 @@ static void DoAction(u32 act, bool32 confirmed)
             sMessage = CS("This preset is from another version\nand can't be loaded.");
         }
         break;
+    case ACT_EXIT:
+        sPendingAction = act;
+        sConfirm = 1;
+        PlaySE(SE_SELECT);
+        DrawDesc();
+        return;
+    case ACT_RESET_RUN:
+        sPendingAction = act;
+        sConfirm = 2;                     // default NO, twice
+        PlaySE(SE_SELECT);
+        DrawDesc();
+        return;
     case ACT_DEFAULTS:
         if (!confirmed)
         {
@@ -1811,11 +1889,35 @@ static void Task_Input(u8 taskId)
         }
         else if (JOY_NEW(A_BUTTON))
         {
-            if (sConfirm == 1 && sPendingAction == ACT_BEGIN)
+            if (sConfirm == 1 && sPendingAction == ACT_RESET_RUN)
             {
+                // first YES: ask a second, separate time
+                sPendingAction = ACT_RESET_RUN_2;
+                sConfirm = 2;
                 PlaySE(SE_SELECT);
+                DrawDesc();
+                return;
+            }
+            if (sConfirm == 1 && (sPendingAction == ACT_BEGIN || sPendingAction == ACT_EXIT || sPendingAction == ACT_RESET_RUN_2))
+            {
+                if (sPendingAction == ACT_RESET_RUN_2)
+                {
+                    EraseGameSave();
+                    PlaySE(SE_BANG);
+                    gTasks[taskId].func = sInGame ? Task_ResetRunInGame : Task_Begin;
+                }
+                else if (sPendingAction == ACT_EXIT)
+                {
+                    PlaySE(SE_SELECT);
+                    gTasks[taskId].func = Task_LeaveNoChange;
+                }
+                else
+                {
+                    PlaySE(SE_SELECT);
+                    gTasks[taskId].func = sInGame ? Task_LeaveApply : Task_Begin;
+                }
+                sConfirm = 0;
                 BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
-                gTasks[taskId].func = Task_Begin;
                 return;
             }
             if (sConfirm == 1)
@@ -1841,9 +1943,15 @@ static void Task_Input(u8 taskId)
     {
         sMessage = NULL;
         DrawDesc();
+        if (JOY_NEW(A_BUTTON | B_BUTTON))
+            return;
     }
 
-    if (JOY_NEW(SELECT_BUTTON))
+    if (sInGame && JOY_NEW(B_BUTTON))
+    {
+        DoAction(ACT_EXIT, FALSE);        // easy way out: B, then YES
+    }
+    else if (JOY_NEW(SELECT_BUTTON))
     {
         sMenuOpen = TRUE;
         sMenuCursor = sSection;
@@ -1927,6 +2035,60 @@ static void Task_Input(u8 taskId)
     }
 }
 
+// Randomizer Settings key item: back to the field (the script waits in "waitstate").
+static void LeaveToField(u8 taskId)
+{
+    DestroyTask(taskId);
+    FreeAllWindowBuffers();
+    sInitialized = FALSE;
+    sInGame = FALSE;
+    SetMainCallback2(CB2_ReturnToFieldContinueScriptPlayMapMusic);
+}
+
+static void Task_LeaveApply(u8 taskId)
+{
+    if (!gPaletteFade.active)
+    {
+        RH_ApplyPendingSettings();
+        LeaveToField(taskId);
+    }
+}
+
+static void Task_LeaveNoChange(u8 taskId)
+{
+    if (!gPaletteFade.active)
+        LeaveToField(taskId);
+}
+
+// Reset The Run from the key item: the save is already erased; start a brand new game with these settings.
+static void Task_ResetRunInGame(u8 taskId)
+{
+    if (!gPaletteFade.active)
+    {
+        DestroyTask(taskId);
+        FreeAllWindowBuffers();
+        sInitialized = FALSE;
+        sInGame = FALSE;
+        m4aMPlayAllStop();
+        SetMainCallback1(NULL);
+        gFieldCallback = NULL;
+        ResetMenuAndMonGlobals();
+        InitHeap(gHeap, HEAP_SIZE);
+        RH_ApplyPendingSettings();
+        StartNewGameSceneFrlg();
+    }
+}
+
+// Special (Randomizer Settings key item script, after fadescreen): open this screen during a run.
+void RH_OpenRandomizerSettings(void)
+{
+    CleanupOverworldWindowsAndTilemaps();
+    sInGame = TRUE;
+    sInitialized = FALSE;
+    gMain.state = 0;
+    SetMainCallback2(CB2_InitRandomizerMenu);
+}
+
 static void Task_Begin(u8 taskId)
 {
     if (!gPaletteFade.active)
@@ -1982,13 +2144,19 @@ void CB2_InitRandomizerMenu(void)
     case 4:
         if (!sInitialized || gRhPendingSettings.version != RH_SETTINGS_VERSION)
         {
-            RH_SetDefaultSettings(&gRhPendingSettings);
+            if (sInGame && gSaveBlock3Ptr->rhSettings.version == RH_SETTINGS_VERSION)
+            {
+                gRhPendingSettings = gSaveBlock3Ptr->rhSettings;    // the run's current settings
+            }
+            else
+            {
+                RH_SetDefaultSettings(&gRhPendingSettings);
 #if defined(RH_TEST_MENU_PRESET) && !defined(RELEASE)
-            RH_TEST_MENU_PRESET(&gRhPendingSettings);     // test builds: start from a preset
+                RH_TEST_MENU_PRESET(&gRhPendingSettings);     // test builds: start from a preset
 #endif
-            RandomSeedText();
-            sSection = SEC_GENERAL;
-            sRow = sScroll = 0;
+                RandomSeedText();
+            }
+            GoToSection(SEC_GENERAL);
             sMessage = NULL;
             sInitialized = TRUE;
         }

@@ -1627,4 +1627,27 @@ void ItemUseOutOfBattle_HMKit(u8 taskId)
     }
 }
 
+// Randomizer Settings (GBA SP): a field script shows the warning and opens the settings screen.
+static void ItemUseOnFieldCB_RandomizerSettings(u8 taskId)
+{
+    LockPlayerFieldControls();
+    ScriptContext_SetupScript(RH_EventScript_RandomizerSettings);
+    DestroyTask(taskId);
+}
+
+void ItemUseOutOfBattle_RandomizerSettings(u8 taskId)
+{
+    if (!gTasks[taskId].tUsingRegisteredKeyItem)
+    {
+        sItemUseOnFieldCB = ItemUseOnFieldCB_RandomizerSettings;
+        gFieldCallback = FieldCB_UseItemOnField;
+        gBagMenu->newScreenCallback = CB2_ReturnToField;
+        Task_FadeAndCloseBagMenu(taskId);
+    }
+    else
+    {
+        gTasks[taskId].func = ItemUseOnFieldCB_RandomizerSettings;
+    }
+}
+
 #undef tUsingRegisteredKeyItem

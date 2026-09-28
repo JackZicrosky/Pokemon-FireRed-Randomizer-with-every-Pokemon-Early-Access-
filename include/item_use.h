@@ -50,6 +50,7 @@ void ItemUseOutOfBattle_PokeFlute(u8 taskId);
 void ItemUseOutOfBattle_TownMap(u8 taskId);
 void ItemUseOutOfBattle_HealingKit(u8 taskId);
 void ItemUseOutOfBattle_HMKit(u8 taskId);
+void ItemUseOutOfBattle_RandomizerSettings(u8 taskId);
 bool8 ItemfinderCheckForHiddenItems(const struct MapEvents *, u8);
 enum Direction GetDirectionToHiddenItem(s16, s16);
 

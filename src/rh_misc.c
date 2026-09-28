@@ -100,6 +100,7 @@ bool32 RH_HMKitCovers(enum FieldMove fieldMove)
 void RH_OnNewGame(void)
 {
     AddBagItem(ITEM_HM_KIT, 1);
+    AddBagItem(ITEM_RANDOMIZER_SETTINGS, 1);
     if (S->nuzlocke)
     {
         AddBagItem(ITEM_INFINITE_CANDY, 1);
@@ -125,6 +126,13 @@ void RH_OnNewGame(void)
     }
 }
 
+
+// Loading a save: runs started before v0.5 get the Randomizer Settings key item too.
+void RH_OnContinue(void)
+{
+    if (!CheckBagHasItem(ITEM_RANDOMIZER_SETTINGS, 1))
+        AddBagItem(ITEM_RANDOMIZER_SETTINGS, 1);
+}
 
 #ifndef RELEASE
 #include "config/rh_test.h"
@@ -171,6 +179,7 @@ void RH_TestSetup(void)
 void RH_TestSetupLight(void)
 {
     struct Pokemon mon;
+    S->instantText = TRUE;
     CreateMon(&mon, SPECIES_BULBASAUR, 20, 0, OTID_STRUCT_PLAYER_ID);
     GiveMonInitialMoveset(&mon);
     CalculateMonStats(&mon);

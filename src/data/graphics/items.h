@@ -1847,6 +1847,8 @@ const u16 gItemIconPalette_TownMap[] = INCGFX_U16("graphics/items/icon_palettes/
 const u32 gItemIcon_VsSeeker[] = INCGFX_U32("graphics/items/icons/vs_seeker.png", ".4bpp.smol");
 const u16 gItemIconPalette_VsSeeker[] = INCGFX_U16("graphics/items/icon_palettes/vs_seeker.pal", ".gbapal");
 
+const u32 gItemIcon_GbaSp[] = INCGFX_U32("graphics/items/icons/gba_sp.png", ".4bpp.smol");
+const u16 gItemIconPalette_GbaSp[] = INCGFX_U16("graphics/items/icon_palettes/gba_sp.pal", ".gbapal");
 const u32 gItemIcon_TMCase[] = INCGFX_U32("graphics/items/icons/tm_case.png", ".4bpp.smol");
 const u16 gItemIconPalette_TMCase[] = INCGFX_U16("graphics/items/icon_palettes/tm_case.pal", ".gbapal");
 

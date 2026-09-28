@@ -14157,6 +14157,22 @@ const struct ItemInfo gItemsInfo[] =
         .iconPalette = gItemIconPalette_TMCase,
     },
 
+    [ITEM_RANDOMIZER_SETTINGS] =
+    {
+        .name = ITEM_NAME("Randomizer Settings"),
+        .price = 0,
+        .description = COMPOUND_STRING(
+            "A GBA SP holding\n"
+            "the randomizer's\n"
+            "settings. Careful!"),
+        .importance = 1,
+        .pocket = POCKET_KEY_ITEMS,
+        .type = ITEM_USE_BAG_MENU,
+        .fieldUseFunc = ItemUseOutOfBattle_RandomizerSettings,
+        .iconPic = gItemIcon_GbaSp,
+        .iconPalette = gItemIconPalette_GbaSp,
+    },
+
     [ITEM_TOWN_MAP] =
     {
         .name = ITEM_NAME("Town Map"),
