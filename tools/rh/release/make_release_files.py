@@ -1,12 +1,12 @@
 # Makes the public GitHub Release files for every version:
 #   build/release/README vX.txt  - the release README with lines addressed to the owner removed
 #   build/release/notes vX.md    - the release page text
-# Reads the owner's release files from "Pokemon Romhack Stuff/Fire Red/" in the project folder.
+# Reads the owner's release files from the Fire Red folder (the parent of this project folder).
 # For a new version: add it to CHANGES (last entry = latest), then run publish_releases.ps1.
 import os
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-FIRE_RED = os.path.join(ROOT, "Pokemon Romhack Stuff", "Fire Red")
+FIRE_RED = os.path.dirname(ROOT)                     # the project lives in ...\Fire Red\source
 OUT = os.path.join(ROOT, "build", "release")
 REPO_URL = "https://github.com/JackZicrosky/Pokemon-FireRed-Randomizer-with-every-Pokemon-Early-Access-"
 

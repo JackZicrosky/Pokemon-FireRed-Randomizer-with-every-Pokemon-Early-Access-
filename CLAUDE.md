@@ -49,13 +49,15 @@
    **Never push to `rh-hideout/pokeemerald-expansion`** (the upstream). It's public and not theirs.
    The old session could not push because the repo wasn't attached to that session. A session started with
    the repo selected can push.
-   **Project folder on the owner's Windows PC: `D:\AI shit\Claude`.** The owner wants *all* work for this
-   project there, and no files created anywhere else unless absolutely necessary.
-   - The git repository's root **is** `D:\AI shit\Claude` (remote `mine` = the owner's repo; `origin` =
-     upstream, never push there).
-   - The owner's own files live in the same folder: `Pokemon Romhack Stuff\` (Fire Red release files, both
-     clean ROMs, the Emerald folder) and `notes.txt`. `.git/info/exclude` keeps git from ever tracking
-     them. **Never commit them.**
+   **Project folder (since 2026-10-02): `D:\AI shit\Claude\Pokemon Romhack Stuff\Fire Red\source`** = the git
+   repository root (remote `mine` = the owner's repo; `origin` = upstream, never push there). The owner wants
+   *all* work under `D:\AI shit\Claude` and no files created anywhere else unless absolutely necessary.
+   - Release files go one level up, in `...\Fire Red\` (the release tools find it as the parent folder).
+   - `D:\AI shit\Claude` itself holds the owner's other things (`Video Player App`, `notes.txt`): not ours.
+   - This folder was the owner's `source` folder first: it still holds their v0.1
+     `firered-expansion-randomizer-source.zip` and `rh_firered_changes.bundle` (excluded in
+     `.git/info/exclude`). **Never commit or delete them.**
+   - `...\Fire Red\CLAUDE.md` is the owner's copy of the original v0.5.2 handoff note (stale); this file wins.
    - The GitHub CLI is at `C:\Program Files\GitHub CLI\gh.exe`, logged in as JackZicrosky.
    - Releases: `python tools/rh/release/make_release_files.py` (add the new version to `CHANGES` first)
      writes the public READMEs and notes to `build/release/`. Then run
@@ -69,7 +71,7 @@
    **Building on this PC (since 2026-10-02): WSL1 + Ubuntu** (distro "Ubuntu", WSL version 1, used as
    root; no Linux user/password). Installed: gcc-arm-none-eabi 14.2.1, make, python3-pil, libpng-dev,
    libmgba-dev (setup script: `build/wsl_setup.sh`). Run commands from Git Bash like:
-   `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu -u root -- bash -c 'cd "/mnt/d/AI shit/Claude" && make firered -j12'`
+   `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu -u root -- bash -c 'cd "/mnt/d/AI shit/Claude/Pokemon Romhack Stuff/Fire Red/source" && make firered -j12'`
    - The spaces in the path are fine. A first build takes ~13 min; later builds a few minutes.
    - GCC 14.2 here vs 13.2 before: rebuilt ROMs are not byte-identical to v0.5.2 (same source).
    - Harness: `gcc -O2 tools/rh/test/harness.c -o build/harness -lmgba -lpng` (binary in ignored build/);
