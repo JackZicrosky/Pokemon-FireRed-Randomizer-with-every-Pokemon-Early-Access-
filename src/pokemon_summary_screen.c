@@ -1465,6 +1465,13 @@ static bool8 DecompressGraphics(void)
     case 6:
         LoadPalette(gSummaryScreen_Pal, BG_PLTT_ID(0), 8 * PLTT_SIZE_4BPP);
         LoadPalette(&gPPTextPalette, BG_PLTT_ID(8) + 1, PLTT_SIZEOF(16 - 1));
+        // UI Theme: the "START RELEARN" prompt (palette 15) sits on the colored header bar, so it keeps the normal
+        // white text and button (copied directly, so LoadPalette doesn't theme it).
+        if (gSaveBlock3Ptr->rhSettings.uiTheme)
+        {
+            CpuCopy16(gStandardMenuPalette, &gPlttBufferUnfaded[BG_PLTT_ID(15)], PLTT_SIZE_4BPP);
+            CpuCopy16(gStandardMenuPalette, &gPlttBufferFaded[BG_PLTT_ID(15)], PLTT_SIZE_4BPP);
+        }
         sMonSummaryScreen->switchCounter++;
         break;
     case 7:

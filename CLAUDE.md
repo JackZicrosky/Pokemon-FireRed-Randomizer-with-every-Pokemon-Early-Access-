@@ -25,7 +25,7 @@
 - **Test everything** you change: the in-ROM self-test on 3 pools, plus emulator screenshots of the real
   flows (see §5). The owner once asked to "test every single setting to make sure they work", and that
   standard still applies.
-- **Latest released version: v0.7.1** (tag `v0.7.1`): UI Theme option (Default / Randomizer / AMOLED) + owner's fixes.
+- **Latest released version: v0.7.2** (tag `v0.7.2`): UI Theme option (Default / Randomizer / AMOLED) + owner's fixes.
 
 ---
 
@@ -501,6 +501,7 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 | v0.5 | Randomizer Settings key item, Reset The Run, dark centred "RANDOMIZE GAME" title menu |
 | v0.5.1 | Item description; rainbow Infinite Candy; randomizer-palette HM Kit icon |
 | v0.5.2 | Healing Kit icon from the owner's drawing (white case, red cross) |
+| v0.7.2 | UI Theme: summary screen copies the unthemed std palette into BG palette 15 (the START RELEARN prompt; the summary never loads 15 itself, it inherits the previous screen's) |
 | v0.7.1 | UI Theme: summary white labels kept (rows 6-7 colours 3-4); bag (colours 12-13) and party (row 1 colours 4-5) stripes merged into one colour (`merge` mask in `sThemed[]`) |
 | v0.7 | UI Theme option (Misc. Tweaks): Default / Randomizer / AMOLED re-lights text boxes, menus, bag, party, summary, shop, battle boxes, Pokédex, trainer card, options, PC boxes, naming screen; CODE_VERSION 3 (uses the old runIndoors byte) |
 | v0.6.1 | Rival's starter slot is always the Pokemon from the lab ball (any trainer options; evolves along its vanilla line); blank Custom starters = default starters; Route 3 barricade moved to x=8 (no pop-in); Mewtwo catch rule only for the lv100 Mewtwo; EWRAM 99.04% -> 97.40% (map buffer sized for FRLG, pick buffer on the heap) |
