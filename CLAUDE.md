@@ -66,8 +66,17 @@
    - `python tools/rh/release/bpscheck.py clean.gba patch.bps` applies a BPS and checks all its CRCs.
    - GitHub turns spaces in uploaded file names into dots (`FireRed.Expansion.Randomizer.vX.bps`), so
      release notes use the dotted names.
-   This PC has no GBA toolchain (no `arm-none-eabi-gcc`, `make` or WSL), so building must be set up
-   before a new version can be made here.
+   **Building on this PC (since 2026-10-02): WSL1 + Ubuntu** (distro "Ubuntu", WSL version 1, used as
+   root; no Linux user/password). Installed: gcc-arm-none-eabi 14.2.1, make, python3-pil, libpng-dev,
+   libmgba-dev (setup script: `build/wsl_setup.sh`). Run commands from Git Bash like:
+   `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu -u root -- bash -c 'cd "/mnt/d/AI shit/Claude" && make firered -j12'`
+   - The spaces in the path are fine. A first build takes ~13 min; later builds a few minutes.
+   - GCC 14.2 here vs 13.2 before: rebuilt ROMs are not byte-identical to v0.5.2 (same source).
+   - Harness: `gcc -O2 tools/rh/test/harness.c -o build/harness -lmgba -lpng` (binary in ignored build/);
+     self-test: `ROM=pokefirered.gba ELF=pokefirered.elf HARNESS=build/harness bash tools/rh/test/run_st.sh 80`.
+     The self-test log now lives at the end of the heap (`gRhSelfTestLog` is a pointer; `dumpstr *ADDR`).
+   - Write edit scripts with the file tool, not bash heredocs: the shell collapses `\\` to `\`.
+   - Python on Windows writes CRLF unless `newline=''`/`'\n'` is used; keep files' own line endings.
 4. **Exact scope.** If told "change nothing else", don't slip in extra fixes. If you notice a bug, *tell*
    the owner and ask, or list it as a known issue. The owner cares a lot about this.
 5. **Follow UPR FVX behaviour and descriptions.** The owner asked to *"re-check the Universal Pokemon

@@ -39,7 +39,7 @@ int main(int argc,char**argv){
       for(long i=0;i<st;i++){core->step(core); if(i%997==0) fprintf(o,"%08x\n",cpu->gprs[15]);} fclose(o);}
     else if(!strcmp(cmd,"shot")) shot(a);
     else if(!strcmp(cmd,"peek32")){unsigned long ad=strtoul(a,0,16);printf("%08lx=%08x\n",ad,core->busRead32(core,ad));}
-    else if(!strcmp(cmd,"dumpstr")){ /* dumpstr ADDR(hex) MAXLEN : print ASCII until NUL */ unsigned long ad=strtoul(a,0,16);int mx=atoi(b3);for(int i=0;i<mx;i++){int c=core->busRead8(core,ad+i);if(!c)break;putchar(c);}putchar('\n');fflush(stdout);}
+    else if(!strcmp(cmd,"dumpstr")){ /* dumpstr ADDR(hex)|*PTR MAXLEN : print ASCII until NUL */ unsigned long ad; if(a[0]=='*'){ad=core->busRead32(core,strtoul(a+1,0,16));} else ad=strtoul(a,0,16);int mx=atoi(b3);for(int i=0;i<mx;i++){int c=core->busRead8(core,ad+i);if(!c)break;putchar(c);}putchar('\n');fflush(stdout);}
     else if(!strcmp(cmd,"dump")){ /* dump ADDR(hex) LEN FILE : raw bytes; ADDR may be *PTR to deref */ unsigned long ad; if(a[0]=='*'){ad=core->busRead32(core,strtoul(a+1,0,16));} else ad=strtoul(a,0,16); int len=atoi(b3); char fn[256]; sscanf(line,"%*s %*s %*s %255s",fn); FILE* o=fopen(fn,"wb"); for(int i=0;i<len;i++) fputc(core->busRead8(core,ad+i),o); fclose(o);}
     else if(!strcmp(cmd,"poke8")){ unsigned long ad; if(a[0]=='*'){ad=core->busRead32(core,strtoul(a+1,0,16));} else ad=strtoul(a,0,16); int off=0, v=0; sscanf(line,"%*s %*s %i %i",&off,&v); core->busWrite8(core,ad+off,v);}
     else if(!strcmp(cmd,"peek16")){unsigned long ad=strtoul(a,0,16);printf("%08lx=%04x\n",ad,core->busRead16(core,ad));}

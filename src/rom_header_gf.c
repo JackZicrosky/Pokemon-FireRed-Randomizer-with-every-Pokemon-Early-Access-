@@ -160,13 +160,15 @@ __attribute__((section(".text.header_gf"))) USED static const struct GFRomHeader
     .gcnLinkFlagsOffset = offsetof(struct SaveBlock2, gcnLinkFlags),
     .gameClearFlag = FLAG_SYS_GAME_CLEAR,
     .ribbonFlag = FLAG_SYS_RIBBON_GET,
-    .bagCountItems = BAG_ITEMS_COUNT,
+    // Romhack: the bag/PC sizes no longer fit these u8 fields and the PC items left SaveBlock1 (only used by
+    // GameCube link software, which the romhack doesn't support).
+    .bagCountItems = 255,
     .bagCountKeyItems = BAG_KEYITEMS_COUNT,
     .bagCountPokeballs = BAG_POKEBALLS_COUNT,
     .bagCountTMHMs = BAG_TMHM_COUNT,
     .bagCountBerries = BAG_BERRIES_COUNT,
-    .pcItemsCount = PC_ITEMS_COUNT,
-    .pcItemsOffset = offsetof(struct SaveBlock1, pcItems),
+    .pcItemsCount = 255,
+    .pcItemsOffset = 0,
     .giftRibbonsOffset = offsetof(struct SaveBlock1, giftRibbons),
 #if FREE_ENIGMA_BERRY == FALSE
     .enigmaBerryOffset = offsetof(struct SaveBlock1, enigmaBerry),

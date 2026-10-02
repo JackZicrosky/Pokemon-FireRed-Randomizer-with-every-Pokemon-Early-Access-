@@ -1362,7 +1362,8 @@ void Bike_HandleBumpySlopeJump(void)
 
 bool32 IsRunningDisallowed(u8 metatile)
 {
-    if ((OW_RUNNING_INDOORS == GEN_3 && !gMapHeader.allowRunning && !gSaveBlock3Ptr->rhSettings.runIndoors) || IsRunningDisallowedByMetatile(metatile) == TRUE)
+    // Romhack: the Running Shoes always work indoors (no map-header restriction).
+    if (IsRunningDisallowedByMetatile(metatile) == TRUE)
         return TRUE;
 
     return FALSE;

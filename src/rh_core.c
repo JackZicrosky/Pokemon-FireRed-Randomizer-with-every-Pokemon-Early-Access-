@@ -432,9 +432,62 @@ void RH_FilterExclude(struct RhFilter *f, u16 species)
         f->exclude[f->excludeCount++] = species;
 }
 
+// ---------------------------------------------------------------------------
+// Scatterbug / Spewpa / Vivillon: their 20 wing patterns count as ONE Pokemon each in the pool (owner's rule).
+// A pick that lands on the line's base form rolls one of the patterns when forms are in play ("All + Forms"
+// pool or "Allow Alternate Formes"); the patterns are never picked on their own.
+// ---------------------------------------------------------------------------
+#define VIVILLON_PATTERNS 20
+static const u16 sVivillonLines[3][VIVILLON_PATTERNS] = {
+    {
+    SPECIES_SCATTERBUG_ICY_SNOW, SPECIES_SCATTERBUG_POLAR, SPECIES_SCATTERBUG_TUNDRA, SPECIES_SCATTERBUG_CONTINENTAL,
+    SPECIES_SCATTERBUG_GARDEN, SPECIES_SCATTERBUG_ELEGANT, SPECIES_SCATTERBUG_MEADOW, SPECIES_SCATTERBUG_MODERN,
+    SPECIES_SCATTERBUG_MARINE, SPECIES_SCATTERBUG_ARCHIPELAGO, SPECIES_SCATTERBUG_HIGH_PLAINS, SPECIES_SCATTERBUG_SANDSTORM,
+    SPECIES_SCATTERBUG_RIVER, SPECIES_SCATTERBUG_MONSOON, SPECIES_SCATTERBUG_SAVANNA, SPECIES_SCATTERBUG_SUN,
+    SPECIES_SCATTERBUG_OCEAN, SPECIES_SCATTERBUG_JUNGLE, SPECIES_SCATTERBUG_FANCY, SPECIES_SCATTERBUG_POKEBALL,
+    },
+    {
+    SPECIES_SPEWPA_ICY_SNOW, SPECIES_SPEWPA_POLAR, SPECIES_SPEWPA_TUNDRA, SPECIES_SPEWPA_CONTINENTAL,
+    SPECIES_SPEWPA_GARDEN, SPECIES_SPEWPA_ELEGANT, SPECIES_SPEWPA_MEADOW, SPECIES_SPEWPA_MODERN,
+    SPECIES_SPEWPA_MARINE, SPECIES_SPEWPA_ARCHIPELAGO, SPECIES_SPEWPA_HIGH_PLAINS, SPECIES_SPEWPA_SANDSTORM,
+    SPECIES_SPEWPA_RIVER, SPECIES_SPEWPA_MONSOON, SPECIES_SPEWPA_SAVANNA, SPECIES_SPEWPA_SUN,
+    SPECIES_SPEWPA_OCEAN, SPECIES_SPEWPA_JUNGLE, SPECIES_SPEWPA_FANCY, SPECIES_SPEWPA_POKEBALL,
+    },
+    {
+    SPECIES_VIVILLON_ICY_SNOW, SPECIES_VIVILLON_POLAR, SPECIES_VIVILLON_TUNDRA, SPECIES_VIVILLON_CONTINENTAL,
+    SPECIES_VIVILLON_GARDEN, SPECIES_VIVILLON_ELEGANT, SPECIES_VIVILLON_MEADOW, SPECIES_VIVILLON_MODERN,
+    SPECIES_VIVILLON_MARINE, SPECIES_VIVILLON_ARCHIPELAGO, SPECIES_VIVILLON_HIGH_PLAINS, SPECIES_VIVILLON_SANDSTORM,
+    SPECIES_VIVILLON_RIVER, SPECIES_VIVILLON_MONSOON, SPECIES_VIVILLON_SAVANNA, SPECIES_VIVILLON_SUN,
+    SPECIES_VIVILLON_OCEAN, SPECIES_VIVILLON_JUNGLE, SPECIES_VIVILLON_FANCY, SPECIES_VIVILLON_POKEBALL,
+    },
+};
+
+static bool32 IsVivillonPattern(u16 species)
+{
+    u32 s, p;
+    for (s = 0; s < 3; s++)
+        for (p = 1; p < VIVILLON_PATTERNS; p++)
+            if (sVivillonLines[s][p] == species)
+                return TRUE;
+    return FALSE;
+}
+
+static u16 RollVivillonPattern(u16 species, const struct RhFilter *f, u32 hash)
+{
+    u32 s;
+    if (species == SPECIES_NONE || !(f->allowVariants || S->speciesPool == RH_POOL_ALL_FORMS))
+        return species;
+    for (s = 0; s < 3; s++)
+        if (sVivillonLines[s][0] == species)
+            return sVivillonLines[s][RH_Hash(hash, species, 0x717) % VIVILLON_PATTERNS];
+    return species;
+}
+
 static bool32 FilterOk(const struct RhPoolMon *m, const struct RhFilter *f)
 {
     u32 i;
+    if (m->variant && IsVivillonPattern(m->species))
+        return FALSE;
     if (m->mega)
     {
         if (!f->allowMegas)
@@ -511,7 +564,7 @@ static EWRAM_DATA u8 sPickDepth = 0;
 static EWRAM_DATA bool8 sRankedPick = FALSE;
 static EWRAM_DATA u32 sRankedSalt = 0;
 
-u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash)
+static u16 PickWithFilter(const struct RhFilter *f, u32 hash)
 {
     u32 i, count = 0, target;
     if (sRankedPick && sPickDepth == 0)
@@ -566,7 +619,7 @@ u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash)
 
 // The rank-th allowed Pokemon in a keyed order (a bijection on the accepted ones): different ranks give different
 // Pokemon until every accepted one has been used. Used by "even distribution" and Catch Em' All.
-u16 RH_PickRanked(const struct RhFilter *f, u32 rank, u32 salt)
+static u16 PickRanked(const struct RhFilter *f, u32 rank, u32 salt)
 {
     u32 i, count = 0;
     u16 result = SPECIES_NONE;
@@ -592,6 +645,18 @@ u16 RH_PickRanked(const struct RhFilter *f, u32 rank, u32 salt)
     sPickDepth--;
     return result;
 }
+
+u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash)
+{
+    return RollVivillonPattern(PickWithFilter(f, hash), f, hash);
+}
+
+u16 RH_PickRanked(const struct RhFilter *f, u32 rank, u32 salt)
+{
+    return RollVivillonPattern(PickRanked(f, rank, salt), f, rank ^ salt);
+}
+
+bool32 RH_DebugIsVivillonPattern(u16 species) { return IsVivillonPattern(species); }
 
 // Picks a species. With "similarTo", tries +-10%, 20%, 35% BST windows first. When nothing matches, relaxes the
 // type, stage, exclusion and legendary rules (in that order) rather than failing.

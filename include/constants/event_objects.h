@@ -413,6 +413,8 @@ enum
     OBJ_EVENT_GFX_PUSHABLE_BOULDER_FRLG,
     OBJ_EVENT_GFX_CUTTABLE_TREE_FRLG,
     OBJ_EVENT_GFX_BREAKABLE_ROCK_FRLG,
+    OBJ_EVENT_GFX_RH_BALL_SELLER,   // romhack: Celadon Poke Ball seller
+    OBJ_EVENT_GFX_RH_BARRICADE,     // romhack: Route 3 barricade
     NUM_OBJ_EVENT_GFX,
 };
 
@@ -613,6 +615,7 @@ enum
 // Not a real OW palette tag; used for the white flash applied to followers
 #define OBJ_EVENT_PAL_TAG_WHITE                   (OBJ_EVENT_PAL_TAG_NONE - 1)
 #define OBJ_EVENT_PAL_TAG_RH_PLAYER               0x11C0 // romhack custom player graphics (0x11C0 + pack)
+#define OBJ_EVENT_PAL_TAG_RH_BALL_SELLER          0x11B0 // romhack Poke Ball seller + barricade
 #define OBJ_EVENT_PAL_TAG_NONE                    0x11FF
 
 // This + localId is used as the tileTag

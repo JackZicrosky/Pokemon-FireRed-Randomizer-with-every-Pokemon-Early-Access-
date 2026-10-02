@@ -10,4 +10,5 @@
 #define RH_SPECIAL_TRAINING     6
 #define RH_SPECIAL_BERRIES      7
 #define RH_SPECIAL_SNACKS       8
+#define RH_SPECIAL_BALLS        9   // Celadon Dept. Store 2F Poke Ball seller
 #endif

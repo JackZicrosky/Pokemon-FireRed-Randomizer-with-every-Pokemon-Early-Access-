@@ -1,4 +1,5 @@
 #include "global.h"
+#include "pokemon_storage_system.h"
 #include "item_menu.h"
 #include "battle.h"
 #include "battle_controllers.h"
@@ -1211,7 +1212,7 @@ static void InitPocketScrollPositions(void)
         SetCursorScrollWithinListBounds(&gBagPosition.scrollPosition[i], &gBagPosition.cursorPosition[i], gBagMenu->numShownItems[i], gBagMenu->numItemStacks[i], MAX_ITEMS_SHOWN);
 }
 
-u8 GetItemListPosition(u8 pocketId)
+u16 GetItemListPosition(u8 pocketId)
 {
     return gBagPosition.scrollPosition[pocketId] + gBagPosition.cursorPosition[pocketId];
 }
@@ -2421,16 +2422,16 @@ static void PrepareBagForWallyTutorial(void)
     u32 i;
 
     sTempWallyBag = AllocZeroed(sizeof(*sTempWallyBag));
-    memcpy(sTempWallyBag->bagPocket_Items, gSaveBlock1Ptr->bag.items, sizeof(gSaveBlock1Ptr->bag.items));
-    memcpy(sTempWallyBag->bagPocket_PokeBalls, gSaveBlock1Ptr->bag.pokeBalls, sizeof(gSaveBlock1Ptr->bag.pokeBalls));
+    memcpy(sTempWallyBag->bagPocket_Items, gSaveBlock3Ptr->bagItems, sizeof(gSaveBlock3Ptr->bagItems));
+    memcpy(sTempWallyBag->bagPocket_PokeBalls, gPokemonStoragePtr->bagPokeBalls, sizeof(gPokemonStoragePtr->bagPokeBalls));
     sTempWallyBag->pocket = gBagPosition.pocket;
     for (i = 0; i < POCKETS_COUNT; i++)
     {
         sTempWallyBag->cursorPosition[i] = gBagPosition.cursorPosition[i];
         sTempWallyBag->scrollPosition[i] = gBagPosition.scrollPosition[i];
     }
-    memset(gSaveBlock1Ptr->bag.items, 0, sizeof(gSaveBlock1Ptr->bag.items));
-    memset(gSaveBlock1Ptr->bag.pokeBalls, 0, sizeof(gSaveBlock1Ptr->bag.pokeBalls));
+    memset(gSaveBlock3Ptr->bagItems, 0, sizeof(gSaveBlock3Ptr->bagItems));
+    memset(gPokemonStoragePtr->bagPokeBalls, 0, sizeof(gPokemonStoragePtr->bagPokeBalls));
     ResetBagScrollPositions();
 }
 
@@ -2438,8 +2439,8 @@ static void RestoreBagAfterWallyTutorial(void)
 {
     u32 i;
 
-    memcpy(gSaveBlock1Ptr->bag.items, sTempWallyBag->bagPocket_Items, sizeof(sTempWallyBag->bagPocket_Items));
-    memcpy(gSaveBlock1Ptr->bag.pokeBalls, sTempWallyBag->bagPocket_PokeBalls, sizeof(sTempWallyBag->bagPocket_PokeBalls));
+    memcpy(gSaveBlock3Ptr->bagItems, sTempWallyBag->bagPocket_Items, sizeof(sTempWallyBag->bagPocket_Items));
+    memcpy(gPokemonStoragePtr->bagPokeBalls, sTempWallyBag->bagPocket_PokeBalls, sizeof(sTempWallyBag->bagPocket_PokeBalls));
     gBagPosition.pocket = sTempWallyBag->pocket;
     for (i = 0; i < POCKETS_COUNT; i++)
     {

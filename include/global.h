@@ -255,6 +255,12 @@ struct NPCFollower
 #define ITEM_FLAGS_COUNT ((ITEMS_COUNT / 8) + ((ITEMS_COUNT % 8) ? 1 : 0))
 
 #include "rh_settings.h"
+struct ItemSlot
+{
+    enum Item itemId;
+    u16 quantity;
+};
+
 struct SaveBlock3
 {
     struct RhSettings rhSettings;
@@ -271,6 +277,7 @@ struct SaveBlock3
     u8 dexNavSearchLevels[NUM_SPECIES];
 #endif
     u8 dexNavChain;
+    struct ItemSlot bagItems[BAG_ITEMS_COUNT];      // romhack: the Items pocket (340 slots)
 #if APRICORN_TREE_COUNT > 0
     u8 apricornTrees[NUM_APRICORN_TREE_BYTES];
 #endif
@@ -673,12 +680,6 @@ struct WarpData
     s8 warpId;
     //u8 padding;
     s16 x, y;
-};
-
-struct ItemSlot
-{
-    enum Item itemId;
-    u16 quantity;
 };
 
 struct Pokeblock
@@ -1085,13 +1086,12 @@ struct ExternalEventFlags
 
 } __attribute__((packed));/*size = 0x15*/
 
+// Romhack: only the Key Items and TM/HM pockets are in SaveBlock1 now (same 744 bytes as the old bag); the Items
+// pocket is in SaveBlock3 (bagItems) and the Poke Ball / Berry pockets in struct PokemonStorage.
 struct Bag
 {
-    struct ItemSlot items[BAG_ITEMS_COUNT];
     struct ItemSlot keyItems[BAG_KEYITEMS_COUNT];
-    struct ItemSlot pokeBalls[BAG_POKEBALLS_COUNT];
     struct ItemSlot TMsHMs[BAG_TMHM_COUNT];
-    struct ItemSlot berries[BAG_BERRIES_COUNT];
 };
 
 struct SaveBlock1
@@ -1115,7 +1115,7 @@ struct SaveBlock1
     /*0x490*/ u32 money;
     /*0x494*/ u16 coins;
     /*0x496*/ u16 registeredItem; // registered for use with SELECT button
-    /*0x498*/ struct ItemSlot pcItems[PC_ITEMS_COUNT];
+    // romhack: pcItems moved to struct PokemonStorage (260 slots)
     /*0x560 -> 0x848 is bag storage*/
     /*0x560*/ struct Bag bag;
     /*0x848*/ struct Pokeblock pokeblocks[POKEBLOCKS_COUNT];

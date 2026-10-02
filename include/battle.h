@@ -603,8 +603,9 @@ struct BattleStruct
     u8 wildVictorySong;
     enum Type dynamicMoveType;
     enum BattlerId battlerPreventingSwitchout;
-    u8 moneyMultiplier:6;
-    u8 moneyMultiplierItem:1;
+    u8 moneyMultiplier:5;
+    u8 moneyMultiplierItem:1;       // Amulet Coin (or another prize doubler) already applied
+    u8 moneyMultiplierIncense:1;    // romhack: Luck Incense doubles again on top of the Amulet Coin
     u8 moneyMultiplierMove:1;
     u8 savedTurnActionNumber;
     u8 scriptPartyIdx; // for printing the nickname

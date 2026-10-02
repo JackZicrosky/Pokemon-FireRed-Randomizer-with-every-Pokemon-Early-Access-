@@ -1973,6 +1973,14 @@ static const struct SpriteFrameImage sPicTable_Sign[] = {
     overworld_frame(gObjectEventPic_Sign, 2, 2, 0),
 };
 
+static const struct SpriteFrameImage sPicTable_RhBallSeller[] = {
+    overworld_ascending_frames(gObjectEventPic_RhBallSeller, 2, 4),
+};
+
+static const struct SpriteFrameImage sPicTable_RhBarricade[] = {
+    overworld_frame(gObjectEventPic_RhBarricade, 2, 2, 0),
+};
+
 static const struct SpriteFrameImage sPicTable_WoodenSign[] = {
     overworld_frame(gObjectEventPic_WoodenSign, 2, 2, 0),
 };

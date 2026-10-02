@@ -149,9 +149,9 @@
 #define FLAG_HIDE_SAFFRON_CITY_POKECENTER_SABRINA_JOURNALS 0x0AE
 
 // Unused?
-#define FLAG_0x0AF               0x0AF
-#define FLAG_0x0B0               0x0B0
-#define FLAG_0x0B1               0x0B1
+#define FLAG_RH_HIDE_ROUTE3_BARRICADE    0x0AF // romhack: Route 3 barricade (shown after the Pewter Mewtwo is beaten/caught, until Brock)
+#define FLAG_RH_PEWTER_MEWTWO_BATTLE     0x0B0 // romhack: the special Pewter Mewtwo battle is on (catch rule)
+#define FLAG_RH_BOUGHT_MASTER_BALL       0x0B1 // romhack: the Poke Ball seller's one-time Master Ball was bought
 #define FLAG_0x0B2               0x0B2
 #define FLAG_0x0B3               0x0B3
 #define FLAG_0x0B4               0x0B4

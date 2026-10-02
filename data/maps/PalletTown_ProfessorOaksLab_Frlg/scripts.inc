@@ -1179,6 +1179,7 @@ PalletTown_ProfessorOaksLab_EventScript_RivalTakesStarter::
 	removeobject RIVAL_STARTER_ID
 	textcolor NPC_TEXT_COLOR_NEUTRAL
 	bufferspeciesname STR_VAR_1, RIVAL_STARTER_SPECIES
+	copyvar VAR_RH_RIVAL_STARTER, RIVAL_STARTER_SPECIES
 	message PalletTown_ProfessorOaksLab_Text_RivalReceivedMonFromOak
 	waitmessage
 	playfanfare MUS_RG_OBTAIN_KEY_ITEM

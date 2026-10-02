@@ -44,12 +44,95 @@ RH_EventScript_MomGivesRings::
 	giveitem ITEM_MEGA_RING
 	giveitem ITEM_Z_POWER_RING
 	msgbox RH_Text_MomRingsAfter
+	msgbox RH_Text_MomRunningShoes
+	call RH_EventScript_GetRunningShoes
 	closemessage
 	applymovement LOCALID_PLAYERS_HOUSE_1F_MOM, RH_Movement_MomWalkBack
 	waitmovement 0
 	setvar VAR_RH_MOM_GAVE_RINGS, 1
 	releaseall
 	end
+
+RH_EventScript_GetRunningShoes::
+	textcolor NPC_TEXT_COLOR_NEUTRAL
+	playfanfare MUS_RG_OBTAIN_KEY_ITEM
+	message RH_Text_ReceivedRunningShoesFromMom
+	waitmessage
+	waitfanfare
+	signmsg
+	msgbox PewterCity_Text_ExplainRunningShoes
+	normalmsg
+	setflag FLAG_SYS_B_DASH
+	textcolor NPC_TEXT_COLOR_FEMALE
+	return
+
+@ ---------------------------------------------------------------------------
+@ The level 100 Mewtwo blocking Pewter City's east road until BROCK is beaten.
+@ ---------------------------------------------------------------------------
+RH_EventScript_PewterMewtwo::
+	lockall
+	goto RH_EventScript_PewterMewtwoMeet
+	end
+
+RH_EventScript_PewterMewtwoTrigger::
+	lockall
+	applymovement OBJ_EVENT_ID_PLAYER, Common_Movement_FaceRight
+	waitmovement 0
+	goto RH_EventScript_PewterMewtwoMeet
+	end
+
+RH_EventScript_PewterMewtwoMeet::
+	playmoncry SPECIES_MEWTWO, CRY_MODE_ENCOUNTER
+	msgbox RH_Text_GoFightBrockDude
+	waitmoncry
+	msgbox RH_Text_FightMewtwoAnyway, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, RH_EventScript_PewterMewtwoStepBack
+	closemessage
+	setflag FLAG_RH_PEWTER_MEWTWO_BATTLE
+	setwildbattle SPECIES_MEWTWO, 100
+	special RH_PreparePewterMewtwo
+	dowildbattle
+	clearflag FLAG_RH_PEWTER_MEWTWO_BATTLE
+	specialvar VAR_RESULT, GetBattleOutcome
+	goto_if_eq VAR_RESULT, B_OUTCOME_WON, RH_EventScript_PewterMewtwoGone
+	goto_if_eq VAR_RESULT, B_OUTCOME_CAUGHT, RH_EventScript_PewterMewtwoGone
+	goto RH_EventScript_PewterMewtwoStepBack
+	end
+
+RH_EventScript_PewterMewtwoStepBack::
+	closemessage
+	applymovement OBJ_EVENT_ID_PLAYER, RH_Movement_StepBackWest
+	waitmovement 0
+	releaseall
+	end
+
+RH_EventScript_PewterMewtwoGone::
+	removeobject LOCALID_PEWTER_GYM_GUIDE
+	setflag FLAG_HIDE_PEWTER_CITY_GYM_GUIDE
+	clearflag FLAG_RH_HIDE_ROUTE3_BARRICADE
+	setvar VAR_MAP_SCENE_PEWTER_CITY, 3
+	releaseall
+	end
+
+RH_Movement_StepBackWest:
+	face_left
+	walk_left
+	step_end
+
+RH_EventScript_Route3Barricade::
+	msgbox RH_Text_Route3Barricade, MSGBOX_SIGN
+	end
+
+RH_Text_GoFightBrockDude::
+	.string "MEWTWO: Go fight Brock, dude...$"
+
+RH_Text_FightMewtwoAnyway::
+	.string "Fight MEWTWO anyway?$"
+
+RH_Text_Route3Barricade::
+	.string "The road is barricaded.\p"
+	.string "ROAD CLOSED until the PEWTER GYM\n"
+	.string "LEADER has been defeated.$"
 
 RH_Movement_MomWalkToPlayer:
 	walk_up
@@ -64,6 +147,16 @@ RH_Movement_MomWalkBack:
 	walk_down
 	face_left
 	step_end
+
+RH_Text_MomRunningShoes::
+	.string "Oh, and PROF. OAK's AIDE dropped\n"
+	.string "these off for you, too.\p"
+	.string "RUNNING SHOES! Now you can dash\n"
+	.string "around everywhere, even indoors!$"
+
+RH_Text_ReceivedRunningShoesFromMom::
+	.string "{PLAYER} received the\n"
+	.string "RUNNING SHOES from MOM.$"
 
 RH_Text_MomWait::
 	.string "MOM: {PLAYER}! Wait a moment!$"

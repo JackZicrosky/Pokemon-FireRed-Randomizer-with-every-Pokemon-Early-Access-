@@ -1,4 +1,5 @@
 #include "global.h"
+#include "pokemon_storage_system.h"
 #include "rh.h"
 #include "item.h"
 #include "move.h"
@@ -28,10 +29,11 @@
 {                                           \
     .id = POCKET_DUMMY,                     \
     .capacity = PC_ITEMS_COUNT,             \
-    .itemSlots = gSaveBlock1Ptr->pcItems,   \
+    .itemSlots = gPokemonStoragePtr->pcItems, \
 }
 
 static bool32 CheckPyramidBagHasItem(enum Item itemId, u16 count);
+static bool32 CheckPCHasSpace(enum Item itemId, u16 count);
 static bool32 CheckPyramidBagHasSpace(enum Item itemId, u16 count);
 static const u8 *GetItemPluralName(enum Item);
 static bool32 DoesItemHavePluralName(enum Item);
@@ -146,7 +148,7 @@ void ApplyNewEncryptionKeyToBagItems(u32 newKey)
 
 void SetBagItemsPointers(void)
 {
-    gBagPockets[POCKET_ITEMS].itemSlots = gSaveBlock1Ptr->bag.items;
+    gBagPockets[POCKET_ITEMS].itemSlots = gSaveBlock3Ptr->bagItems;
     gBagPockets[POCKET_ITEMS].capacity = BAG_ITEMS_COUNT;
     gBagPockets[POCKET_ITEMS].id = POCKET_ITEMS;
 
@@ -154,7 +156,7 @@ void SetBagItemsPointers(void)
     gBagPockets[POCKET_KEY_ITEMS].capacity = BAG_KEYITEMS_COUNT;
     gBagPockets[POCKET_KEY_ITEMS].id = POCKET_KEY_ITEMS;
 
-    gBagPockets[POCKET_POKE_BALLS].itemSlots = gSaveBlock1Ptr->bag.pokeBalls;
+    gBagPockets[POCKET_POKE_BALLS].itemSlots = gPokemonStoragePtr->bagPokeBalls;
     gBagPockets[POCKET_POKE_BALLS].capacity = BAG_POKEBALLS_COUNT;
     gBagPockets[POCKET_POKE_BALLS].id = POCKET_POKE_BALLS;
 
@@ -162,7 +164,7 @@ void SetBagItemsPointers(void)
     gBagPockets[POCKET_TM_HM].capacity = BAG_TMHM_COUNT;
     gBagPockets[POCKET_TM_HM].id = POCKET_TM_HM;
 
-    gBagPockets[POCKET_BERRIES].itemSlots = gSaveBlock1Ptr->bag.berries;
+    gBagPockets[POCKET_BERRIES].itemSlots = gPokemonStoragePtr->bagBerries;
     gBagPockets[POCKET_BERRIES].capacity = BAG_BERRIES_COUNT;
     gBagPockets[POCKET_BERRIES].id = POCKET_BERRIES;
 }
@@ -193,7 +195,7 @@ u8 *CopyItemNameHandlePlural(enum Item itemId, u8 *dst, u32 quantity)
 
 bool32 IsBagPocketNonEmpty(enum Pocket pocketId)
 {
-    u8 i;
+    u32 i;
 
     for (i = 0; i < gBagPockets[pocketId].capacity; i++)
     {
@@ -257,7 +259,9 @@ bool32 CheckBagHasSpace(enum Item itemId, u16 count)
     if (CurrentBattlePyramidLocation() != PYRAMID_LOCATION_NONE || FlagGet(FLAG_STORING_ITEMS_IN_PYRAMID_BAG) == TRUE)
         return CheckPyramidBagHasSpace(itemId, count);
 
-    return GetFreeSpaceForItemInBag(itemId) >= count;
+    if (GetFreeSpaceForItemInBag(itemId) >= count)
+        return TRUE;
+    return CheckPCHasSpace(itemId, count);             // romhack: the PC takes what the bag can't
 }
 
 static u32 NONNULL BagPocket_GetFreeSpaceForItem(struct BagPocket *pocket, enum Item itemId)
@@ -359,7 +363,9 @@ bool32 AddBagItem(enum Item itemId, u16 count)
     if (CurrentBattlePyramidLocation() != PYRAMID_LOCATION_NONE || FlagGet(FLAG_STORING_ITEMS_IN_PYRAMID_BAG) == TRUE)
         return AddPyramidBagItem(itemId, count);
 
-    return BagPocket_AddItem(&gBagPockets[GetItemPocket(itemId)], itemId, count);
+    if (BagPocket_AddItem(&gBagPockets[GetItemPocket(itemId)], itemId, count))
+        return TRUE;
+    return AddPCItem(itemId, count);                    // romhack: a full pocket overflows into the PC
 }
 
 static bool32 NONNULL BagPocket_RemoveItem(struct BagPocket *pocket, enum Item itemId, u16 count)
@@ -463,6 +469,12 @@ bool32 CheckPCHasItem(enum Item itemId, u16 count)
     return BagPocket_CheckPocketForItemCount(&dummyPocket, itemId, count);
 }
 
+static bool32 CheckPCHasSpace(enum Item itemId, u16 count)
+{
+    struct BagPocket dummyPocket = DUMMY_PC_BAG_POCKET;
+    return BagPocket_GetFreeSpaceForItem(&dummyPocket, itemId) >= count;
+}
+
 bool32 AddPCItem(enum Item itemId, u16 count)
 {
     struct BagPocket dummyPocket = DUMMY_PC_BAG_POCKET;
@@ -562,6 +574,9 @@ void MoveItemSlotInPC(struct ItemSlot *itemSlots, u32 from, u32 to)
 void ClearBag(void)
 {
     CpuFastFill(0, &gSaveBlock1Ptr->bag, sizeof(struct Bag));
+    CpuFill16(0, gSaveBlock3Ptr->bagItems, sizeof(gSaveBlock3Ptr->bagItems));
+    CpuFill16(0, gPokemonStoragePtr->bagPokeBalls, sizeof(gPokemonStoragePtr->bagPokeBalls));
+    CpuFill16(0, gPokemonStoragePtr->bagBerries, sizeof(gPokemonStoragePtr->bagBerries));
 }
 
 static inline u16 NONNULL BagPocket_CountTotalItemQuantity(struct BagPocket *pocket, enum Item itemId)

@@ -149,7 +149,7 @@ struct RhSettings
     u8 playerGraphics;            // 0 = default, else index into the graphics pack table
 
     // ---- Misc. Tweaks ----
-    u8 instantText, runIndoors, randomPcPotion, nationalDexAtStart, fastEggs, lowerCaseNames,
+    u8 instantText, unusedRunIndoors, randomPcPotion, nationalDexAtStart, fastEggs, lowerCaseNames,
        randomCatchTutorial, banLuckyEgg, balanceStaticLevels, runWithoutShoes, reusableTMs, forgettableTMs, noEVs;
 
     u8 padding[8];

@@ -316,7 +316,7 @@ bool8 MenuHelpers_ShouldWaitForLinkRecv(void)
         return FALSE;
 }
 
-void SetItemListPerPageCount(struct ItemSlot *slots, u8 slotsCount, u8 *pageItems, u8 *totalItems, u8 maxPerPage)
+void SetItemListPerPageCount(struct ItemSlot *slots, u16 slotsCount, u8 *pageItems, u16 *totalItems, u8 maxPerPage)
 {
     u16 i;
 
@@ -336,7 +336,7 @@ void SetItemListPerPageCount(struct ItemSlot *slots, u8 slotsCount, u8 *pageItem
         *pageItems = *totalItems;
 }
 
-void SetCursorWithinListBounds(u16 *scrollOffset, u16 *cursorPos, u8 maxShownItems, u8 totalItems)
+void SetCursorWithinListBounds(u16 *scrollOffset, u16 *cursorPos, u8 maxShownItems, u16 totalItems)
 {
     if (*scrollOffset != 0 && *scrollOffset + maxShownItems > totalItems)
         *scrollOffset = totalItems - maxShownItems;
@@ -350,9 +350,9 @@ void SetCursorWithinListBounds(u16 *scrollOffset, u16 *cursorPos, u8 maxShownIte
     }
 }
 
-void SetCursorScrollWithinListBounds(u16 *scrollOffset, u16 *cursorPos, u8 shownItems, u8 totalItems, u8 maxShownItems)
+void SetCursorScrollWithinListBounds(u16 *scrollOffset, u16 *cursorPos, u8 shownItems, u16 totalItems, u8 maxShownItems)
 {
-    u8 i;
+    u16 i;
 
     if (maxShownItems % 2 != 0)
     {

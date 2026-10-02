@@ -24,6 +24,10 @@ struct PokemonStorage
     /*0x8344*/ u8 boxNames[TOTAL_BOXES_COUNT][BOX_NAME_LENGTH + 1];
     /*0x83C2*/ u8 boxWallpapers[TOTAL_BOXES_COUNT];
     /*0x8432*/ struct Pokemon fusions[MAX_FUSION_STORAGE];
+    // Romhack: the spare space of the storage sectors holds two bag pockets and the PC item storage.
+    struct ItemSlot bagPokeBalls[BAG_POKEBALLS_COUNT];
+    struct ItemSlot bagBerries[BAG_BERRIES_COUNT];
+    struct ItemSlot pcItems[PC_ITEMS_COUNT];
 };
 
 extern struct PokemonStorage *gPokemonStoragePtr;

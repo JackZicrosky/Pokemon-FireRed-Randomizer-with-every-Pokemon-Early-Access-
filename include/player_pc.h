@@ -8,7 +8,7 @@ struct PlayerPCItemPageStruct
     u16 cursorPos;
     u16 itemsAbove;
     u8 pageItems;
-    u8 count;
+    u16 count;                  // romhack: PC item storage can exceed 255 slots
     u8 scrollIndicatorTaskId;
 };
 

@@ -67,6 +67,10 @@ u16 RH_CatchTutorialSpecies(u16 vanilla);
 enum Item RH_FieldItem(enum Item item, u32 flag);
 enum Item RH_ShopItem(enum Item item, u32 mart, u32 slot);
 u32 RH_ItemPrice(u16 item, u32 vanilla);
+const u16 *RH_FilterShopList(const u16 *items);
+bool32 RH_ShopItemIsOneTime(u16 item);
+bool32 RH_ShopItemSoldOut(u16 item);
+void RH_ShopOnPurchase(u16 item);
 enum Item RH_PickupItem(enum Item vanilla, u32 tableIndex);
 bool32 RH_HMKitCovers(enum FieldMove fieldMove);
 

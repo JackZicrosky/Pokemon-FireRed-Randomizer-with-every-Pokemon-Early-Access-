@@ -96,7 +96,7 @@ enum Language
 #define MAIL_COUNT (10 + PARTY_SIZE)
 #define SECRET_BASES_COUNT 20
 #define POKE_NEWS_COUNT 16
-#define PC_ITEMS_COUNT 50
+#define PC_ITEMS_COUNT 260      // romhack: bag overflow goes here (with 340 bag slots: one of every item fits)
 #define OBJECT_EVENT_TEMPLATES_COUNT 64
 #define DECOR_MAX_SECRET_BASE 16
 #define DECOR_MAX_PLAYERS_HOUSE 12
@@ -110,11 +110,13 @@ enum Language
 #define ROAMER_COUNT 1 // Number of maximum concurrent active roamers
 
 // Bag constants
-#define BAG_ITEMS_COUNT 30
-#define BAG_KEYITEMS_COUNT 30
-#define BAG_POKEBALLS_COUNT 16
-#define BAG_TMHM_COUNT 64
-#define BAG_BERRIES_COUNT 46
+// Romhack: much bigger pockets (owner: never "The BAG is full"). Items live in SaveBlock3, Poke Balls / Berries /
+// PC items in the spare space of the Pokemon storage sectors; Key Items and TMs stay in SaveBlock1.
+#define BAG_ITEMS_COUNT 340
+#define BAG_KEYITEMS_COUNT 78
+#define BAG_POKEBALLS_COUNT 28
+#define BAG_TMHM_COUNT 108
+#define BAG_BERRIES_COUNT 68
 
 // Number of facilities for Ranking Hall.
 // 7 facilities for single mode + tower double mode + tower multi mode.

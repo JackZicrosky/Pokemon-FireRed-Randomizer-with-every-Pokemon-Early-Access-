@@ -643,6 +643,8 @@ gSpecials::
 	def_special RH_RemapTutorMove
 	def_special RH_RemapStaticVar8004
 	def_special RH_OpenRandomizerSettings
+	def_special RH_PreparePewterMewtwo
+	def_special RH_SetPewterMewtwoGfx
 	def_special RH_BufferTMMoveFromItem
 	def_special RH_BufferStaticSpecies
 	def_special RH_IsPostgameNationalDex

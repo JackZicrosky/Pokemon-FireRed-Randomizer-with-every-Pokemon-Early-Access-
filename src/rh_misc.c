@@ -1,5 +1,6 @@
 // Misc. tweaks, new-game setup, the HM Kit and small script specials.
 #include "global.h"
+#include "pokemon_storage_system.h"
 #include "constants/characters.h"
 #include "event_data.h"
 #include "field_move.h"
@@ -9,6 +10,9 @@
 #include "rh_internal.h"
 #include "constants/items.h"
 #include "constants/species.h"
+#include "battle.h"
+#include "constants/event_objects.h"
+#include "constants/moves.h"
 
 // ---------------------------------------------------------------------------
 // Lower-case names off: show species names in capitals like the original games.
@@ -99,6 +103,7 @@ bool32 RH_HMKitCovers(enum FieldMove fieldMove)
 // ---------------------------------------------------------------------------
 void RH_OnNewGame(void)
 {
+    FlagSet(FLAG_RH_HIDE_ROUTE3_BARRICADE);              // only shown after the Pewter Mewtwo is beaten
     AddBagItem(ITEM_HM_KIT, 1);
     AddBagItem(ITEM_RANDOMIZER_SETTINGS, 1);
     if (S->nuzlocke)
@@ -121,17 +126,50 @@ void RH_OnNewGame(void)
             item = it;
             break;
         }
-        CpuFastFill(0, gSaveBlock1Ptr->pcItems, sizeof(gSaveBlock1Ptr->pcItems));
+        CpuFastFill(0, gPokemonStoragePtr->pcItems, sizeof(gPokemonStoragePtr->pcItems));
         AddPCItem(item, 1);
     }
 }
 
 
 // Loading a save: runs started before v0.5 get the Randomizer Settings key item too.
+// ---------------------------------------------------------------------------
+// The Mewtwo blocking Pewter City's east road (instead of the Gym Guide).
+// ---------------------------------------------------------------------------
+// Map script (on transition): the Mewtwo object uses graphics variable 0.
+void RH_SetPewterMewtwoGfx(void)
+{
+    VarSet(VAR_OBJ_GFX_ID_0, OBJ_EVENT_GFX_SPECIES(MEWTWO));
+}
+
+// After "setwildbattle": replace the (possibly randomized) opponent with the real thing. Level 100, perfect IVs,
+// Timid, max Special Attack and Speed, Leftovers, and a moveset that wipes an early-game team.
+void RH_PreparePewterMewtwo(void)
+{
+    static const u16 sMoves[MAX_MON_MOVES] = { MOVE_PSYSTRIKE, MOVE_AURA_SPHERE, MOVE_ICE_BEAM, MOVE_RECOVER };
+    struct Pokemon *mon = &gParties[B_TRAINER_OPPONENT_A][0];
+    u8 maxEv = MAX_PER_STAT_EVS, restEv = 4;
+    u16 item = ITEM_LEFTOVERS;
+    u32 i, personality;
+
+    ZeroEnemyPartyMons();
+    personality = GetMonPersonality(SPECIES_MEWTWO, MON_GENDERLESS, NATURE_TIMID, RANDOM_UNOWN_LETTER);
+    CreateMonWithIVs(mon, SPECIES_MEWTWO, MAX_LEVEL, personality, OTID_STRUCT_PLAYER_ID, MAX_PER_STAT_IVS);
+    for (i = 0; i < MAX_MON_MOVES; i++)
+        SetMonMoveSlot(mon, sMoves[i], i);
+    SetMonData(mon, MON_DATA_SPATK_EV, &maxEv);
+    SetMonData(mon, MON_DATA_SPEED_EV, &maxEv);
+    SetMonData(mon, MON_DATA_HP_EV, &restEv);
+    SetMonData(mon, MON_DATA_HELD_ITEM, &item);
+    CalculateMonStats(mon);
+}
+
 void RH_OnContinue(void)
 {
     if (!CheckBagHasItem(ITEM_RANDOMIZER_SETTINGS, 1))
         AddBagItem(ITEM_RANDOMIZER_SETTINGS, 1);
+    if (VarGet(VAR_RH_MOM_GAVE_RINGS) != 0)
+        FlagSet(FLAG_SYS_B_DASH);                         // Mom gives the Running Shoes with the rings
 }
 
 #ifndef RELEASE
@@ -211,18 +249,26 @@ void RH_TestMenuPreset(struct RhSettings *s)
     s->wild = TRUE; s->wildZone = 2; s->wildSimilarStrength = TRUE;
     s->fieldItems = 2; s->shopItems = 2; s->shopSpecial = TRUE;
     s->paletteMode = 1; s->paletteFollowTypes = TRUE;
-    s->nuzlocke = TRUE; s->runIndoors = TRUE; s->runWithoutShoes = TRUE; s->reusableTMs = TRUE;
+    s->nuzlocke = TRUE; s->runWithoutShoes = TRUE; s->reusableTMs = TRUE;
     s->noPrematureEvos = TRUE;
 }
 #endif
+#ifdef RH_TEST_FILL_BAG
+void RH_TestFillBag(void)
+{
+    u32 it;
+    for (it = 1; it < ITEMS_COUNT; it++)
+        if (GetItemPocket(it) < POCKETS_COUNT && gItemsInfo[it].name[0] != 0)
+            AddBagItem(it, 1);
+}
+#endif
 #ifdef RH_TEST_VARIANT
-// Test builds only: Misc. Tweaks in the field. Variant bit 0 = Running Shoes Indoors, bit 1 = Run Without Running
+// Test builds only: Misc. Tweaks in the field. Variant bit 0 = unused (running indoors is always on), bit 1 = Run Without Running
 // Shoes (the shoes flag is cleared), bit 2 = Instantaneous Text.
 void RH_TestTweaks(u32 variant)
 {
     struct Pokemon mon;
     S->enabled = TRUE;
-    S->runIndoors = (variant & 1) != 0;
     S->runWithoutShoes = (variant & 2) != 0;
     S->instantText = (variant & 4) != 0;
     S->statics = (variant & 8) ? 2 : 0;

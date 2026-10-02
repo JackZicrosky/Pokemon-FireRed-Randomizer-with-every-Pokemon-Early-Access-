@@ -7,6 +7,7 @@
 #include "item.h"
 #include "move.h"
 #include "overworld.h"
+#include "event_data.h"
 #include "pokemon.h"
 #include "string_util.h"
 #include "random.h"
@@ -782,6 +783,16 @@ static u16 ChooseSpecies(const struct TrainerMon *mon, const struct Trainer *tra
 // ---------------------------------------------------------------------------
 // Hook: called for every trainer Pokemon before it is created.
 // ---------------------------------------------------------------------------
+// The rival's starter: the Pokemon he took in Oak's lab (VAR_RH_RIVAL_STARTER); before that (or in old saves) the
+// randomized Pokemon in the ball he takes.
+u16 RH_RivalStarter(u32 starterSlot)
+{
+    u16 saved = VarGet(VAR_RH_RIVAL_STARTER);
+    if (saved != SPECIES_NONE && saved < NUM_SPECIES && IsSpeciesEnabled(saved))
+        return saved;
+    return RH_StarterForSlot(starterSlot);
+}
+
 static bool32 CarriesStarter(void)
 {
     // With starters randomized the rival always matches them; with trainers randomized only when "Rival Carries
@@ -876,8 +887,9 @@ void RH_ModifyTrainerMon(struct TrainerMon *mon, const struct Trainer *trainer, 
     if (starterSlot >= 0 && slot < trainer->partySize && IsRivalClass(trainer->trainerClass) && CarriesStarter())
     {
         // The rival uses the starter the player didn't pick, evolved like the original (or further by level).
+        // It is the exact Pokemon he took from Oak's lab (saved there), so it always matches what he grabbed.
         u32 steps = 0;
-        newSpecies = RH_StarterForSlot(starterSlot);
+        newSpecies = RH_RivalStarter(starterSlot);
         if (S->trainersEvolveOn)
             newSpecies = EvolveForLevelEx(newSpecies, mon->lvl, 0, &steps);
         if (steps < stage)

@@ -38,11 +38,22 @@ bool32 IsForceTriggerItemActivation(enum HoldEffect holdEffect)
         || gHoldEffectsInfo[holdEffect].onHpThreshold;
 }
 
+// Romhack: the Amulet Coin and the Luck Incense stack (each doubles the prize once, both = x4).
 static enum ItemEffect TryDoublePrize(enum BattlerId battler)
 {
     enum ItemEffect effect = ITEM_NO_EFFECT;
 
-    if (IsOnPlayerSide(battler) && !gBattleStruct->moneyMultiplierItem)
+    if (!IsOnPlayerSide(battler))
+        return effect;
+    if (gBattleMons[battler].item == ITEM_LUCK_INCENSE)
+    {
+        if (!gBattleStruct->moneyMultiplierIncense)
+        {
+            gBattleStruct->moneyMultiplier *= 2;
+            gBattleStruct->moneyMultiplierIncense = TRUE;
+        }
+    }
+    else if (!gBattleStruct->moneyMultiplierItem)
     {
         gBattleStruct->moneyMultiplier *= 2;
         gBattleStruct->moneyMultiplierItem = TRUE;

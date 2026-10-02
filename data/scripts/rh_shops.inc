@@ -121,6 +121,55 @@ RH_Items_Herb::
 	.2byte ITEM_SERIOUS_MINT
 	pokemartlistend
 
+RH_EventScript_CeladonBallSeller::
+	lock
+	faceplayer
+	msgbox RH_Text_BallSeller
+	message gText_HowMayIServeYou
+	waitmessage
+	setvar VAR_0x8004, RH_SPECIAL_BALLS
+	special RH_OpenSpecialShop
+	msgbox gText_PleaseComeAgain
+	release
+	end
+
+RH_Text_BallSeller::
+	.string "I'm a POKé BALL through and through!\p"
+	.string "I sell every kind of BALL there is,\n"
+	.string "even the ones nobody else has!$"
+
+	.align 2
+RH_Items_Balls::
+	.2byte ITEM_POKE_BALL
+	.2byte ITEM_GREAT_BALL
+	.2byte ITEM_ULTRA_BALL
+	.2byte ITEM_MASTER_BALL
+	.2byte ITEM_PREMIER_BALL
+	.2byte ITEM_HEAL_BALL
+	.2byte ITEM_NET_BALL
+	.2byte ITEM_NEST_BALL
+	.2byte ITEM_DIVE_BALL
+	.2byte ITEM_DUSK_BALL
+	.2byte ITEM_TIMER_BALL
+	.2byte ITEM_QUICK_BALL
+	.2byte ITEM_REPEAT_BALL
+	.2byte ITEM_LUXURY_BALL
+	.2byte ITEM_LEVEL_BALL
+	.2byte ITEM_LURE_BALL
+	.2byte ITEM_MOON_BALL
+	.2byte ITEM_FRIEND_BALL
+	.2byte ITEM_LOVE_BALL
+	.2byte ITEM_FAST_BALL
+	.2byte ITEM_HEAVY_BALL
+	.2byte ITEM_DREAM_BALL
+	.2byte ITEM_SAFARI_BALL
+	.2byte ITEM_SPORT_BALL
+	.2byte ITEM_PARK_BALL
+	.2byte ITEM_BEAST_BALL
+	.2byte ITEM_CHERISH_BALL
+	.2byte ITEM_STRANGE_BALL
+	.2byte ITEM_NONE
+
 RH_EventScript_CeladonCompetitive::
 	lock
 	faceplayer

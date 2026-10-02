@@ -8175,6 +8175,27 @@ static void SetBallThrowShakes(void)
     if (gBattleResults.catchAttempts[ballId] < 255)
         gBattleResults.catchAttempts[ballId]++;
 
+#if IS_FRLG
+    // Romhack: the Mewtwo blocking Pewter City. Any ball catches it 1 time in 8192; a Master Ball half the time.
+    if (FlagGet(FLAG_RH_PEWTER_MEWTWO_BATTLE))
+    {
+        u32 shakeCount;
+        if (gLastUsedItem == ITEM_MASTER_BALL ? (Random() % 2) == 0 : (Random() % 8192) == 0)
+        {
+            FinalizeCapture();
+            return;
+        }
+        if (!gHasFetchedBall)
+            gLastUsedBall = gLastUsedItem;
+        shakeCount = Random() % (BALL_3_SHAKES_FAIL + 1);
+        gBattleCommunication[MULTISTRING_CHOOSER] = shakeCount;
+        BtlController_EmitBallThrowAnim(gBattlerAttacker, B_COMM_TO_CONTROLLER, shakeCount);
+        MarkBattlerForControllerExec(gBattlerAttacker);
+        gBattlescriptCurrInstr = BattleScript_ShakeBallThrow;
+        return;
+    }
+#endif
+
     gBattleSpritesDataPtr->animationData->isCriticalCapture = FALSE;
     gBattleSpritesDataPtr->animationData->criticalCaptureSuccess = FALSE;
 

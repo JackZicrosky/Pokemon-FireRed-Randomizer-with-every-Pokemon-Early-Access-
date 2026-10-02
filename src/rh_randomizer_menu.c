@@ -429,7 +429,6 @@ static const struct RhRow sRows[] =
 
     // ---------------- Misc ----------------
     TOGGLE(SEC_MISC, 0, instantText, "Instantaneous Text", "All text appears instantly, whatever\nthe text speed option says.", NULL),
-    TOGGLE(SEC_MISC, 0, runIndoors, "Running Shoes Indoors", "Run with the Running Shoes anywhere,\nincluding inside buildings.", NULL),
     TOGGLE(SEC_MISC, 0, randomPcPotion, "Randomize PC Potion", "The Potion in your bedroom PC becomes\na random useful item.", NULL),
     TOGGLE(SEC_MISC, 0, nationalDexAtStart, "National Dex at Start", "The National Dex from the start. Oak's\naides count National Dex entries.", NULL),
     TOGGLE(SEC_MISC, 0, fastEggs, "Fast Egg Hatching", "Every Egg hatches in as few steps as\npossible (under 256).", NULL),
@@ -480,7 +479,7 @@ static const struct BgTemplate sBgTemplates[] =
 };
 
 // Dark theme palette.
-enum { C_TRANSPARENT, C_PANEL, C_TEXT, C_SHADOW, C_VALUE, C_VALUE_SH, C_DIM, C_HEADER, C_SEL, C_ACCENT, C_HEADBAR, C_OK, C_WARN, C_BLOOD };
+enum { C_TRANSPARENT, C_PANEL, C_TEXT, C_SHADOW, C_VALUE, C_VALUE_SH, C_DIM, C_HEADER, C_SEL, C_ACCENT, C_HEADBAR, C_OK, C_WARN, C_BLOOD, C_BLOOD_SEL };
 static const u16 sPal[16] = {
     [C_TRANSPARENT] = RGB(2, 3, 4),
     [C_PANEL]       = RGB(3, 4, 5),      // near-black panel
@@ -496,6 +495,7 @@ static const u16 sPal[16] = {
     [C_OK]          = RGB(10, 27, 12),
     [C_WARN]        = RGB(31, 11, 9),
     [C_BLOOD]       = RGB(31, 2, 3),     // "Reset The Run"
+    [C_BLOOD_SEL]   = RGB(8, 1, 2),      // "Reset The Run" selected: dark red bar
 };
 static const u16 sBgColor[] = { RGB(2, 3, 4) };
 
@@ -759,8 +759,9 @@ static void DrawList(void)
         bool32 selected = (sScroll + i == sRow);
         if (selected)
         {
-            FillWindowPixelRect(WIN_LIST, PIXEL_FILL(C_SEL), 0, y, 240, ROW_H);
-            FillWindowPixelRect(WIN_LIST, PIXEL_FILL(r->fmt == ACT_RESET_RUN && r->kind == RK_ACTION ? C_BLOOD : C_ACCENT), 0, y, 3, ROW_H);
+            bool32 reset = (r->fmt == ACT_RESET_RUN && r->kind == RK_ACTION);
+            FillWindowPixelRect(WIN_LIST, PIXEL_FILL(reset ? C_BLOOD_SEL : C_SEL), 0, y, 240, ROW_H);
+            FillWindowPixelRect(WIN_LIST, PIXEL_FILL(reset ? C_BLOOD : C_ACCENT), 0, y, 3, ROW_H);
         }
         if (r->kind == RK_HEADER)
         {
@@ -1063,7 +1064,7 @@ static u16 ParseNumber(const u8 *s)
 // Presets keep the same packed bits in a spare flash sector (the Trainer Hill sector, unused in FireRed), so
 // they are independent of the save file and survive starting a new game.
 // ---------------------------------------------------------------------------
-#define CODE_VERSION      1
+#define CODE_VERSION      2     // v0.6: "Running Shoes Indoors" row removed
 #define CODE_MAX_BYTES    96
 #define CODE_MAX_CHARS    (CODE_MAX_BYTES * 8 / 5)
 #define CODE_CHECK_BITS   10
@@ -1904,7 +1905,7 @@ static void Task_Input(u8 taskId)
                 {
                     EraseGameSave();
                     PlaySE(SE_BANG);
-                    gTasks[taskId].func = sInGame ? Task_ResetRunInGame : Task_Begin;
+                    gTasks[taskId].func = Task_ResetRunInGame;   // back to the options, new seed
                 }
                 else if (sPendingAction == ACT_EXIT)
                 {
@@ -2060,22 +2061,28 @@ static void Task_LeaveNoChange(u8 taskId)
         LeaveToField(taskId);
 }
 
-// Reset The Run from the key item: the save is already erased; start a brand new game with these settings.
+// Reset The Run (title screen or the key item): the save is already erased. Everything is reinitialized and the
+// player lands back on these options, with the same settings but a freshly rolled seed (owner's rule), ready to
+// press START. Presets live in their own flash sector and are untouched.
 static void Task_ResetRunInGame(u8 taskId)
 {
     if (!gPaletteFade.active)
     {
         DestroyTask(taskId);
         FreeAllWindowBuffers();
-        sInitialized = FALSE;
-        sInGame = FALSE;
+        sInGame = FALSE;                                     // sInitialized stays set: keep the pending settings
         m4aMPlayAllStop();
         SetMainCallback1(NULL);
         gFieldCallback = NULL;
         ResetMenuAndMonGlobals();
         InitHeap(gHeap, HEAP_SIZE);
-        RH_ApplyPendingSettings();
-        StartNewGameSceneFrlg();
+        RandomSeedText();
+        sSection = SEC_GENERAL;
+        sRow = 0;
+        sScroll = 0;
+        sMessage = CS("The run was reset and a new seed was\nrolled. Press START to begin.");
+        gMain.state = 0;
+        SetMainCallback2(CB2_InitRandomizerMenu);
     }
 }
 

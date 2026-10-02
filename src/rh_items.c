@@ -57,6 +57,38 @@ static bool32 IsXItem(u16 item)
     return FALSE;
 }
 
+// Poke Balls missing from the FVX item table (no vanilla shop price). The Celadon Poke Ball seller sells them and
+// they join the shop randomization pools (regular "Shop Items" and the special shops).
+static const u16 sRhExtraShopItems[] = {
+    ITEM_MASTER_BALL, ITEM_CHERISH_BALL, ITEM_BEAST_BALL, ITEM_DREAM_BALL, ITEM_PARK_BALL, ITEM_SPORT_BALL,
+    ITEM_STRANGE_BALL, ITEM_SAFARI_BALL,
+};
+#define SHOP_POOL_COUNT (RH_ITEM_COUNT + ARRAY_COUNT(sRhExtraShopItems))
+
+static u16 ShopPoolItem(u32 i)
+{
+    return i < RH_ITEM_COUNT ? sRhItems[i].item : sRhExtraShopItems[i - RH_ITEM_COUNT];
+}
+
+// Items whose only use is selling (Nuggets, Pearls, Stardust, Relics, Shards...): never in randomized shops.
+// Bottle Caps and the mushrooms (Two Island move reminder) have a use and stay.
+static bool32 IsSellOnlyItem(u16 item)
+{
+    enum ItemSortType t = gItemsInfo[item].sortType;
+    switch (item)
+    {
+    case ITEM_BOTTLE_CAP: case ITEM_GOLD_BOTTLE_CAP: case ITEM_TINY_MUSHROOM: case ITEM_BIG_MUSHROOM:
+        return FALSE;
+    }
+    return t == ITEM_TYPE_SELLABLE || t == ITEM_TYPE_RELIC || t == ITEM_TYPE_SHARD;
+}
+
+// Nuzlocke Mode: no Rare Candy in any shop.
+static bool32 IsNuzlockeBannedShopItem(u16 item)
+{
+    return S->enabled && S->nuzlocke && item == ITEM_RARE_CANDY;
+}
+
 static bool32 PoolItemOk(const struct RhItem *it, bool32 banBad)
 {
     if (RH_ItemBanned(it->item))
@@ -197,6 +229,8 @@ static bool32 ShopItemAllowed(u16 item)
         return FALSE;
     if (GetItemTMHMIndex(item) > NUM_TECHNICAL_MACHINES)
         return FALSE;
+    if (IsSellOnlyItem(item) || IsNuzlockeBannedShopItem(item))
+        return FALSE;
     return TRUE;
 }
 
@@ -228,7 +262,7 @@ enum Item RH_ShopItem(enum Item item, u32 mart, u32 slot)
         return RH_ShuffledShopItem(item, mart, slot);        // the shops' own items, moved around
     for (tries = 0; tries < 32; tries++)
     {
-        u16 it = sRhItems[RH_Hash(SALT_SHOP, mart * 256 + slot, tries) % RH_ITEM_COUNT].item;
+        u16 it = ShopPoolItem(RH_Hash(SALT_SHOP, mart * 256 + slot, tries) % SHOP_POOL_COUNT);
         if (ShopItemAllowed(it) && GetItemPrice(it) != 0)
             return it;
     }
@@ -240,7 +274,7 @@ enum Item RH_ShopItem(enum Item item, u32 mart, u32 slot)
 // Every slot gets a different random item and no item appears twice across all of them.
 // ---------------------------------------------------------------------------
 extern const u16 RH_Items_Evo[], RH_Items_Herb[], RH_Items_Competitive[], RH_Items_Forms[], RH_Items_Mega[],
-                 RH_Items_ZCrystal[], RH_Items_Training[], RH_Items_Berries[], RH_Items_Snacks[];
+                 RH_Items_ZCrystal[], RH_Items_Training[], RH_Items_Berries[], RH_Items_Snacks[], RH_Items_Balls[];
 
 static const u16 *const sSpecialLists[] = {
     [RH_SPECIAL_EVO]         = RH_Items_Evo,
@@ -252,10 +286,12 @@ static const u16 *const sSpecialLists[] = {
     [RH_SPECIAL_TRAINING]    = RH_Items_Training,
     [RH_SPECIAL_BERRIES]     = RH_Items_Berries,
     [RH_SPECIAL_SNACKS]      = RH_Items_Snacks,
+    [RH_SPECIAL_BALLS]       = RH_Items_Balls,
 };
 
 #define SPECIAL_MAX_ITEMS 100
 static EWRAM_DATA u16 sSpecialBuffer[SPECIAL_MAX_ITEMS + 1] = {0};
+static EWRAM_DATA bool8 sBallShopOpen = FALSE;     // the Poke Ball seller's shop is the one open
 
 static bool32 SpecialItemOk(u16 item)
 {
@@ -266,6 +302,8 @@ static bool32 SpecialItemOk(u16 item)
     if (S->shopBanRegular && IsRegularShopItem(item))
         return FALSE;
     if (S->shopBanOverpowered && RH_ItemIsOverpowered(item))
+        return FALSE;
+    if (IsSellOnlyItem(item) || IsNuzlockeBannedShopItem(item))
         return FALSE;
     return TRUE;
 }
@@ -318,16 +356,16 @@ u32 RH_BuildSpecialShop(u32 list, u16 *out, u32 max)
         // special shops (FVX-style no-duplicates). With "Guarantee Evolution Items", the evolution items are
         // numbered first and the permutation runs over all special-shop slots, so each of them lands in one slot.
         u32 len, accepted = 0, p, j, evoCount = 0, total = 0;
-        u16 *acc = AllocUnchecked(RH_ITEM_COUNT * sizeof(u16));
+        u16 *acc = AllocUnchecked(SHOP_POOL_COUNT * sizeof(u16));
         for (len = 0; items[len] != ITEM_NONE && len < max - 1; len++)
             ;
         for (l = 0; l < ARRAY_COUNT(sSpecialLists); l++)
             if (!SpecialListKept(l))
                 for (i = 0; sSpecialLists[l][i] != ITEM_NONE; i++)
                     total++;
-        for (p = 0; p < RH_ITEM_COUNT; p++)
+        for (p = 0; p < SHOP_POOL_COUNT; p++)
         {
-            u16 it = sRhItems[p].item;
+            u16 it = ShopPoolItem(p);
             if (SpecialItemOk(it) && !IsKeptSpecialItem(it) && S->shopGuaranteeEvo && IsEvolutionItem(it))
             {
                 if (acc != NULL)
@@ -336,9 +374,9 @@ u32 RH_BuildSpecialShop(u32 list, u16 *out, u32 max)
                 evoCount++;
             }
         }
-        for (p = 0; p < RH_ITEM_COUNT; p++)
+        for (p = 0; p < SHOP_POOL_COUNT; p++)
         {
-            u16 it = sRhItems[p].item;
+            u16 it = ShopPoolItem(p);
             if (SpecialItemOk(it) && !IsKeptSpecialItem(it) && !(S->shopGuaranteeEvo && IsEvolutionItem(it)))
             {
                 if (acc != NULL)
@@ -376,23 +414,114 @@ u32 RH_BuildSpecialShop(u32 list, u16 *out, u32 max)
 void RH_OpenSpecialShop(void)
 {
     RH_BuildSpecialShop(gSpecialVar_0x8004, sSpecialBuffer, SPECIAL_MAX_ITEMS + 1);
+    sBallShopOpen = (gSpecialVar_0x8004 == RH_SPECIAL_BALLS);
     CreatePokemartMenu(sSpecialBuffer);
+}
+
+// ---------------------------------------------------------------------------
+// Poke Ball seller: in a game without shop randomization ("Shop Items" off and "Randomize Special Shops" off) his
+// Master Ball is a one-time purchase. With either option on it is an ordinary item (and part of the random pool).
+// ---------------------------------------------------------------------------
+static bool32 ShopsRandomized(void)
+{
+    return S->enabled && (S->shopItems != 0 || S->shopSpecial);
+}
+
+bool32 RH_ShopItemIsOneTime(u16 item)
+{
+    return sBallShopOpen && item == ITEM_MASTER_BALL && !ShopsRandomized();
+}
+
+void RH_DebugSetBallShopOpen(bool32 open) { sBallShopOpen = open; }
+
+bool32 RH_ShopItemSoldOut(u16 item)
+{
+    return RH_ShopItemIsOneTime(item) && FlagGet(FLAG_RH_BOUGHT_MASTER_BALL);
+}
+
+void RH_ShopOnPurchase(u16 item)
+{
+    if (RH_ShopItemIsOneTime(item))
+        FlagSet(FLAG_RH_BOUGHT_MASTER_BALL);
+}
+
+// Every shop list goes through here (shop.c, CreatePokemartMenu): drops Rare Candy in Nuzlocke Mode and the
+// one-time Master Ball once it has been bought.
+static EWRAM_DATA u16 sFilteredShop[SPECIAL_MAX_ITEMS + 1] = {0};
+
+const u16 *RH_FilterShopList(const u16 *items)
+{
+    u32 i, n = 0;
+    bool32 changed = FALSE;
+    for (i = 0; items[i] != ITEM_NONE; i++)
+        if (IsNuzlockeBannedShopItem(items[i]) || RH_ShopItemSoldOut(items[i]))
+            changed = TRUE;
+    if (!changed)
+        return items;
+    for (i = 0; items[i] != ITEM_NONE && n < SPECIAL_MAX_ITEMS; i++)
+        if (!IsNuzlockeBannedShopItem(items[i]) && !RH_ShopItemSoldOut(items[i]))
+            sFilteredShop[n++] = items[i];
+    sFilteredShop[n] = ITEM_NONE;
+    return sFilteredShop;
 }
 
 // ---------------------------------------------------------------------------
 // Prices ("Balance Shop Item Prices")
 // ---------------------------------------------------------------------------
+// Prices for the Poke Balls the games never sell (the Celadon Poke Ball seller sells them all).
+static u32 ExtraBallPrice(u16 item)
+{
+    switch (item)
+    {
+    case ITEM_MASTER_BALL:  return 100000;
+    case ITEM_CHERISH_BALL: return 3000;
+    case ITEM_BEAST_BALL:   return 2000;
+    case ITEM_DREAM_BALL:   return 1000;
+    case ITEM_PARK_BALL:    return 1000;
+    case ITEM_STRANGE_BALL: return 1000;
+    case ITEM_SAFARI_BALL:  return 500;
+    case ITEM_SPORT_BALL:   return 300;
+    }
+    return 0;
+}
+
+// "Balance Shop Prices" curve (owner's spec): prices up to 1000 stay; above that, the more expensive an item, the
+// harder the cut (10000 -> ~6800, 20000 -> ~10500, 100000 -> ~22200, 250000 -> ~29500). sCurve[k] is the price
+// for 1000 << k (1000 * e^(x - 0.07 x^2), x = ln(price / 1000)); prices in between are interpolated.
+static const u16 sBalanceCurve[] = { 1000, 1933, 3497, 5911, 9346, 13806, 19069, 24632, 29730, 33580, 35450 };
+
+static u32 BalancePrice(u32 price)
+{
+    u32 k, lo, out;
+    if (price <= 1000)
+        return price;
+    for (k = 0; k < ARRAY_COUNT(sBalanceCurve) - 1; k++)
+    {
+        lo = 1000u << k;
+        if (price < (lo << 1))
+        {
+            out = sBalanceCurve[k] + (sBalanceCurve[k + 1] - sBalanceCurve[k]) * (price - lo) / lo;
+            return (out + 5) / 10 * 10;
+        }
+    }
+    return sBalanceCurve[ARRAY_COUNT(sBalanceCurve) - 1];
+}
+
+u32 RH_DebugBalancePrice(u32 price) { return BalancePrice(price); }
+
 u32 RH_ItemPrice(u16 item, u32 vanilla)
 {
-    if (!S->enabled || vanilla == 0)
-        return vanilla;
+    u32 price = vanilla != 0 ? vanilla : ExtraBallPrice(item);
+    if (!S->enabled || price == 0)
+        return price;
     if (S->shopAddCheapRareCandy && item == ITEM_RARE_CANDY)
         return 10;                                           // FVX "Add Cheap Rare Candies"
     if (!S->shopBalancePrices)
-        return vanilla;
-    if (item < ARRAY_COUNT(sRhBalancedPrices) && sRhBalancedPrices[item] != 0)
-        return sRhBalancedPrices[item];                      // FVX's balanced price table
-    return vanilla;
+        return price;
+    // FVX's balanced price table first (not for the balls only the romhack sells: FVX lists the Master Ball at 3000)
+    if (vanilla != 0 && item < ARRAY_COUNT(sRhBalancedPrices) && sRhBalancedPrices[item] != 0)
+        price = sRhBalancedPrices[item];
+    return BalancePrice(price);
 }
 
 // Celadon Dept. Store counters that FVX randomizes (4F stones, 5F X items and vitamins). VAR_0x8004 = counter.
@@ -415,6 +544,7 @@ void RH_OpenRandomizedPokemart(void)
     if (S->enabled && S->shopAddCheapRareCandy && n < ARRAY_COUNT(sCounterBuffer) - 1)
         sCounterBuffer[n++] = ITEM_RARE_CANDY;
     sCounterBuffer[n] = ITEM_NONE;
+    sBallShopOpen = FALSE;
     CreatePokemartMenu(sCounterBuffer);
 }
 

@@ -2,6 +2,7 @@
 // Runs from the RH_TEST_EXTRA hook of a quickstart new game: every option is switched on in turn and the rules it
 // promises are checked on the real data. Results go to gRhSelfTestLog (plain ASCII) for the emulator harness.
 #include "global.h"
+#include "pokemon_storage_system.h"
 #include "config/rh_test.h"
 #ifndef RELEASE
 #include "constants/characters.h"
@@ -30,7 +31,8 @@
 // Log
 // ---------------------------------------------------------------------------
 #define LOG_SIZE 5120
-EWRAM_DATA char gRhSelfTestLog[LOG_SIZE] = {0};
+// The log lives on the heap while the test runs (EWRAM is nearly full); the harness follows this pointer.
+EWRAM_DATA char *gRhSelfTestLog = NULL;
 EWRAM_DATA u32 gRhSelfTestDone = 0;
 static EWRAM_DATA u32 sLogLen = 0;
 static EWRAM_DATA u32 sFails = 0;          // in the current test
@@ -40,6 +42,8 @@ static EWRAM_DATA u32 sTestStart = 0;
 
 static void Log(const char *s)
 {
+    if (gRhSelfTestLog == NULL)
+        return;
     while (*s && sLogLen < LOG_SIZE - 1)
         gRhSelfTestLog[sLogLen++] = *s++;
     gRhSelfTestLog[sLogLen] = 0;
@@ -56,6 +60,8 @@ static void LogU(u32 v)
         buf[i++] = '0' + v % 10;
         v /= 10;
     }
+    if (gRhSelfTestLog == NULL)
+        return;
     while (i > 0 && sLogLen < LOG_SIZE - 1)
         gRhSelfTestLog[sLogLen++] = buf[--i];
     gRhSelfTestLog[sLogLen] = 0;
@@ -993,7 +999,7 @@ static void TestSpecialShops(void)
     Reset();
     S->shopSpecial = TRUE;
     Begin("special shops");
-    for (list = 0; list < 9; list++)
+    for (list = 0; list <= RH_SPECIAL_BALLS; list++)
     {
         u32 c = RH_BuildSpecialShop(list, buf, 128);
         Check(c > 0, "empty", list, 0);
@@ -1013,7 +1019,7 @@ static void TestSpecialShops(void)
     S->shopGuaranteeEvo = TRUE;
     Begin("special shops evo");
     n = 0;
-    for (list = 0; list < 9; list++)
+    for (list = 0; list <= RH_SPECIAL_BALLS; list++)
     {
         u32 c = RH_BuildSpecialShop(list, buf, 128);
         for (i = 0; i < c && n < 600; i++)
@@ -1378,7 +1384,7 @@ static void TestNewGameItems(void)
     Check(CheckBagHasItem(ITEM_RANDOMIZER_SETTINGS, 1), "settings on continue", 0, 0);
     RH_OnContinue();
     Check(CountTotalItemQuantityInBag(ITEM_RANDOMIZER_SETTINGS) == 1, "only one", CountTotalItemQuantityInBag(ITEM_RANDOMIZER_SETTINGS), 0);
-    Check(gSaveBlock1Ptr->pcItems[0].itemId != ITEM_NONE, "pc item", 0, 0);
+    Check(gPokemonStoragePtr->pcItems[0].itemId != ITEM_NONE, "pc item", 0, 0);
     Check(RH_CatchTutorialSpecies(SPECIES_WEEDLE) != SPECIES_NONE, "tutorial", 0, 0);
     End();
 }
@@ -1614,7 +1620,7 @@ static void TestMoveNamesUnique(void)
         u32 i;
         StringCopy(buf, GetMoveName(MOVE_FIRE_PUNCH));
         for (i = 0; buf[i] != EOS; i++)
-            if (sLogLen < LOG_SIZE - 2)
+            if (gRhSelfTestLog != NULL && sLogLen < LOG_SIZE - 2)
                 gRhSelfTestLog[sLogLen++] = (buf[i] >= CHAR_A && buf[i] <= CHAR_Z) ? 'A' + buf[i] - CHAR_A : (buf[i] >= CHAR_a && buf[i] <= CHAR_z) ? 'a' + buf[i] - CHAR_a : ' ';
     }
     Log("] ");
@@ -1840,6 +1846,226 @@ static void TestRivalSameTeam(void)
     End();
 }
 
+u32 RH_DebugBalancePrice(u32 price);
+bool32 RH_DebugIsVivillonPattern(u16 species);
+void RH_DebugSetBallShopOpen(bool32 open);
+
+static bool32 SellOnly(u16 it)
+{
+    enum ItemSortType t = gItemsInfo[it].sortType;
+    if (it == ITEM_BOTTLE_CAP || it == ITEM_GOLD_BOTTLE_CAP || it == ITEM_TINY_MUSHROOM || it == ITEM_BIG_MUSHROOM)
+        return FALSE;
+    return t == ITEM_TYPE_SELLABLE || t == ITEM_TYPE_RELIC || t == ITEM_TYPE_SHARD;
+}
+
+// v0.6 bag: one of every item in the game fits (bag pockets, overflow into the PC), and nothing says "bag full".
+static void TestBagHoldsEverything(void)
+{
+    u32 it, added = 0, failed = 0, inBag = 0, inPc = 0;
+    Reset();
+    Begin("bag holds every item");
+    ClearBag();
+    CpuFill16(0, gPokemonStoragePtr->pcItems, sizeof(gPokemonStoragePtr->pcItems));
+    for (it = 1; it < ITEMS_COUNT; it++)
+    {
+        if (GetItemPocket(it) >= POCKETS_COUNT || gItemsInfo[it].name[0] == 0)
+            continue;
+        Check(CheckBagHasSpace(it, 1), "space", it, 0);
+        if (AddBagItem(it, 1))
+            added++;
+        else
+            failed++;
+    }
+    for (it = 1; it < ITEMS_COUNT; it++)
+    {
+        if (GetItemPocket(it) >= POCKETS_COUNT || gItemsInfo[it].name[0] == 0)
+            continue;
+        if (CheckBagHasItem(it, 1))
+            inBag++;
+        else if (CheckPCHasItem(it, 1))
+            inPc++;
+        else
+            Check(FALSE, "lost", it, 0);
+    }
+    Note("added", added);
+    Note("in bag", inBag);
+    Note("in PC", inPc);
+    Check(failed == 0, "add failed", failed, 0);
+    ClearBag();
+    CpuFill16(0, gPokemonStoragePtr->pcItems, sizeof(gPokemonStoragePtr->pcItems));
+    End();
+}
+
+// v0.6 shop rules: price curve, Poke Ball seller prices, sell-only items out of the pools, Nuzlocke without Rare
+// Candy, Master Ball in the special-shop pool, and the one-time Master Ball in unrandomized games.
+static void TestShopRulesV06(void)
+{
+    u16 *buf = Alloc(128 * 2);
+    u32 list, i, c, m, prev = 0;
+    static const u16 sCandy[] = { ITEM_POTION, ITEM_RARE_CANDY, ITEM_MASTER_BALL, ITEM_NONE };
+    const u16 *f;
+
+    Reset();
+    Begin("v0.6 shop rules");
+    // Balance curve: cheap items unchanged, monotonic, the expensive ones cut hard.
+    Check(RH_DebugBalancePrice(200) == 200 && RH_DebugBalancePrice(1000) == 1000, "cheap", RH_DebugBalancePrice(200), 0);
+    for (i = 1000; i <= 400000; i += 2500)
+    {
+        u32 p = RH_DebugBalancePrice(i);
+        Check(p >= prev && p <= i, "monotonic", i, p);
+        prev = p;
+    }
+    c = RH_DebugBalancePrice(10000);  Check(c >= 6000 && c <= 7500, "10k", c, 0);
+    c = RH_DebugBalancePrice(20000);  Check(c >= 9500 && c <= 11500, "20k", c, 0);
+    c = RH_DebugBalancePrice(250000); Check(c >= 27000 && c <= 32000, "250k", c, 0);
+    Check(GetItemPrice(ITEM_MASTER_BALL) == 100000, "master price", GetItemPrice(ITEM_MASTER_BALL), 0);
+    Check(GetItemPrice(ITEM_CHERISH_BALL) != 0 && GetItemPrice(ITEM_BEAST_BALL) != 0, "ball prices", 0, 0);
+    S->shopBalancePrices = TRUE;
+    RH_InvalidateSettingsHash();
+    c = GetItemPrice(ITEM_MASTER_BALL);  Check(c >= 20000 && c <= 25000, "master balanced", c, 0);
+    c = GetItemPrice(ITEM_ABILITY_PATCH); Check(c >= 27000 && c <= 32000, "patch balanced", c, 0);
+    Check(GetItemPrice(ITEM_POKE_BALL) == 200, "poke ball", GetItemPrice(ITEM_POKE_BALL), 0);
+
+    // Randomized pools: no sell-only items; the Master Ball is in the special-shop pool.
+    Reset();
+    S->shopItems = 2;
+    S->shopSpecial = TRUE;
+    S->nuzlocke = TRUE;
+    RH_InvalidateSettingsHash();
+    Check(RH_DebugSpecialItemOk(ITEM_MASTER_BALL), "master in pool", 0, 0);
+    Check(!RH_DebugSpecialItemOk(ITEM_NUGGET) && !RH_DebugSpecialItemOk(ITEM_PEARL), "sell-only pool", 0, 0);
+    Check(!RH_DebugSpecialItemOk(ITEM_RARE_CANDY), "nuzlocke candy pool", 0, 0);
+    for (list = 0; list <= RH_SPECIAL_BALLS; list++)
+    {
+        c = RH_BuildSpecialShop(list, buf, 128);
+        for (i = 0; i < c; i++)
+            Check(!SellOnly(buf[i]) && buf[i] != ITEM_RARE_CANDY, "special item", list, buf[i]);
+    }
+    for (m = 0; m < 14; m++)
+        for (i = 0; i < 24; i++)
+        {
+            u16 r = RH_ShopItem(ITEM_X_ATTACK, m, i);
+            Check(!SellOnly(r) && r != ITEM_RARE_CANDY, "shop item", m, r);
+        }
+    f = RH_FilterShopList(sCandy);
+    for (i = 0; f[i] != ITEM_NONE; i++)
+        Check(f[i] != ITEM_RARE_CANDY, "nuzlocke filter", i, f[i]);
+
+    // One-time Master Ball: only at the ball seller, only without shop randomization.
+    Reset();
+    FlagClear(FLAG_RH_BOUGHT_MASTER_BALL);
+    RH_DebugSetBallShopOpen(TRUE);
+    Check(RH_ShopItemIsOneTime(ITEM_MASTER_BALL) && !RH_ShopItemSoldOut(ITEM_MASTER_BALL), "one-time", 0, 0);
+    Check(!RH_ShopItemIsOneTime(ITEM_ULTRA_BALL), "only master", 0, 0);
+    RH_ShopOnPurchase(ITEM_MASTER_BALL);
+    Check(RH_ShopItemSoldOut(ITEM_MASTER_BALL), "sold out", 0, 0);
+    f = RH_FilterShopList(sCandy);
+    for (i = 0; f[i] != ITEM_NONE; i++)
+        Check(f[i] != ITEM_MASTER_BALL, "sold out hidden", i, f[i]);
+    S->shopItems = 1;
+    RH_InvalidateSettingsHash();
+    Check(!RH_ShopItemIsOneTime(ITEM_MASTER_BALL) && !RH_ShopItemSoldOut(ITEM_MASTER_BALL), "shop items: repeatable", 0, 0);
+    S->shopItems = 0;
+    S->shopSpecial = TRUE;
+    RH_InvalidateSettingsHash();
+    Check(!RH_ShopItemIsOneTime(ITEM_MASTER_BALL) && !RH_ShopItemSoldOut(ITEM_MASTER_BALL), "special: repeatable", 0, 0);
+    RH_DebugSetBallShopOpen(FALSE);
+    S->shopSpecial = FALSE;
+    RH_InvalidateSettingsHash();
+    Check(!RH_ShopItemIsOneTime(ITEM_MASTER_BALL), "other shop", 0, 0);
+    FlagClear(FLAG_RH_BOUGHT_MASTER_BALL);
+    End();
+    Free(buf);
+}
+
+// "Rival Carries Starter": every rival battle uses exactly the Pokemon he took in Oak's lab, also after the seed
+// (and so the starters) changed mid-run.
+static void TestRivalStarterFromLab(void)
+{
+    u32 slot, id, pass;
+    static const u16 sBase[3] = { SPECIES_BULBASAUR, SPECIES_CHARMANDER, SPECIES_SQUIRTLE };
+    Reset();
+    S->trainers = 1;
+    S->starters = 2;
+    S->rivalCarriesTeam = TRUE;
+    S->trainersEvolveOn = TRUE;
+    RH_InvalidateSettingsHash();
+    Begin("rival starter = lab");
+    for (slot = 0; slot < 3; slot++)
+    {
+        u16 lab = RH_StarterSpecies(sBase[slot]);            // what the lab ball holds (RH_RemapStarterVars)
+        VarSet(VAR_RH_RIVAL_STARTER, lab);
+        for (pass = 0; pass < 2; pass++)
+        {
+            if (pass == 1)
+            {
+                S->seed ^= 0x5A5A5;                          // settings changed mid-run: still the same Pokemon
+                RH_InvalidateSettingsHash();
+            }
+            for (id = 1; id < TRAINERS_COUNT; id++)
+            {
+                const struct Trainer *t = GetTrainerStructFromId(id);
+                struct Pokemon *party = gParties[B_TRAINER_OPPONENT_A];
+                u32 i, stage;
+                bool32 has = FALSE, found = FALSE;
+                if (t->party == NULL || (t->trainerClass != TRAINER_CLASS_RIVAL_EARLY_FRLG
+                 && t->trainerClass != TRAINER_CLASS_RIVAL_LATE_FRLG && t->trainerClass != TRAINER_CLASS_CHAMPION_FRLG))
+                    continue;
+                for (i = 0; i < t->partySize; i++)
+                    if (RH_StarterFamily(t->party[i].species, &stage) == (s32)slot)
+                        has = TRUE;
+                if (!has)
+                    continue;
+                CreateNPCTrainerPartyFromTrainer(party, t);
+                for (i = 0; i < PARTY_SIZE; i++)
+                {
+                    u16 sp = GetMonData(&party[i], MON_DATA_SPECIES);
+                    if (sp != SPECIES_NONE && RH_FamilyRoot(sp) == RH_FamilyRoot(lab))
+                        found = TRUE;
+                }
+                Check(found, "rival starter", id, lab);
+            }
+        }
+        S->seed ^= 0x5A5A5;
+        RH_InvalidateSettingsHash();
+    }
+    VarSet(VAR_RH_RIVAL_STARTER, SPECIES_NONE);
+    End();
+}
+
+// Scatterbug / Spewpa / Vivillon: one entry per stage in the pool; with forms on, a pick rolls the wing pattern.
+static void TestVivillonPool(void)
+{
+    struct RhFilter f = {0};
+    u32 i, line = 0, patterns = 0, n = 2000;
+    Reset();
+    S->speciesPool = RH_POOL_ALL_FORMS;
+    RH_InvalidateSettingsHash();
+    Begin("vivillon one pokemon");
+    for (i = 0; i < RH_PoolCount(); i++)
+    {
+        u16 sp = RH_PoolSpecies(i);
+        struct RhFilter one = {0};
+        if (RH_DebugIsVivillonPattern(sp))
+            Check(!RH_FilterAccepts(&one, i), "pattern pickable", sp, 0);
+    }
+    for (i = 0; i < n; i++)
+    {
+        u16 sp = RH_PickWithFilter(&f, RH_Hash(0xB0B, i, 0));
+        u16 root = RH_FamilyRoot(sp);
+        if (root == RH_FamilyRoot(SPECIES_SCATTERBUG))
+        {
+            line++;
+            if (sp != SPECIES_SCATTERBUG && sp != SPECIES_SPEWPA && sp != SPECIES_VIVILLON)
+                patterns++;
+        }
+    }
+    Note("line picks", line);
+    Note("patterned", patterns);
+    Check(line < 30, "line weight", line, n);                // 3 of ~1260 entries, not 60
+    End();
+}
+
 u32 RH_DebugSettingsToCode(const struct RhSettings *st, u8 *chars);
 bool32 RH_DebugCodeToSettings(struct RhSettings *st, const u8 *chars, u32 n);
 u32 RH_DebugSettingsCodeMaxChars(void);
@@ -1917,6 +2143,10 @@ static void TestSettingsCodes(void)
 static void RunSuite(void)
 {
 #ifdef RH_SELFTEST_NEW_ONLY
+    TestBagHoldsEverything();
+    TestShopRulesV06();
+    TestRivalStarterFromLab();
+    TestVivillonPool();
     TestSettingsCodes();
     TestRivalSameTeam();
     TestSpecialShops();
@@ -1977,6 +2207,13 @@ static void RunSuite(void)
     TestRivalSameTeam();
     TestSettingsCodes();
     TestPrices();
+    TestShopRulesV06();
+    TestRivalStarterFromLab();
+    if (sBasePool == RH_POOL_ALL)
+    {
+        TestVivillonPool();
+        TestBagHoldsEverything();
+    }
     TestFieldItems();
     TestShopItems();
     TestMiscItems();
@@ -2006,6 +2243,8 @@ static void RunSuite(void)
 void RH_SelfTest(void)
 {
     struct RhSettings saved = *S;
+    // Debug only: the last LOG_SIZE bytes of the heap (rarely reached; not reset by the InitHeap after new game).
+    gRhSelfTestLog = (char *)gHeap + HEAP_SIZE - LOG_SIZE;
     static const u8 sPools[] = { RH_POOL_ALL, RH_POOL_GEN1, RH_POOL_ALL_FORMS };
     static const char *const sPoolNames[] = { "=== pool: all 1025\n", "=== pool: Kanto 151\n", "=== pool: all + forms\n" };
     u32 pool;

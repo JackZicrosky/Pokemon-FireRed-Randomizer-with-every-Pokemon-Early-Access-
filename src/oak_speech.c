@@ -753,6 +753,10 @@ static void Task_NewGameScene(u8 taskId)
         ChangeBgY(1, 0, BG_COORD_SET);
         ChangeBgX(2, 0, BG_COORD_SET);
         ChangeBgY(2, 0, BG_COORD_SET);
+        // Romhack: undo any BG2 scaling/wraparound left over from an earlier player-shrink animation or the
+        // overworld (Reset The Run during a run), otherwise Oak / rival / player pics show small or not at all.
+        SetBgAffine(2, 0, 0, 0, 0, 0x100, 0x100, 0);
+        SetBgAttribute(2, BG_ATTR_WRAPAROUND, 0);
         gSpriteCoordOffsetX = 0;
         gSpriteCoordOffsetY = 0;
         break;

@@ -90,6 +90,7 @@ s32 RH_ApplyPercent(s32 value, s16 percent);   // value * (100 + percent) / 100,
 bool32 RH_IsLeagueReserved(u16 species);
 enum Species RH_WildSpeciesAt(u8 mapGroup, u8 mapNum, const struct WildPokemonInfo *info, u32 slot, enum WildPokemonArea area, u32 level);
 u16 RH_StarterForSlot(u32 slot);
+u16 RH_RivalStarter(u32 starterSlot);
 s32 RH_StarterFamily(u16 species, u32 *stage);
 u16 RH_DebugPoolItem(u32 i);
 u16 RH_RivalRosterSpecies(u32 index);

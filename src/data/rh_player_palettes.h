@@ -12,3 +12,4 @@
     {gRhPlayerPal10, OBJ_EVENT_PAL_TAG_RH_PLAYER + 10},
     {gRhPlayerPal11, OBJ_EVENT_PAL_TAG_RH_PLAYER + 11},
     {gRhPlayerPal12, OBJ_EVENT_PAL_TAG_RH_PLAYER + 12},
+    {gRhPlayerPal13, OBJ_EVENT_PAL_TAG_RH_PLAYER + 13},

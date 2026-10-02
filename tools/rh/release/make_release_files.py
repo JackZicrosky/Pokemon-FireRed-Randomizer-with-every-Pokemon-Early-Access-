@@ -18,8 +18,10 @@ CHANGES = {
     "0.5": "Randomizer Settings key item, Reset The Run, dark \"RANDOMIZE GAME\" title menu.",
     "0.5.1": "Clearer Randomizer Settings description; new Infinite Candy and HM Kit icons.",
     "0.5.2": "New Healing Kit icon: a white case with a shaded red cross.",
+    "0.6": "The bag never fills up (one of every item fits; overflow goes to the PC); Mom gives the Running Shoes and you can run indoors; a level 100 Mewtwo blocks the road to Mt. Moon until you beat Brock; new Poke Ball seller in Celadon (every Ball, incl. Master/Cherish/Beast); new shop price curve; no sell-only items in random shops; no Rare Candy in Nuzlocke shops; the rival always uses the Pokemon he took from Oak's lab; Vivillon patterns count as one Pokemon; Amulet Coin + Luck Incense stack; Reset The Run returns to the options with a new seed (and the intro graphics bug is fixed); new player character: Lucoa. Start a new game: older saves and settings codes don't carry over.",
 }
-SAVES = {"0.1": "Start a new game.", "0.2": "Start a new game (v0.1 saves don't carry over)."}
+SAVES = {"0.1": "Start a new game.", "0.2": "Start a new game (v0.1 saves don't carry over).",
+         "0.6": "Start a new game (saves from older versions don't carry over)."}
 
 # Lines written to the owner that shouldn't appear in public READMEs.
 TEXT_SUBS = [

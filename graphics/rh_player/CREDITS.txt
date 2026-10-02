@@ -1,5 +1,5 @@
-Custom player graphics come from Universal Pokemon Randomizer FVX graphics packs.
-All art belongs to the creators listed below.
+Custom player graphics come from Universal Pokemon Randomizer FVX graphics packs
+(plus packs made for this romhack). All art belongs to the creators listed below.
 
 [Ethan]
 From=Pokémon - Generation II
@@ -60,4 +60,8 @@ Adapter=Voliol // The watering can, decorate, and underwater sprites needed to b
 From=Pokémon Snakewood
 Creator=Cutlerine
 Adapter=Voliol // The watering can, decorate, and underwater sprites needed to be custom-made. Everything else is directly from Snakewood.
+
+[Lucoa]
+From=Miss Kobayashi's Dragon Maid (fan art)
+Creator=JackZicrosky (owner) and Claude; built on the Cynthia pack frames by NachoPenalva
 
