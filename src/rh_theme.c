@@ -113,6 +113,7 @@ struct ThemedPal
     u8 mode;
     u16 keep;   // color indices (in every row of 16) left unchanged, e.g. white text drawn on colored boxes
     u16 white;  // color indices (in every row of 16) set to white (spare colors used for text by themed code)
+    u16 merge;  // color indices (in every row of 16) that all get their average: turns striped backgrounds plain
 };
 
 // Menu, text box and window palettes (anything drawn on a white base). Loading one of these anywhere gets themed.
@@ -120,13 +121,13 @@ static const struct ThemedPal sThemed[] =
 {
     { gStandardMenuPalette, 16, MODE_TEXT },
     { gMessageBox_Pal, 16, MODE_TEXT },
-    { gBagScreenMale_Pal, 32, MODE_SCREEN },
-    { gBagScreenFemale_Pal, 32, MODE_SCREEN },
+    { gBagScreenMale_Pal, 32, MODE_SCREEN, .merge = (1 << 12) | (1 << 13) },     // (12-13: the two background stripes)
+    { gBagScreenFemale_Pal, 32, MODE_SCREEN, .merge = (1 << 12) | (1 << 13) },
     { gPartyMenuBg_Pal, 16, MODE_SCREEN },
-    { gPartyMenuBg_Pal + 16, 2 * 16, MODE_SCREEN, (1 << 1) | (1 << 10) },                         // Cancel/Confirm
+    { gPartyMenuBg_Pal + 16, 2 * 16, MODE_SCREEN, (1 << 1) | (1 << 10), .merge = (1 << 4) | (1 << 5) },   // background stripes, Cancel/Confirm
     { gPartyMenuBg_Pal + 48, 8 * 16, MODE_SCREEN, (1 << 1) | (1 << 2) | (1 << 3) | (3 << 9) | (7 << 13) },   // Pokemon boxes (text, HP bar)
     { gSummaryScreen_Pal, 6 * 16, MODE_SCREEN, 1 << 2 },
-    { gSummaryScreen_Pal + 96, 2 * 16, MODE_TEXT },
+    { gSummaryScreen_Pal + 96, 2 * 16, MODE_TEXT, (1 << 3) | (1 << 4) },   // (3-4: white labels with a grey shadow)
     { gPPTextPalette, 16, MODE_TEXT },
     { gShopMenu_Pal, 16, MODE_SCREEN },
     // Battle message box. Its white text moves to spare color 8 (battle_message.c), because color 1 is also the
@@ -142,16 +143,17 @@ static const struct ThemedPal sThemed[] =
 
 // Returns the mode for a themed palette, or -1.
 // Returns the mode for a color of a themed palette (or -1), its keep mask and its index in its row of 16.
-static s32 ThemedMode(const u16 *src, u16 *keep, u16 *white, u32 *index)
+static s32 ThemedMode(const u16 *src, u16 *keep, u16 *white, u16 *merge, u32 *index)
 {
     u32 i;
-    *keep = *white = 0;
+    *keep = *white = *merge = 0;
     for (i = 0; i < ARRAY_COUNT(sThemed); i++)
     {
         if (src >= sThemed[i].pal && src < sThemed[i].pal + sThemed[i].count)
         {
             *keep = sThemed[i].keep;
             *white = sThemed[i].white;
+            *merge = sThemed[i].merge;
             *index = (src - sThemed[i].pal) & 15;
             return sThemed[i].mode;
         }
@@ -181,7 +183,8 @@ void RH_ThemeLoadedPalette(const void *src, u32 offset, u32 size)
 {
     u32 theme = gSaveBlock3Ptr->rhSettings.uiTheme, i, end, index;
     const u16 *pal = src;
-    u16 keep, white;
+    u16 keep, white, merge;
+    u32 start, sum[3], count, j;
     s32 mode;
     if (theme == RH_THEME_DEFAULT || offset >= PLTT_BUFFER_SIZE)
         return;
@@ -191,18 +194,36 @@ void RH_ThemeLoadedPalette(const void *src, u32 offset, u32 size)
     // A load can span several table entries (the party menu loads all 11 palettes at once), so look each color up.
     for (i = 0; i < size; i = end)
     {
-        mode = ThemedMode(&pal[i], &keep, &white, &index);
+        mode = ThemedMode(&pal[i], &keep, &white, &merge, &index);
         end = i + 16 - index;   // table entries are whole rows of 16
         if (end > size)
             end = size;
         if (mode < 0)
             continue;
+        start = i;
+        sum[0] = sum[1] = sum[2] = count = 0;
         for (; i < end; i++, index++)
         {
+            u16 *color = &gPlttBufferUnfaded[offset + i];
             if (white & (1 << index))
-                gPlttBufferUnfaded[offset + i] = RGB_WHITE;
+                *color = RGB_WHITE;
             else if (!(keep & (1 << index)))
-                gPlttBufferUnfaded[offset + i] = ThemeColor(gPlttBufferUnfaded[offset + i], theme, mode);
+                *color = ThemeColor(*color, theme, mode);
+            if (merge & (1 << index))
+            {
+                for (j = 0; j < 3; j++)
+                    sum[j] += (*color >> (j * 5)) & 31;
+                count++;
+            }
+        }
+        if (count > 1)
+        {
+            u16 average = RGB((sum[0] + count / 2) / count, (sum[1] + count / 2) / count, (sum[2] + count / 2) / count);
+            for (j = start; j < end; j++)
+            {
+                if (merge & (1 << (index - (end - j))))
+                    gPlttBufferUnfaded[offset + j] = average;
+            }
         }
     }
     CpuCopy16(&gPlttBufferUnfaded[offset], &gPlttBufferFaded[offset], size * 2);

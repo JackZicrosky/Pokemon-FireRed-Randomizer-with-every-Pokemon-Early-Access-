@@ -2187,6 +2187,10 @@ static void TestUiTheme(void)
         LoadPalette(gBattleTextboxPalette, slot, PLTT_SIZE_4BPP);
         Check(gPlttBufferUnfaded[slot + 8] == (theme ? RGB_WHITE : gBattleTextboxPalette[8]), "battle text color 8", theme, gPlttBufferUnfaded[slot + 8]);
         Check(gPlttBufferUnfaded[slot + 6] == gBattleTextboxPalette[6], "battle shadow kept", theme, gPlttBufferUnfaded[slot + 6]);
+        LoadPalette(gBagScreenMale_Pal, slot, PLTT_SIZE_4BPP);
+        Check((gPlttBufferUnfaded[slot + 12] == gPlttBufferUnfaded[slot + 13]) == (theme != RH_THEME_DEFAULT), "bag stripes merged", theme, gPlttBufferUnfaded[slot + 12]);
+        LoadPalette(gSummaryScreen_Pal + 96, slot, PLTT_SIZE_4BPP);
+        Check(gPlttBufferUnfaded[slot + 3] == gSummaryScreen_Pal[96 + 3], "summary white label kept", theme, gPlttBufferUnfaded[slot + 3]);
         LoadPalette(plain, slot, sizeof(plain));
         for (i = 0; i < 16; i++)
             Check(gPlttBufferUnfaded[slot + i] == plain[i], "other pal untouched", theme * 16 + i, gPlttBufferUnfaded[slot + i]);

@@ -21,11 +21,13 @@ CHANGES = {
     "0.6": "The bag never fills up (one of every item fits; overflow goes to the PC); Mom gives the Running Shoes and you can run indoors; a level 100 Mewtwo blocks the road to Mt. Moon until you beat Brock; new Poke Ball seller in Celadon (every Ball, incl. Master/Cherish/Beast); new shop price curve; no sell-only items in random shops; no Rare Candy in Nuzlocke shops; the rival always uses the Pokemon he took from Oak's lab; Vivillon patterns count as one Pokemon; Amulet Coin + Luck Incense stack; Reset The Run returns to the options with a new seed (and the intro graphics bug is fixed); new player character: Lucoa. Start a new game: older saves and settings codes don't carry over.",
     "0.6.1": "Fixes: the rival always uses exactly the Pokemon he took from Oak's lab (whatever the trainer options); blank Custom starters keep Bulbasaur / Charmander / Squirtle; the Route 3 barricade no longer pops in late; losing to the Pewter Mewtwo no longer affects other catches; less memory used. v0.6 saves keep working.",
     "0.7": "NEW: UI Theme option (Misc. Tweaks): Default, Randomizer (dark menus in the randomizer screen's colors) or AMOLED (pitch black). It re-colors text boxes, menus, the bag, party, summary, shop, battle text boxes, Pokedex, Trainer Card, Options, PC boxes and the naming screen. v0.6 saves keep working; old settings codes and presets don't load.",
+    "0.7.1": "UI Theme fixes: the white labels on the summary screen (name, level, Dex number, page title...) stay white and readable; the striped backgrounds of the bag and party screens become one plain color in the Randomizer and AMOLED themes. v0.6 / v0.7 saves keep working.",
 }
 SAVES = {"0.1": "Start a new game.", "0.2": "Start a new game (v0.1 saves don't carry over).",
          "0.6": "Start a new game (saves from older versions don't carry over).",
          "0.6.1": "v0.6 saves keep working; start a new game if you come from v0.5.2 or older.",
-         "0.7": "v0.6 / v0.6.1 saves keep working; start a new game if you come from v0.5.2 or older."}
+         "0.7": "v0.6 / v0.6.1 saves keep working; start a new game if you come from v0.5.2 or older.",
+         "0.7.1": "v0.6 and v0.7 saves keep working; start a new game if you come from v0.5.2 or older."}
 
 # Lines written to the owner that shouldn't appear in public READMEs.
 TEXT_SUBS = [
