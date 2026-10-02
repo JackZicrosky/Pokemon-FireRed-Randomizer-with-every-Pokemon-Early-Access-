@@ -25,7 +25,7 @@
 - **Test everything** you change: the in-ROM self-test on 3 pools, plus emulator screenshots of the real
   flows (see §5). The owner once asked to "test every single setting to make sure they work", and that
   standard still applies.
-- **Latest released version: v0.5.2** (tag `v0.5.2`).
+- **Latest released version: v0.6** (tag `v0.6`). Next: v0.7 = dark UI themes (owner will say when).
 
 ---
 
@@ -181,6 +181,14 @@ Vanilla files we hook (search for `RH_` / `rh` in them): `pokemon.c` (most hooks
 Romhack vars (in `include/constants/vars.h`):
 - `VAR_RH_MOM_GAVE_RINGS` 0x40F7
 - `VAR_RH_SAFARI_GEN` 0x40F8
+- `VAR_RH_RIVAL_STARTER` 0x40F9 (species the rival took in Oak's lab)
+
+Romhack flags (FRLG `flags_frlg.h`, formerly unused): `FLAG_RH_HIDE_ROUTE3_BARRICADE` 0x0AF,
+`FLAG_RH_PEWTER_MEWTWO_BATTLE` 0x0B0, `FLAG_RH_BOUGHT_MASTER_BALL` 0x0B1.
+
+Bag layout (v0.6): Items pocket = `gSaveBlock3Ptr->bagItems[340]`; Poke Balls / Berries / PC items =
+`gPokemonStoragePtr->bagPokeBalls/bagBerries/pcItems[260]`; Key Items + TMs stay in SaveBlock1. A full pocket
+overflows into the PC (item.c). Save space is now nearly full everywhere (SB3 28 bytes, storage 16 bytes free).
 
 Romhack items (in `include/constants/items.h`, after the Mega Stones):
 - `ITEM_INFINITE_CANDY` 874
@@ -403,7 +411,9 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 2. Create the BPS against the clean ROM:
    - ROM: **"Pokemon FireRed (USA) v1.0.gba", SHA-1 `dd5945db9b930750cb39d00c84da8571feebf417`**. The
      owner has it; ask them to attach it if you don't have it.
-   - Tool: Flips (`https://github.com/Alcaro/Flips`, build with `make` or `./make-linux.sh`):
+   - Tool on the owner's PC: `python tools/rh/release/make_bps.py clean.gba pokefirered-release.gba out.bps`
+     (romhack's own BPS writer, ~22 MB patches; verify with bpscheck.py). Or Flips if available
+     (`https://github.com/Alcaro/Flips`, build with `make` or `./make-linux.sh`):
      `flips --create --bps clean.gba pokefirered-release.gba "FireRed Expansion Randomizer vX.bps"`.
    - Verify: `flips --apply` onto the clean ROM, then `cmp` with `pokefirered-release.gba`. It must be
      identical.
@@ -450,7 +460,12 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 - The UPR FVX source was used as the reference for option behaviour. It's a public GitHub project
   (Universal Pokemon Randomizer FVX); re-clone it if you need it.
 
-## 7. Known limitations / open items (as of v0.5.2)
+## 7. Known limitations / open items (as of v0.6)
+- **v0.7 (planned): dark UI themes** - Misc. Tweaks option "Default / Randomizer / AMOLED" re-theming text boxes,
+  bag, party, summary, shop and other white menus (owner's #12). Do it in passes with screenshots for approval.
+- Lucoa's battle front/back pics are placeholder recolours of Cynthia's (no cap/horns); her overworld sheet is the
+  owner's (`build/lucoa/image-*.png`, generator `build/lucoa/lucoa_pack.py`).
+- Amulet Coin + Luck Incense stacking (v0.6) compiled and code-reviewed but not yet checked in a battle.
 - Some NPC dialogue still names the original Pokémon.
 - New-game-only settings don't apply when changed mid-run with the key item.
 - Codes/presets may not load after option rows change (see §6).
@@ -474,6 +489,7 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 | v0.5 | Randomizer Settings key item, Reset The Run, dark centred "RANDOMIZE GAME" title menu |
 | v0.5.1 | Item description; rainbow Infinite Candy; randomizer-palette HM Kit icon |
 | v0.5.2 | Healing Kit icon from the owner's drawing (white case, red cross) |
+| v0.6 | Owner's 16-item list minus the UI themes: bag never full, Mom gives Running Shoes, Pewter Mewtwo, Celadon Poke Ball seller, shop rules (price curve, no sell-only items, Nuzlocke no Rare Candy, Master Ball in pools), rival starter from lab, Vivillon one Pokemon, Amulet Coin + Luck Incense stack, Reset The Run back to options + intro fix, Vermilion NPC moved, Lucoa pack |
 
 ---
 
