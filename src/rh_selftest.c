@@ -26,6 +26,11 @@
 #include "constants/moves.h"
 #include "constants/trainers.h"
 #include "constants/rh_special_shops.h"
+#include "constants/rgb.h"
+#include "graphics.h"
+#include "menu.h"
+#include "palette.h"
+#include "rh.h"
 
 // ---------------------------------------------------------------------------
 // Log
@@ -2139,10 +2144,64 @@ static void TestSettingsCodes(void)
     Free(code);
 }
 
+// v0.7 UI Theme: menu palettes are re-lit when loaded (white -> dark, text -> light), other palettes are untouched.
+static u32 ColorLum(u16 c)
+{
+    return ((c & 31) + ((c >> 5) & 31) + ((c >> 10) & 31)) / 3;
+}
+
+static void TestUiTheme(void)
+{
+    u32 theme, i, slot = BG_PLTT_ID(15);
+    u16 savedU[16], savedF[16], plain[16];
+
+    Begin("ui theme");
+    Reset();
+    CpuCopy16(&gPlttBufferUnfaded[slot], savedU, sizeof(savedU));
+    CpuCopy16(&gPlttBufferFaded[slot], savedF, sizeof(savedF));
+    for (i = 0; i < 16; i++)
+        plain[i] = RGB(i * 2, 31 - i, i);
+    for (theme = RH_THEME_DEFAULT; theme < RH_THEME_COUNT; theme++)
+    {
+        S->uiTheme = theme;
+        if (theme == RH_THEME_DEFAULT)
+        {
+            Check(RH_ThemeColor(RGB(5, 17, 29), theme) == RGB(5, 17, 29), "default unchanged", theme, 0);
+        }
+        else
+        {
+            Check(ColorLum(RH_ThemeColor(RGB_WHITE, theme)) <= 5, "white bg dark", theme, RH_ThemeColor(RGB_WHITE, theme));
+            Check(ColorLum(RH_ThemeColor(RGB(12, 12, 12), theme)) >= 24, "text light", theme, RH_ThemeColor(RGB(12, 12, 12), theme));
+            Check(ColorLum(RH_ThemeColor(RGB(26, 26, 25), theme)) <= 10, "shadow dark", theme, RH_ThemeColor(RGB(26, 26, 25), theme));
+            Check(ColorLum(RH_ThemeColor(RGB(28, 1, 1), theme)) >= 12, "red text readable", theme, RH_ThemeColor(RGB(28, 1, 1), theme));
+        }
+        if (theme == RH_THEME_AMOLED)
+            Check(RH_ThemeColor(RGB_WHITE, theme) == RGB_BLACK, "amoled black", theme, RH_ThemeColor(RGB_WHITE, theme));
+
+        LoadPalette(gStandardMenuPalette, slot, PLTT_SIZE_4BPP);
+        for (i = 1; i < 16; i++)
+        {
+            Check(gPlttBufferUnfaded[slot + i] == RH_ThemeColor(gStandardMenuPalette[i], theme), "menu pal themed", theme * 16 + i, gPlttBufferUnfaded[slot + i]);
+            Check(gPlttBufferFaded[slot + i] == gPlttBufferUnfaded[slot + i], "faded copy", theme * 16 + i, gPlttBufferFaded[slot + i]);
+        }
+        LoadPalette(gBattleTextboxPalette, slot, PLTT_SIZE_4BPP);
+        Check(gPlttBufferUnfaded[slot + 8] == (theme ? RGB_WHITE : gBattleTextboxPalette[8]), "battle text color 8", theme, gPlttBufferUnfaded[slot + 8]);
+        Check(gPlttBufferUnfaded[slot + 6] == gBattleTextboxPalette[6], "battle shadow kept", theme, gPlttBufferUnfaded[slot + 6]);
+        LoadPalette(plain, slot, sizeof(plain));
+        for (i = 0; i < 16; i++)
+            Check(gPlttBufferUnfaded[slot + i] == plain[i], "other pal untouched", theme * 16 + i, gPlttBufferUnfaded[slot + i]);
+    }
+    S->uiTheme = RH_THEME_DEFAULT;
+    CpuCopy16(savedU, &gPlttBufferUnfaded[slot], sizeof(savedU));
+    CpuCopy16(savedF, &gPlttBufferFaded[slot], sizeof(savedF));
+    End();
+}
+
 // ---------------------------------------------------------------------------
 static void RunSuite(void)
 {
 #ifdef RH_SELFTEST_NEW_ONLY
+    TestUiTheme();
     TestBagHoldsEverything();
     TestShopRulesV06();
     TestRivalStarterFromLab();
@@ -2209,6 +2268,7 @@ static void RunSuite(void)
     TestPrices();
     TestShopRulesV06();
     TestRivalStarterFromLab();
+    TestUiTheme();
     if (sBasePool == RH_POOL_ALL)
     {
         TestVivillonPool();

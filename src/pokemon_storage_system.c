@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "malloc.h"
 #include "bg.h"
 #include "data.h"
@@ -3881,6 +3882,8 @@ static void InitPalettesAndSprites(void)
         LoadPalette(sScrollingBg_Pal, BG_PLTT_ID(3), sizeof(sScrollingBg_Pal));
     else
         LoadPalette(sScrollingBgMoveItems_Pal, BG_PLTT_ID(3), sizeof(sScrollingBgMoveItems_Pal));
+    RH_ThemeLoadedRange(BG_PLTT_ID(15), 16, RH_THEME_MODE_TEXT, 0);   // UI Theme: message windows
+    RH_ThemeLoadedRange(BG_PLTT_ID(3), 16, RH_THEME_MODE_SCREEN, 0);  // and the scrolling background
 
     SetGpuReg(REG_OFFSET_BG1CNT, BGCNT_PRIORITY(1) | BGCNT_CHARBASE(1) | BGCNT_16COLOR | BGCNT_SCREENBASE(30));
     CreateDisplayMonSprite();

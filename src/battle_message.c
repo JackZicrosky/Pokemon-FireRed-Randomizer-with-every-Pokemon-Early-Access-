@@ -3873,6 +3873,10 @@ void BattlePutTextOnWindow(const u8 *text, u8 windowId)
     printerTemplate.letterSpacing = textInfo[windowId].letterSpacing;
     printerTemplate.lineSpacing = textInfo[windowId].lineSpacing;
     printerTemplate.color = textInfo[windowId].color;
+    // UI Theme: the message box's white text uses spare color 8 (rh_theme.c), so color 1 can turn dark with the menus.
+    if (gSaveBlock3Ptr->rhSettings.uiTheme && (windowId == B_WIN_MSG || windowId == B_WIN_ACTION_PROMPT)
+     && printerTemplate.color.foreground == 1)
+        printerTemplate.color.foreground = 8;
 
     if (B_WIN_MOVE_NAME_1 <= windowId && windowId <= B_WIN_MOVE_NAME_4)
     {

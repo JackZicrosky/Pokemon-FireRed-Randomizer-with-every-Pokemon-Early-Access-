@@ -96,4 +96,12 @@ u32 RH_MoveCategory(enum Move move, u32 vanilla);
 const u8 *RH_MoveName(enum Move move, const u8 *vanilla);
 uq4_12_t RH_TypeModifier(enum Type atkType, enum Type defType, uq4_12_t vanilla);
 
+// UI Theme (rh_theme.c)
+enum { RH_THEME_DEFAULT, RH_THEME_RANDOMIZER, RH_THEME_AMOLED, RH_THEME_COUNT };
+u16 RH_ThemeColor(u16 color, u32 theme);
+void RH_ThemePalette(u16 *pal, u32 count, u32 theme);
+void RH_ThemeLoadedPalette(const void *src, u32 offset, u32 size);
+enum { RH_THEME_MODE_TEXT, RH_THEME_MODE_SCREEN };
+void RH_ThemeLoadedRange(u32 offset, u32 count, u32 mode, u16 keep);
+
 #endif

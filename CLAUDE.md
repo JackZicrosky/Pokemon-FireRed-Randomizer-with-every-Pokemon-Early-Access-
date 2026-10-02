@@ -25,7 +25,7 @@
 - **Test everything** you change: the in-ROM self-test on 3 pools, plus emulator screenshots of the real
   flows (see §5). The owner once asked to "test every single setting to make sure they work", and that
   standard still applies.
-- **Latest released version: v0.6.1** (tag `v0.6.1`). Next: v0.7 = dark UI themes (owner will say when).
+- **Latest released version: v0.7** (tag `v0.7`): UI Theme option (Default / Randomizer / AMOLED).
 
 ---
 
@@ -166,6 +166,7 @@
 | `src/rh_shops.c` | Progressive (badge-gated) Poké Mart stock. `data/scripts/rh_shops.inc` holds the shop scripts. |
 | `src/rh_safari.c` | Safari Zone generation selector (Kanto / Gen 2–9 / All). |
 | `src/rh_palettes.c` | Random Pokémon palettes (hue shift, follow types/evos, shiny-from-normal). |
+| `src/rh_theme.c` | v0.7 **UI Theme**. `LoadPalette`/`LoadPaletteFast` (palette.c) call `RH_ThemeLoadedPalette`, which re-lights colours loaded from the palettes in `sThemed[]` (text window/frames, std menu, bag, party, summary, shop, battle textbox, Pokédex) - MODE_TEXT inverts lightness (white bg -> dark, dark text -> light), MODE_SCREEN keeps coloured art but darkens it; per-row `keep`/`white` masks. Screens with file-private palettes call `RH_ThemeLoadedRange` (options, trainer card, PC storage, naming screen). Battle message text uses spare colour 8 when themed (battle_message.c, egg_hatch.c, trade.c); options menu lights the selected row instead of darkening the others. |
 | `src/rh_player_graphics.c` | Custom Player Graphics packs converted from UPR FVX (Ethan, Kris, Red, Leaf, Brendan, May, Wally, Birch, Cynthia…). |
 | `src/rh_misc.c` | Misc tweaks, `RH_OnNewGame` (gives key items), `RH_OnContinue`, HM Kit logic, intro species, test setups (`RH_TestSetup`, `RH_TestSetupLight`, `RH_TestMenuPreset`, debug-only). |
 | `src/rh_randomizer_menu.c` | The **options screen** (≈2200 lines): rows table, drawing, input, text entry via the naming screen, **settings codes**, **presets**, **in-game mode**, **Reset The Run**. |
@@ -470,9 +471,10 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 - The UPR FVX source was used as the reference for option behaviour. It's a public GitHub project
   (Universal Pokemon Randomizer FVX); re-clone it if you need it.
 
-## 7. Known limitations / open items (as of v0.6)
-- **v0.7 (planned): dark UI themes** - Misc. Tweaks option "Default / Randomizer / AMOLED" re-theming text boxes,
-  bag, party, summary, shop and other white menus (owner's #12). Do it in passes with screenshots for approval.
+## 7. Known limitations / open items (as of v0.7)
+- UI Theme (v0.7) covers the main screens; rarely seen ones (Hall of Fame, mail, town/fly map, Trainer Tower, berry
+  screens...) keep their normal colours. Add a screen by listing its palette in `sThemed[]` or calling
+  `RH_ThemeLoadedRange`, then check screenshots in all 3 themes (test ROMs: `build/th/b3.sh`, `b4.sh`, `b5.sh`).
 - Lucoa's battle front/back pics are placeholder recolours of Cynthia's (no cap/horns); her overworld sheet is the
   owner's (`build/lucoa/image-*.png`, generator `build/lucoa/lucoa_pack.py`).
 - Amulet Coin + Luck Incense stacking (v0.6) compiled and code-reviewed but not yet checked in a battle.
@@ -499,6 +501,7 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 | v0.5 | Randomizer Settings key item, Reset The Run, dark centred "RANDOMIZE GAME" title menu |
 | v0.5.1 | Item description; rainbow Infinite Candy; randomizer-palette HM Kit icon |
 | v0.5.2 | Healing Kit icon from the owner's drawing (white case, red cross) |
+| v0.7 | UI Theme option (Misc. Tweaks): Default / Randomizer / AMOLED re-lights text boxes, menus, bag, party, summary, shop, battle boxes, Pokédex, trainer card, options, PC boxes, naming screen; CODE_VERSION 3 (uses the old runIndoors byte) |
 | v0.6.1 | Rival's starter slot is always the Pokemon from the lab ball (any trainer options; evolves along its vanilla line); blank Custom starters = default starters; Route 3 barricade moved to x=8 (no pop-in); Mewtwo catch rule only for the lv100 Mewtwo; EWRAM 99.04% -> 97.40% (map buffer sized for FRLG, pick buffer on the heap) |
 | v0.6 | Owner's 16-item list minus the UI themes: bag never full, Mom gives Running Shoes, Pewter Mewtwo, Celadon Poke Ball seller, shop rules (price curve, no sell-only items, Nuzlocke no Rare Candy, Master Ball in pools), rival starter from lab, Vivillon one Pokemon, Amulet Coin + Luck Incense stack, Reset The Run back to options + intro fix, Vermilion NPC moved, Lucoa pack |
 
@@ -725,8 +728,8 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
   - Shiny From Normal  (paletteShinyFromNormal)
 
 [SEC_MISC]
+  - UI Theme  (uiTheme: Default / Randomizer / AMOLED)
   - Instantaneous Text  (instantText)
-  - Running Shoes Indoors  (runIndoors)
   - Randomize PC Potion  (randomPcPotion)
   - National Dex at Start  (nationalDexAtStart)
   - Fast Egg Hatching  (fastEggs)

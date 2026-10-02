@@ -149,7 +149,8 @@ struct RhSettings
     u8 playerGraphics;            // 0 = default, else index into the graphics pack table
 
     // ---- Misc. Tweaks ----
-    u8 instantText, unusedRunIndoors, randomPcPotion, nationalDexAtStart, fastEggs, lowerCaseNames,
+    // uiTheme: RH_THEME_* (rh.h). It took the byte of the old "Running Shoes Indoors" option.
+    u8 instantText, uiTheme, randomPcPotion, nationalDexAtStart, fastEggs, lowerCaseNames,
        randomCatchTutorial, banLuckyEgg, balanceStaticLevels, runWithoutShoes, reusableTMs, forgettableTMs, noEVs;
 
     u8 padding[8];

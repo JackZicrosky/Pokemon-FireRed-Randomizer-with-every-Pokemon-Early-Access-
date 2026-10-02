@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "mail.h"
 #include "scanline_effect.h"
 #include "palette.h"
@@ -1468,6 +1469,7 @@ static u8 SetCardBgsAndPals(void)
                 LoadPalette(sKantoTrainerCardFemaleBg_Pal, BG_PLTT_ID(1), PLTT_SIZE_4BPP);
         }
         LoadPalette(sTrainerCardStar_Pal, BG_PLTT_ID(4), PLTT_SIZE_4BPP);
+        RH_ThemeLoadedRange(BG_PLTT_ID(0), 3 * 16, RH_THEME_MODE_SCREEN, (1 << 5) | (1 << 8));   // the card (not its title)
         break;
     case 3:
         SetBgTilemapBuffer(0, sData->cardTilemapBuffer);

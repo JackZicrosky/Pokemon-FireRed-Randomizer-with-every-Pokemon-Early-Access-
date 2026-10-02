@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "option_menu.h"
 #include "bg.h"
 #include "gpu_regs.h"
@@ -193,11 +194,23 @@ void CB2_InitOptionMenu(void)
         DeactivateAllTextPrinters();
         SetGpuReg(REG_OFFSET_WIN0H, 0);
         SetGpuReg(REG_OFFSET_WIN0V, 0);
-        SetGpuReg(REG_OFFSET_WININ, WININ_WIN0_BG0);
-        SetGpuReg(REG_OFFSET_WINOUT, WINOUT_WIN01_BG0 | WINOUT_WIN01_BG1 | WINOUT_WIN01_CLR);
-        SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT1_BG0 | BLDCNT_EFFECT_DARKEN);
-        SetGpuReg(REG_OFFSET_BLDALPHA, 0);
-        SetGpuReg(REG_OFFSET_BLDY, 4);
+        if (gSaveBlock3Ptr->rhSettings.uiTheme)
+        {
+            // UI Theme: darkening the other rows can't show on a dark menu, so the selected row is lit up instead.
+            SetGpuReg(REG_OFFSET_WININ, WININ_WIN0_BG0 | WININ_WIN0_CLR);
+            SetGpuReg(REG_OFFSET_WINOUT, WINOUT_WIN01_BG0 | WINOUT_WIN01_BG1);
+            SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT1_BG0 | BLDCNT_EFFECT_LIGHTEN);
+            SetGpuReg(REG_OFFSET_BLDALPHA, 0);
+            SetGpuReg(REG_OFFSET_BLDY, 2);
+        }
+        else
+        {
+            SetGpuReg(REG_OFFSET_WININ, WININ_WIN0_BG0);
+            SetGpuReg(REG_OFFSET_WINOUT, WINOUT_WIN01_BG0 | WINOUT_WIN01_BG1 | WINOUT_WIN01_CLR);
+            SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT1_BG0 | BLDCNT_EFFECT_DARKEN);
+            SetGpuReg(REG_OFFSET_BLDALPHA, 0);
+            SetGpuReg(REG_OFFSET_BLDY, 4);
+        }
         SetGpuReg(REG_OFFSET_DISPCNT, DISPCNT_WIN0_ON | DISPCNT_OBJ_ON | DISPCNT_OBJ_1D_MAP);
         ShowBg(0);
         ShowBg(1);
@@ -216,11 +229,13 @@ void CB2_InitOptionMenu(void)
         break;
     case 4:
         LoadPalette(sOptionMenuBg_Pal, BG_PLTT_ID(0), sizeof(sOptionMenuBg_Pal));
+        RH_ThemeLoadedRange(BG_PLTT_ID(0), ARRAY_COUNT(sOptionMenuBg_Pal), RH_THEME_MODE_SCREEN, 0);
         LoadPalette(GetWindowFrameTilesPal(gSaveBlock2Ptr->optionsWindowFrameType)->pal, BG_PLTT_ID(7), PLTT_SIZE_4BPP);
         gMain.state++;
         break;
     case 5:
         LoadPalette(sOptionMenuText_Pal, BG_PLTT_ID(1), sizeof(sOptionMenuText_Pal));
+        RH_ThemeLoadedRange(BG_PLTT_ID(1), ARRAY_COUNT(sOptionMenuText_Pal), RH_THEME_MODE_TEXT, 0);
         gMain.state++;
         break;
     case 6:

@@ -9,6 +9,7 @@
 #include "task.h"
 #include "constants/field_weather.h"
 #include "constants/rgb.h"
+#include "rh.h"
 
 enum
 {
@@ -48,6 +49,8 @@ void LoadPalette(const void *src, u32 offset, u32 size)
 {
     CpuCopy16(src, &gPlttBufferUnfaded[offset], size);
     CpuCopy16(src, &gPlttBufferFaded[offset], size);
+    if (gSaveBlock3Ptr->rhSettings.uiTheme)
+        RH_ThemeLoadedPalette(src, offset, size);
 }
 
 // Drop in replacement for LoadPalette, uses CpuFastCopy, size must be 0 % 32
@@ -58,6 +61,8 @@ void LoadPaletteFast(const void *src, u32 offset, u32 size)
     CpuFastCopy(src, &gPlttBufferUnfaded[offset], size);
     // Copying from EWRAM->EWRAM is faster than ROM->EWRAM
     CpuFastCopy(&gPlttBufferUnfaded[offset], &gPlttBufferFaded[offset], size);
+    if (gSaveBlock3Ptr->rhSettings.uiTheme)
+        RH_ThemeLoadedPalette(src, offset, size);
 }
 
 void FillPalette(u32 value, u32 offset, u32 size)

@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "pokemon.h"
 #include "egg_hatch.h"
 #include "pokedex.h"
@@ -885,7 +886,7 @@ static void EggHatchPrintMessage(u8 windowId, u8 *string, u8 x, u8 y, u8 speed)
 {
     FillWindowPixelBuffer(windowId, PIXEL_FILL(15));
     sEggHatchData->textColor[0] = 0;
-    sEggHatchData->textColor[1] = 5;
+    sEggHatchData->textColor[1] = gSaveBlock3Ptr->rhSettings.uiTheme ? 8 : 5;   // UI Theme: white is color 8 (rh_theme.c)
     sEggHatchData->textColor[2] = 6;
     AddTextPrinterParameterized4(windowId, FONT_NORMAL, x, y, 0, 0, sEggHatchData->textColor, speed, string);
 }

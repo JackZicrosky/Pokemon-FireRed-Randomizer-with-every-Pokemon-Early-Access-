@@ -99,6 +99,7 @@ LIST(sExpCurves, CS("Medium Fast"), CS("Medium Slow"), CS("Fast"), CS("Slow"), C
 LIST(sExpWho, CS("Legendaries: Slow"), CS("Strong Legends: Slow"), CS("All Pokémon"));
 LIST(sTypesC, CS("Unchanged"), CS("Random (follow evos)"), CS("Random (completely)"));
 LIST(sUR, CS("Unchanged"), CS("Random"));
+LIST(sTheme, CS("Default"), CS("Randomizer"), CS("AMOLED"));
 LIST(sEvosC, CS("Unchanged"), CS("Random"), CS("Random Every Level"));
 LIST(sTypeChart, CS("Unchanged"), CS("Random"), CS("Random (balanced)"), CS("Keep Identities"), CS("Inverse"));
 LIST(sStarters, CS("Unchanged"), CS("Custom"), CS("Random (completely)"), CS("Random (2 evolutions)"), CS("Random (basic)"));
@@ -428,6 +429,7 @@ static const struct RhRow sRows[] =
     TOGGLE(SEC_GRAPHICS, 1, paletteShinyFromNormal, "Shiny From Normal", "Shiny Pokémon show their original\ncolors.", visPalettes),
 
     // ---------------- Misc ----------------
+    CHOICE(SEC_MISC, 0, uiTheme, sTheme, "UI Theme", "Dark menus and text boxes. Randomizer:\nthese colors. AMOLED: pitch black.", NULL),
     TOGGLE(SEC_MISC, 0, instantText, "Instantaneous Text", "All text appears instantly, whatever\nthe text speed option says.", NULL),
     TOGGLE(SEC_MISC, 0, randomPcPotion, "Randomize PC Potion", "The Potion in your bedroom PC becomes\na random useful item.", NULL),
     TOGGLE(SEC_MISC, 0, nationalDexAtStart, "National Dex at Start", "The National Dex from the start. Oak's\naides count National Dex entries.", NULL),
@@ -1065,7 +1067,7 @@ static u16 ParseNumber(const u8 *s)
 // Presets keep the same packed bits in a spare flash sector (the Trainer Hill sector, unused in FireRed), so
 // they are independent of the save file and survive starting a new game.
 // ---------------------------------------------------------------------------
-#define CODE_VERSION      2     // v0.6: "Running Shoes Indoors" row removed
+#define CODE_VERSION      3     // v0.7: "UI Theme" row added
 #define CODE_MAX_BYTES    96
 #define CODE_MAX_CHARS    (CODE_MAX_BYTES * 8 / 5)
 #define CODE_CHECK_BITS   10

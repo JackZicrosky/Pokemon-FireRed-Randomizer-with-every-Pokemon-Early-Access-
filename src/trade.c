@@ -4899,7 +4899,7 @@ void DrawTextOnTradeWindow(u8 windowId, const u8 *str, u8 speed)
 {
     FillWindowPixelBuffer(windowId, PIXEL_FILL(15));
     sTradeAnim->textColors[0] = TEXT_DYNAMIC_COLOR_6;
-    sTradeAnim->textColors[1] = TEXT_COLOR_WHITE;
+    sTradeAnim->textColors[1] = gSaveBlock3Ptr->rhSettings.uiTheme ? 8 : TEXT_COLOR_WHITE;   // UI Theme: white is color 8 (rh_theme.c)
     sTradeAnim->textColors[2] = TEXT_COLOR_GREEN;
     AddTextPrinterParameterized4(windowId, FONT_NORMAL, 0, 2, 0, 0, sTradeAnim->textColors, speed, str);
     CopyWindowToVram(windowId, COPYWIN_FULL);

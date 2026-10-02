@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "naming_screen.h"
 #include "malloc.h"
 #include "palette.h"
@@ -1964,6 +1965,8 @@ static void LoadPalettes(void)
     LoadPalette(gNamingScreenMenu_Pal, BG_PLTT_ID(0), sizeof(gNamingScreenMenu_Pal));
     LoadPalette(sKeyboard_Pal, BG_PLTT_ID(10), sizeof(sKeyboard_Pal));
     LoadPalette(GetTextWindowPalette(2), BG_PLTT_ID(11), PLTT_SIZE_4BPP);
+    RH_ThemeLoadedRange(BG_PLTT_ID(0), sizeof(gNamingScreenMenu_Pal) / 2, RH_THEME_MODE_SCREEN, 0);   // UI Theme
+    RH_ThemeLoadedRange(BG_PLTT_ID(10), sizeof(sKeyboard_Pal) / 2, RH_THEME_MODE_SCREEN, 0);
 }
 
 static void DrawBgTilemap(u8 bg, const void *src)
