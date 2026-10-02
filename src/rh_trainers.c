@@ -97,11 +97,18 @@ static s32 LeagueMemberOf(s32 trainerId)
 static bool32 IsRivalClass(u32 trainerClass);
 static bool32 CarriesStarter(void);
 
+// Owner's rule: once the rival has taken a Poke Ball in Oak's lab, his starter slot is always that Pokemon,
+// whatever the trainer options ("Rival Carries Starter", "Rival Keeps Same Team", random trainers...).
+static bool32 RivalStarterLocked(void)
+{
+    return VarGet(VAR_RH_RIVAL_STARTER) != SPECIES_NONE || CarriesStarter();
+}
+
 // Is this slot the rival's starter, which keeps being his starter?
 static bool32 IsCarriedStarterSlot(const struct Trainer *t, u32 slot)
 {
     u32 stage;
-    return IsRivalClass(t->trainerClass) && CarriesStarter() && RH_StarterFamily(t->party[slot].species, &stage) >= 0;
+    return IsRivalClass(t->trainerClass) && RivalStarterLocked() && RH_StarterFamily(t->party[slot].species, &stage) >= 0;
 }
 
 // Rank of a party slot by level (0 = highest; ties: the Pokemon further back ranks higher, FVX). The rival's
@@ -793,6 +800,28 @@ u16 RH_RivalStarter(u32 starterSlot)
     return RH_StarterForSlot(starterSlot);
 }
 
+// Evolve "stages" times along the Pokemon's real (unrandomized) evolution line, so the rival's starter stays the
+// line the player saw in the ball (the first listed branch for branched lines).
+static u16 VanillaEvolveTimes(u16 species, u32 stages)
+{
+    while (stages-- > 0)
+    {
+        const struct Evolution *e = gSpeciesInfo[species].evolutions;
+        u32 i;
+        u16 next = SPECIES_NONE;
+        for (i = 0; e != NULL && e[i].method != EVOLUTIONS_END; i++)
+            if (e[i].targetSpecies != SPECIES_NONE && e[i].targetSpecies < NUM_SPECIES && IsSpeciesEnabled(e[i].targetSpecies))
+            {
+                next = e[i].targetSpecies;
+                break;
+            }
+        if (next == SPECIES_NONE)
+            break;
+        species = next;
+    }
+    return species;
+}
+
 static bool32 CarriesStarter(void)
 {
     // With starters randomized the rival always matches them; with trainers randomized only when "Rival Carries
@@ -884,10 +913,17 @@ void RH_ModifyTrainerMon(struct TrainerMon *mon, const struct Trainer *trainer, 
         mon->lvl = min(max(RH_ApplyPercent(mon->lvl, S->trainerLevelMod), 1), MAX_LEVEL);
 
     starterSlot = RH_StarterFamily(mon->species, &stage);
-    if (starterSlot >= 0 && slot < trainer->partySize && IsRivalClass(trainer->trainerClass) && CarriesStarter())
+    if (starterSlot >= 0 && slot < trainer->partySize && IsRivalClass(trainer->trainerClass)
+     && VarGet(VAR_RH_RIVAL_STARTER) != SPECIES_NONE)
     {
-        // The rival uses the starter the player didn't pick, evolved like the original (or further by level).
-        // It is the exact Pokemon he took from Oak's lab (saved there), so it always matches what he grabbed.
+        // Owner's rule: exactly the Pokemon in the ball he took (VAR_RH_RIVAL_STARTER, saved in Oak's lab), whatever
+        // the other options; evolved along its own line to the stage the original starter had in this battle.
+        newSpecies = VanillaEvolveTimes(RH_RivalStarter(starterSlot), stage);
+        changed = TRUE;
+    }
+    else if (starterSlot >= 0 && slot < trainer->partySize && IsRivalClass(trainer->trainerClass) && CarriesStarter())
+    {
+        // Before Oak's lab (or old saves): the starter the player didn't pick, evolved like the original.
         u32 steps = 0;
         newSpecies = RH_RivalStarter(starterSlot);
         if (S->trainersEvolveOn)

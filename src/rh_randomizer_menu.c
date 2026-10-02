@@ -153,7 +153,7 @@ VIS(visEstLevels, s->evolutions != 2 && (s->evoChangeImpossible || s->evoMakeEas
 VIS(visEvoFixes, s->evolutions != 2)
 VIS(visInverse, s->typeChart == 4)
 VIS(visCustomStarters, s->starters == 1)
-VIS(visRandomStarters, s->starters >= 2 || (s->starters == 1 && (!s->customStarters[0] || !s->customStarters[1] || !s->customStarters[2])))
+VIS(visRandomStarters, s->starters >= 2)
 VIS(visStarterItems, s->starterHeldItems)
 VIS(visBstMin, visRandomStarters(s) && s->starterBstMinOn)
 VIS(visBstMax, visRandomStarters(s) && s->starterBstMaxOn)
@@ -266,10 +266,10 @@ static const struct RhRow sRows[] =
 
     // ---------------- Starters, statics & trades ----------------
     HDR(SEC_STARTERS, "Starter Pokémon"),
-    CHOICE(SEC_STARTERS, 1, starters, sStarters, "Starters", "Custom: type 3 names (blank = random).\nBasic: not evolved from anything.", NULL),
-    TEXT(SEC_STARTERS, 2, TF_STARTER1, "Starter 1", "Replaces Bulbasaur. Type the name in\ncaps; blank = random.", visCustomStarters),
-    TEXT(SEC_STARTERS, 2, TF_STARTER2, "Starter 2", "Replaces Charmander. Type the name\nin caps; blank = random.", visCustomStarters),
-    TEXT(SEC_STARTERS, 2, TF_STARTER3, "Starter 3", "Replaces Squirtle. Type the name in\ncaps; blank = random.", visCustomStarters),
+    CHOICE(SEC_STARTERS, 1, starters, sStarters, "Starters", "Custom: type 3 names (blank = default).\nBasic: not evolved from anything.", NULL),
+    TEXT(SEC_STARTERS, 2, TF_STARTER1, "Starter 1", "Replaces Bulbasaur. Type the name in\ncaps; blank = Bulbasaur.", visCustomStarters),
+    TEXT(SEC_STARTERS, 2, TF_STARTER2, "Starter 2", "Replaces Charmander. Type the name\nin caps; blank = Charmander.", visCustomStarters),
+    TEXT(SEC_STARTERS, 2, TF_STARTER3, "Starter 3", "Replaces Squirtle. Type the name in\ncaps; blank = Squirtle.", visCustomStarters),
     TOGGLE(SEC_STARTERS, 2, starterAllowAltFormes, "Allow Alternate Formes", "Regional and other alternate forms can\nbe starters.", visRandomStarters),
     TOGGLE(SEC_STARTERS, 2, starterNoLegends, "Don't Use Legendaries", "Random starters are never legendary.", visRandomStarters),
     TOGGLE(SEC_STARTERS, 1, starterHeldItems, "Random Starter Held Items", "All three starters hold the same\nrandom item (Gen 3 rule).", NULL),
@@ -699,8 +699,9 @@ static void FormatValue(const struct RhRow *r, u8 *dst)
             break;
         case TF_STARTER1: case TF_STARTER2: case TF_STARTER3:
         {
+            static const u16 sDefaultStarters[3] = { SPECIES_BULBASAUR, SPECIES_CHARMANDER, SPECIES_SQUIRTLE };
             u16 sp = S->customStarters[r->fmt - TF_STARTER1];
-            StringCopy(dst, sp ? GetSpeciesName(sp) : CS("(random)"));
+            StringCopy(dst, GetSpeciesName(sp ? sp : sDefaultStarters[r->fmt - TF_STARTER1]));
             break;
         }
         case TF_TYPE:

@@ -3,7 +3,7 @@
 # Versions that already have a release are skipped.
 $ErrorActionPreference = 'Continue'  # gh writes normal messages to stderr; check $LASTEXITCODE instead
 $repo = 'JackZicrosky/Pokemon-FireRed-Randomizer-with-every-Pokemon-Early-Access-'
-$versions = '0.1', '0.2', '0.3', '0.4', '0.5', '0.5.1', '0.5.2', '0.6'
+$versions = '0.1', '0.2', '0.3', '0.4', '0.5', '0.5.1', '0.5.2', '0.6', '0.6.1'
 $latest = $versions[-1]
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..\..')
 $fireRed = Join-Path $root 'Pokemon Romhack Stuff\Fire Red'

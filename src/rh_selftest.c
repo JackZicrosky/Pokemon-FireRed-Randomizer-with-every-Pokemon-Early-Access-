@@ -1676,12 +1676,9 @@ static void TestStartersCustomBlank(void)
     for (i = 0; i < 3; i++)
         st[i] = RH_StarterForSlot(i);
     Check(st[0] == SPECIES_PIKACHU, "custom kept", st[0], 0);
-    for (i = 1; i < 3; i++)
-    {
-        Check(!RH_IsLegendary(st[i]), "legend", st[i], 0);
-        for (j = 0; j < i; j++)
-            Check(!SharesType(st[i], st[j]), "unique", st[i], st[j]);
-    }
+    Check(st[1] == SPECIES_CHARMANDER, "blank = default", st[1], 0);   // owner: blank keeps the game's starter
+    Check(st[2] == SPECIES_SQUIRTLE, "blank = default", st[2], 0);
+    (void)j;
     End();
 }
 
@@ -1982,17 +1979,21 @@ static void TestShopRulesV06(void)
 // (and so the starters) changed mid-run.
 static void TestRivalStarterFromLab(void)
 {
-    u32 slot, id, pass;
+    u32 slot, id, pass, variant;
     static const u16 sBase[3] = { SPECIES_BULBASAUR, SPECIES_CHARMANDER, SPECIES_SQUIRTLE };
-    Reset();
-    S->trainers = 1;
-    S->starters = 2;
-    S->rivalCarriesTeam = TRUE;
-    S->trainersEvolveOn = TRUE;
-    RH_InvalidateSettingsHash();
     Begin("rival starter = lab");
+    // Owner's rule: whatever the trainer options (carries starter on/off, keeps same team, random teams).
+    for (variant = 0; variant < 3; variant++)
     for (slot = 0; slot < 3; slot++)
     {
+        Reset();
+        S->trainers = 1;
+        S->starters = 2;
+        S->rivalCarriesTeam = (variant == 0);
+        S->rivalSameTeam = (variant == 2);
+        S->trainersEvolveOn = TRUE;
+        RH_InvalidateSettingsHash();
+        {
         u16 lab = RH_StarterSpecies(sBase[slot]);            // what the lab ball holds (RH_RemapStarterVars)
         VarSet(VAR_RH_RIVAL_STARTER, lab);
         for (pass = 0; pass < 2; pass++)
@@ -2023,11 +2024,10 @@ static void TestRivalStarterFromLab(void)
                     if (sp != SPECIES_NONE && RH_FamilyRoot(sp) == RH_FamilyRoot(lab))
                         found = TRUE;
                 }
-                Check(found, "rival starter", id, lab);
+                Check(found, "rival starter", id * 4 + variant, lab);
             }
         }
-        S->seed ^= 0x5A5A5;
-        RH_InvalidateSettingsHash();
+        }
     }
     VarSet(VAR_RH_RIVAL_STARTER, SPECIES_NONE);
     End();

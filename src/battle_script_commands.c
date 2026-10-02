@@ -8177,7 +8177,9 @@ static void SetBallThrowShakes(void)
 
 #if IS_FRLG
     // Romhack: the Mewtwo blocking Pewter City. Any ball catches it 1 time in 8192; a Master Ball half the time.
-    if (FlagGet(FLAG_RH_PEWTER_MEWTWO_BATTLE))
+    // (the species/level check: a lost battle whites out before the script can clear the flag)
+    if (FlagGet(FLAG_RH_PEWTER_MEWTWO_BATTLE) && gBattleMons[gBattlerTarget].species == SPECIES_MEWTWO
+     && gBattleMons[gBattlerTarget].level == MAX_LEVEL)
     {
         u32 shakeCount;
         if (gLastUsedItem == ITEM_MASTER_BALL ? (Random() % 2) == 0 : (Random() % 8192) == 0)

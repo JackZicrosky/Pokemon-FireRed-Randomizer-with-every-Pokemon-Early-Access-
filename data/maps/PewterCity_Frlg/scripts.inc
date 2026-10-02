@@ -5,6 +5,7 @@ PewterCity_Frlg_MapScripts::
 PewterCity_OnTransition::
 	setworldmapflag FLAG_WORLD_MAP_PEWTER_CITY
 	special RH_SetPewterMewtwoGfx
+	clearflag FLAG_RH_PEWTER_MEWTWO_BATTLE
 	setvar VAR_MAP_SCENE_PEWTER_CITY_MUSEUM_1F, 0
 	end
 

@@ -12,7 +12,7 @@
 #define NUM_METATILES_TOTAL 1024
 #define NUM_TILES_TOTAL 1024
 #define NUM_PALS_TOTAL 13
-#define MAX_MAP_DATA_SIZE 10240
+#define MAX_MAP_DATA_SIZE (IS_FRLG ? 9408 : 10240)  // romhack: FRLG's largest map needs 9400
 
 #define NUM_TILES_PER_METATILE 8
 

@@ -1,5 +1,6 @@
 // Randomizer core: settings, seeded hashing, the species pool and species picking.
 #include "global.h"
+#include "malloc.h"
 #include "main.h"
 #include "item.h"
 #include "mail.h"
@@ -555,30 +556,62 @@ bool32 RH_FilterAccepts(const struct RhFilter *f, u32 poolIndex)
     return poolIndex < RH_POOL_COUNT && FilterOk(&sRhPool[poolIndex], f);
 }
 
-// One pass collects the accepted Pokemon (the filter is the expensive part); nested picks (a filter callback that
-// picks itself) fall back to counting twice.
-static EWRAM_DATA u16 sPickBuffer[RH_POOL_COUNT] = {0};
+// One pass collects the accepted Pokemon (the filter is the expensive part) into a scratch buffer borrowed from the
+// heap for the pick (EWRAM is nearly full); nested picks (a filter callback that picks itself), or a full heap,
+// count twice instead - with exactly the same result.
 static EWRAM_DATA u8 sPickDepth = 0;
 
 // Ranked picking (see RH_PickSpeciesNearBstRanked): the pick is the rank-th accepted Pokemon in a keyed order.
 static EWRAM_DATA bool8 sRankedPick = FALSE;
 static EWRAM_DATA u32 sRankedSalt = 0;
 
+// Pool indexes of the accepted Pokemon into buf (NULL: only count them).
+static u32 CollectAccepted(const struct RhFilter *f, u16 *buf)
+{
+    u32 i, count = 0;
+    for (i = 0; i < RH_POOL_COUNT; i++)
+        if (FilterOk(&sRhPool[i], f))
+        {
+            if (buf != NULL)
+                buf[count] = i;
+            count++;
+        }
+    return count;
+}
+
+// The k-th accepted Pokemon (from buf when there is one).
+static u16 AcceptedAt(const struct RhFilter *f, const u16 *buf, u32 k)
+{
+    u32 i;
+    if (buf != NULL)
+        return sRhPool[buf[k]].species;
+    for (i = 0; i < RH_POOL_COUNT; i++)
+        if (FilterOk(&sRhPool[i], f) && k-- == 0)
+            return sRhPool[i].species;
+    return SPECIES_NONE;
+}
+
+// Collect, then take entry "which(count)": the shared body of the non-nested picks.
+#define PICK_BUFFERED(f, kExpr)                                                     \
+    ({                                                                              \
+        u16 _res = SPECIES_NONE, *_buf;                                             \
+        u32 count;                                                                  \
+        sPickDepth++;                                                               \
+        _buf = AllocUnchecked(RH_POOL_COUNT * sizeof(u16));                         \
+        count = CollectAccepted(f, _buf);                                           \
+        if (count != 0)                                                             \
+            _res = AcceptedAt(f, _buf, (kExpr));                                    \
+        if (_buf != NULL)                                                           \
+            Free(_buf);                                                             \
+        sPickDepth--;                                                               \
+        _res;                                                                       \
+    })
+
 static u16 PickWithFilter(const struct RhFilter *f, u32 hash)
 {
     u32 i, count = 0, target;
     if (sRankedPick && sPickDepth == 0)
-    {
-        u16 result = SPECIES_NONE;
-        sPickDepth++;
-        for (i = 0; i < RH_POOL_COUNT; i++)
-            if (FilterOk(&sRhPool[i], f))
-                sPickBuffer[count++] = i;
-        if (count != 0)
-            result = sRhPool[sPickBuffer[RH_Permute(sRankedSalt, hash % count, count)]].species;
-        sPickDepth--;
-        return result;
-    }
+        return PICK_BUFFERED(f, RH_Permute(sRankedSalt, hash % count, count));
     // Random candidates first: uniform among the accepted ones, and far cheaper than scanning the whole pool
     // (each filter check costs ~20 us on the GBA). Only strict filters get to the full scan.
     for (i = 0; i < 48; i++)
@@ -588,62 +621,29 @@ static u16 PickWithFilter(const struct RhFilter *f, u32 hash)
             return sRhPool[k].species;
     }
     if (sPickDepth == 0)
-    {
-        u16 result = SPECIES_NONE;
-        sPickDepth++;
-        for (i = 0; i < RH_POOL_COUNT; i++)
-            if (FilterOk(&sRhPool[i], f))
-                sPickBuffer[count++] = i;
-        if (count != 0)
-            result = sRhPool[sPickBuffer[hash % count]].species;
-        sPickDepth--;
-        return result;
-    }
+        return PICK_BUFFERED(f, hash % count);
     for (i = 0; i < RH_POOL_COUNT; i++)
         if (FilterOk(&sRhPool[i], f))
             count++;
     if (count == 0)
         return SPECIES_NONE;
     target = hash % count;
-    for (i = 0; i < RH_POOL_COUNT; i++)
-    {
-        if (FilterOk(&sRhPool[i], f))
-        {
-            if (target == 0)
-                return sRhPool[i].species;
-            target--;
-        }
-    }
-    return SPECIES_NONE;
+    return AcceptedAt(f, NULL, target);
 }
 
 // The rank-th allowed Pokemon in a keyed order (a bijection on the accepted ones): different ranks give different
 // Pokemon until every accepted one has been used. Used by "even distribution" and Catch Em' All.
 static u16 PickRanked(const struct RhFilter *f, u32 rank, u32 salt)
 {
-    u32 i, count = 0;
-    u16 result = SPECIES_NONE;
+    u32 count;
     if (sPickDepth != 0)
     {
-        u32 k;
-        for (i = 0; i < RH_POOL_COUNT; i++)
-            count += FilterOk(&sRhPool[i], f);
+        count = CollectAccepted(f, NULL);
         if (count == 0)
             return SPECIES_NONE;
-        k = RH_Permute(salt, rank % count, count);
-        for (i = 0; i < RH_POOL_COUNT; i++)
-            if (FilterOk(&sRhPool[i], f) && k-- == 0)
-                return sRhPool[i].species;
-        return SPECIES_NONE;
+        return AcceptedAt(f, NULL, RH_Permute(salt, rank % count, count));
     }
-    sPickDepth++;
-    for (i = 0; i < RH_POOL_COUNT; i++)
-        if (FilterOk(&sRhPool[i], f))
-            sPickBuffer[count++] = i;
-    if (count != 0)
-        result = sRhPool[sPickBuffer[RH_Permute(salt, rank % count, count)]].species;
-    sPickDepth--;
-    return result;
+    return PICK_BUFFERED(f, RH_Permute(salt, rank % count, count));
 }
 
 u16 RH_PickWithFilter(const struct RhFilter *f, u32 hash)

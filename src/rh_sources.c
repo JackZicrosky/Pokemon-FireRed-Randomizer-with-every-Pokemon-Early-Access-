@@ -182,14 +182,15 @@ static void BuildStarters(void)
     }
     memcpy(sStarterSlotTypes, slotTypes, 3);
 
+    // Custom: typed names; a blank slot keeps the game's own starter for that ball (owner's rule).
     for (i = 0; i < 3; i++)
-        if (S->starters == 1 && S->customStarters[i] != SPECIES_NONE)
-            sStarters.species[i] = sStarterChosen[i] = S->customStarters[i];
+        if (S->starters == 1)
+            sStarters.species[i] = sStarterChosen[i] = S->customStarters[i] != SPECIES_NONE ? S->customStarters[i] : sVanillaStarters[i];
     for (i = 0; i < 3; i++)
     {
         struct RhFilter f = base;
         u32 j;
-        if (S->starters == 1 && S->customStarters[i] != SPECIES_NONE)
+        if (S->starters == 1)
             continue;
         for (j = 0; j < 3; j++)
             if (j != i && sStarterChosen[j] != SPECIES_NONE)

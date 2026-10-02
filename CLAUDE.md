@@ -25,7 +25,7 @@
 - **Test everything** you change: the in-ROM self-test on 3 pools, plus emulator screenshots of the real
   flows (see §5). The owner once asked to "test every single setting to make sure they work", and that
   standard still applies.
-- **Latest released version: v0.6** (tag `v0.6`). Next: v0.7 = dark UI themes (owner will say when).
+- **Latest released version: v0.6.1** (tag `v0.6.1`). Next: v0.7 = dark UI themes (owner will say when).
 
 ---
 
@@ -189,6 +189,14 @@ Romhack flags (FRLG `flags_frlg.h`, formerly unused): `FLAG_RH_HIDE_ROUTE3_BARRI
 Bag layout (v0.6): Items pocket = `gSaveBlock3Ptr->bagItems[340]`; Poke Balls / Berries / PC items =
 `gPokemonStoragePtr->bagPokeBalls/bagBerries/pcItems[260]`; Key Items + TMs stay in SaveBlock1. A full pocket
 overflows into the PC (item.c). Save space is now nearly full everywhere (SB3 28 bytes, storage 16 bytes free).
+
+Owner's rules from v0.6.1:
+- The rival's starter slot is ALWAYS the Pokemon in the ball he took (VAR_RH_RIVAL_STARTER, saved when the player
+  confirms their choice), overriding Rival Carries Starter / Keeps Same Team / random trainers; later battles
+  evolve it along its vanilla line to the original starter's stage (rh_trainers.c VanillaEvolveTimes).
+- Custom starters: a blank slot = the game's own starter (Bulbasaur / Charmander / Squirtle), not random.
+- EWRAM: keep it down. Big romhack caches: sEvoCache, sNoConv, sMoveCache, sBst (rh_*.c); scratch buffers should
+  borrow from the heap (see PICK_BUFFERED in rh_core.c).
 
 Romhack items (in `include/constants/items.h`, after the Mega Stones):
 - `ITEM_INFINITE_CANDY` 874
@@ -489,6 +497,7 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 | v0.5 | Randomizer Settings key item, Reset The Run, dark centred "RANDOMIZE GAME" title menu |
 | v0.5.1 | Item description; rainbow Infinite Candy; randomizer-palette HM Kit icon |
 | v0.5.2 | Healing Kit icon from the owner's drawing (white case, red cross) |
+| v0.6.1 | Rival's starter slot is always the Pokemon from the lab ball (any trainer options; evolves along its vanilla line); blank Custom starters = default starters; Route 3 barricade moved to x=8 (no pop-in); Mewtwo catch rule only for the lv100 Mewtwo; EWRAM 99.04% -> 97.40% (map buffer sized for FRLG, pick buffer on the heap) |
 | v0.6 | Owner's 16-item list minus the UI themes: bag never full, Mom gives Running Shoes, Pewter Mewtwo, Celadon Poke Ball seller, shop rules (price curve, no sell-only items, Nuzlocke no Rare Candy, Master Ball in pools), rival starter from lab, Vivillon one Pokemon, Amulet Coin + Luck Incense stack, Reset The Run back to options + intro fix, Vermilion NPC moved, Lucoa pack |
 
 ---

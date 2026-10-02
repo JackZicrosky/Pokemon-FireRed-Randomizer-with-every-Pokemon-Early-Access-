@@ -1130,6 +1130,7 @@ PalletTown_ProfessorOaksLab_EventScript_ChoseStarter::
 	call EventScript_RestorePrevTextColor
 	setflag FLAG_SYS_POKEMON_GET
 	setflag FLAG_PALLET_LADY_NOT_BLOCKING_SIGN
+	copyvar VAR_RH_RIVAL_STARTER, RIVAL_STARTER_SPECIES
 	givemon PLAYER_STARTER_SPECIES, 5
 	copyvar VAR_STARTER_MON, PLAYER_STARTER_NUM
 	bufferspeciesname STR_VAR_1, PLAYER_STARTER_SPECIES
@@ -1178,8 +1179,8 @@ PalletTown_ProfessorOaksLab_EventScript_RivalTakesStarter::
 	msgbox PalletTown_ProfessorOaksLab_Text_RivalIllTakeThisOneThen
 	removeobject RIVAL_STARTER_ID
 	textcolor NPC_TEXT_COLOR_NEUTRAL
+	copyvar RIVAL_STARTER_SPECIES, VAR_RH_RIVAL_STARTER
 	bufferspeciesname STR_VAR_1, RIVAL_STARTER_SPECIES
-	copyvar VAR_RH_RIVAL_STARTER, RIVAL_STARTER_SPECIES
 	message PalletTown_ProfessorOaksLab_Text_RivalReceivedMonFromOak
 	waitmessage
 	playfanfare MUS_RG_OBTAIN_KEY_ITEM
