@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "battle.h"
 #include "battle_anim.h"
 #include "battle_bg.h"
@@ -972,6 +973,17 @@ void LoadBattleMenuWindowGfx(void)
 {
     LoadUserWindowBorderGfx(2, 0x12, BG_PLTT_ID(1));
     LoadUserWindowBorderGfx(2, 0x22, BG_PLTT_ID(1));
+    if (gSaveBlock3Ptr->rhSettings.uiTheme)
+    {
+        // UI Theme: in battle this frame palette also draws the menus' insides, so it goes all dark (not the
+        // shaded frame look of the field menus)
+        CpuCopy16(GetWindowFrameTilesPal(gSaveBlock2Ptr->optionsWindowFrameType)->pal, &gPlttBufferUnfaded[BG_PLTT_ID(1)], PLTT_SIZE_4BPP);
+        RH_ThemeLoadedRange(BG_PLTT_ID(1), 16, RH_THEME_MODE_DARK, 0);
+        // the action / move menus' cursor arrow is drawn with this palette when themed (battle_controller_player.c):
+        // its color 9 (not used by the frame) is light on the dark menu
+        gPlttBufferUnfaded[BG_PLTT_ID(1) + 9] = RGB(28, 28, 29);
+        gPlttBufferFaded[BG_PLTT_ID(1) + 9] = RGB(28, 28, 29);
+    }
     LoadPalette(gBattleWindowTextPalette, BG_PLTT_ID(5), PLTT_SIZE_4BPP);
 
     if ((gBattleTypeFlags & (BATTLE_TYPE_ARENA | BATTLE_TYPE_POKEDUDE))

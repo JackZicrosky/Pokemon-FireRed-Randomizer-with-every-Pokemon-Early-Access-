@@ -2173,7 +2173,8 @@ static void TestUiTheme(void)
             Check(ColorLum(RH_ThemeColor(RGB_WHITE, theme)) <= 5, "white bg dark", theme, RH_ThemeColor(RGB_WHITE, theme));
             Check(ColorLum(RH_ThemeColor(RGB(12, 12, 12), theme)) >= 24, "text light", theme, RH_ThemeColor(RGB(12, 12, 12), theme));
             Check(ColorLum(RH_ThemeColor(RGB(26, 26, 25), theme)) <= 10, "shadow dark", theme, RH_ThemeColor(RGB(26, 26, 25), theme));
-            Check(ColorLum(RH_ThemeColor(RGB(28, 1, 1), theme)) >= 12, "red text readable", theme, RH_ThemeColor(RGB(28, 1, 1), theme));
+            Check(RH_ThemeColor(RGB(28, 1, 1), theme) == RGB(28, 1, 1), "colored text kept", theme, RH_ThemeColor(RGB(28, 1, 1), theme));
+            Check(ColorLum(RH_ThemeColor(RGB(16, 16, 16), theme)) >= 24, "grey text light", theme, RH_ThemeColor(RGB(16, 16, 16), theme));
         }
         if (theme == RH_THEME_AMOLED)
             Check(RH_ThemeColor(RGB_WHITE, theme) == RGB_BLACK, "amoled black", theme, RH_ThemeColor(RGB_WHITE, theme));

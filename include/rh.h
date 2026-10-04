@@ -101,7 +101,8 @@ enum { RH_THEME_DEFAULT, RH_THEME_RANDOMIZER, RH_THEME_AMOLED, RH_THEME_COUNT };
 u16 RH_ThemeColor(u16 color, u32 theme);
 void RH_ThemePalette(u16 *pal, u32 count, u32 theme);
 void RH_ThemeLoadedPalette(const void *src, u32 offset, u32 size);
-enum { RH_THEME_MODE_TEXT, RH_THEME_MODE_SCREEN };
+enum { RH_THEME_MODE_TEXT, RH_THEME_MODE_SCREEN, RH_THEME_MODE_FRAME, RH_THEME_MODE_DARK };
 void RH_ThemeLoadedRange(u32 offset, u32 count, u32 mode, u16 keep);
+void RH_ThemeAccentRange(u32 offset, u16 mask);   // Randomizer theme: these colors become the brand purple
 
 #endif

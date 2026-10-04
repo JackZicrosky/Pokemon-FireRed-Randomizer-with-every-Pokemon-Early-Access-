@@ -531,6 +531,30 @@ static void Task_TrainerCard(u8 taskId)
    }
 }
 
+// UI Theme (Hoenn card): the BADGES label and the numbers in the badge boxes use color 1, like the card's stripes and the
+// boxes' outlines. They move to color 6 (unused by the card) which the theme makes white.
+static void ThemeCardBadgeText(u8 *tiles)
+{
+    static const u8 sLabelTiles[] = { 6, 7, 8, 9, 10, 11 };                  // "BADGES"
+    static const u8 sNumberTiles[] = { 22, 23, 24, 25, 38, 39, 40, 41 };    // box corners with 1-8 (outline: x 7, y 7)
+    u32 i, x, y;
+    for (i = 0; i < ARRAY_COUNT(sLabelTiles) + ARRAY_COUNT(sNumberTiles); i++)
+    {
+        bool32 isNumber = (i >= ARRAY_COUNT(sLabelTiles));
+        u8 *tile = tiles + (isNumber ? sNumberTiles[i - ARRAY_COUNT(sLabelTiles)] : sLabelTiles[i]) * TILE_SIZE_4BPP;
+        for (y = 0; y < 8; y++)
+        {
+            for (x = 0; x < 8; x++)
+            {
+                u8 *byte = &tile[y * 4 + x / 2];
+                u32 shift = (x & 1) * 4;
+                if (((*byte >> shift) & 15) == 1 && (!isNumber || (x < 7 && y < 7)))
+                    *byte = (*byte & ~(15 << shift)) | (6 << shift);
+            }
+        }
+    }
+}
+
 static bool8 LoadCardGfx(void)
 {
     switch (sData->gfxLoadState)
@@ -1451,6 +1475,8 @@ static u8 SetCardBgsAndPals(void)
         LoadBgTiles(3, sData->badgeTiles, ARRAY_COUNT(sData->badgeTiles), 0);
         break;
     case 1:
+        if (gSaveBlock3Ptr->rhSettings.uiTheme && sData->cardType != CARD_TYPE_FRLG)
+            ThemeCardBadgeText(sData->cardTiles);
         LoadBgTiles(0, sData->cardTiles, 0x1800, 0);
         break;
     case 2:
@@ -1469,7 +1495,14 @@ static u8 SetCardBgsAndPals(void)
                 LoadPalette(sKantoTrainerCardFemaleBg_Pal, BG_PLTT_ID(1), PLTT_SIZE_4BPP);
         }
         LoadPalette(sTrainerCardStar_Pal, BG_PLTT_ID(4), PLTT_SIZE_4BPP);
-        RH_ThemeLoadedRange(BG_PLTT_ID(0), 3 * 16, RH_THEME_MODE_SCREEN, (1 << 5) | (1 << 8));   // the card (not its title)
+        // the card (not the Kanto card's title)
+        RH_ThemeLoadedRange(BG_PLTT_ID(0), 3 * 16, RH_THEME_MODE_SCREEN, sData->cardType == CARD_TYPE_FRLG ? (1 << 5) | (1 << 8) : 0);
+        if (gSaveBlock3Ptr->rhSettings.uiTheme && sData->cardType != CARD_TYPE_FRLG)
+        {
+            // the Hoenn card's BADGES label and badge numbers (color 6, see ThemeCardBadgeText): white
+            gPlttBufferUnfaded[BG_PLTT_ID(0) + 6] = RGB_WHITE;
+            gPlttBufferFaded[BG_PLTT_ID(0) + 6] = RGB_WHITE;
+        }
         break;
     case 3:
         SetBgTilemapBuffer(0, sData->cardTilemapBuffer);

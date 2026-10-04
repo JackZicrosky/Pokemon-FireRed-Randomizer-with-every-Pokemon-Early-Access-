@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "battle.h"
 #include "battle_anim.h"
 #include "battle_arena.h"
@@ -1805,6 +1806,12 @@ void MoveSelectionCreateCursorAt(u8 cursorPosition, u8 baseTileNum)
     u16 src[2];
     src[0] = baseTileNum + 1;
     src[1] = baseTileNum + 2;
+    if (gSaveBlock3Ptr->rhSettings.uiTheme)
+    {
+        // UI Theme: the arrow's color (9) in palette 0 also draws the textbox surroundings; palette 1 has a light one
+        src[0] |= 0x1000;
+        src[1] |= 0x1000;
+    }
 
     CopyToBgTilemapBufferRect_ChangePalette(0, src, 9 * (cursorPosition & 1) + 1, 55 + (cursorPosition & 2), 1, 2, 0x11);
     CopyBgTilemapBufferToVram(0);
@@ -1825,6 +1832,12 @@ void ActionSelectionCreateCursorAt(u8 cursorPosition, u8 baseTileNum)
     u16 src[2];
     src[0] = 1;
     src[1] = 2;
+    if (gSaveBlock3Ptr->rhSettings.uiTheme)
+    {
+        // UI Theme: see MoveSelectionCreateCursorAt
+        src[0] |= 0x1000;
+        src[1] |= 0x1000;
+    }
 
     CopyToBgTilemapBufferRect_ChangePalette(0, src, 7 * (cursorPosition & 1) + 16, 35 + (cursorPosition & 2), 1, 2, 0x11);
     CopyBgTilemapBufferToVram(0);

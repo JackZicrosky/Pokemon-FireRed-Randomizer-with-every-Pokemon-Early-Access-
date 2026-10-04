@@ -236,6 +236,7 @@ void CB2_InitOptionMenu(void)
     case 5:
         LoadPalette(sOptionMenuText_Pal, BG_PLTT_ID(1), sizeof(sOptionMenuText_Pal));
         RH_ThemeLoadedRange(BG_PLTT_ID(1), ARRAY_COUNT(sOptionMenuText_Pal), RH_THEME_MODE_TEXT, 0);
+        RH_ThemeAccentRange(BG_PLTT_ID(1), 1 << 5);   // the selected choice (red): purple in the Randomizer theme
         gMain.state++;
         break;
     case 6:
