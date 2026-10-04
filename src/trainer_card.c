@@ -531,27 +531,46 @@ static void Task_TrainerCard(u8 taskId)
    }
 }
 
-// UI Theme (Hoenn card): the BADGES label and the numbers in the badge boxes use color 1, like the card's stripes and the
-// boxes' outlines. They move to color 6 (unused by the card) which the theme makes white.
-static void ThemeCardBadgeText(u8 *tiles)
+// UI Theme: the BADGES label and the numbers in the badge boxes share their color with other parts of the card
+// (Hoenn card: color 1, also the stripes and box outlines; Kanto card: letters 14 = the card's white, numbers 3 = the
+// box outlines). Their pixels move to a color the card doesn't use, which the theme makes white (CARD_TEXT_COLOR).
+#define CARD_TEXT_COLOR(kanto) ((kanto) ? 11 : 6)
+
+static void ThemeCardTiles(u8 *tiles, const u8 *list, u32 count, u32 from, u32 to, bool32 numbers)
 {
-    static const u8 sLabelTiles[] = { 6, 7, 8, 9, 10, 11 };                  // "BADGES"
-    static const u8 sNumberTiles[] = { 22, 23, 24, 25, 38, 39, 40, 41 };    // box corners with 1-8 (outline: x 7, y 7)
     u32 i, x, y;
-    for (i = 0; i < ARRAY_COUNT(sLabelTiles) + ARRAY_COUNT(sNumberTiles); i++)
+    for (i = 0; i < count; i++)
     {
-        bool32 isNumber = (i >= ARRAY_COUNT(sLabelTiles));
-        u8 *tile = tiles + (isNumber ? sNumberTiles[i - ARRAY_COUNT(sLabelTiles)] : sLabelTiles[i]) * TILE_SIZE_4BPP;
+        u8 *tile = tiles + list[i] * TILE_SIZE_4BPP;
         for (y = 0; y < 8; y++)
         {
             for (x = 0; x < 8; x++)
             {
                 u8 *byte = &tile[y * 4 + x / 2];
                 u32 shift = (x & 1) * 4;
-                if (((*byte >> shift) & 15) == 1 && (!isNumber || (x < 7 && y < 7)))
-                    *byte = (*byte & ~(15 << shift)) | (6 << shift);
+                // (a number tile is a box corner: its outline is the right column and the bottom row)
+                if (((*byte >> shift) & 15) == from && (!numbers || (x < 7 && y < 7)))
+                    *byte = (*byte & ~(15 << shift)) | (to << shift);
             }
         }
+    }
+}
+
+static void ThemeCardBadgeText(u8 *tiles, bool32 kanto)
+{
+    static const u8 sHoennLabel[] = { 6, 7, 8, 9, 10, 11 };
+    static const u8 sHoennNumbers[] = { 22, 23, 24, 25, 38, 39, 40, 41 };
+    static const u8 sKantoLabel[] = { 92, 93, 94, 95, 108, 109, 110, 111 };
+    static const u8 sKantoNumbers[] = { 10, 26, 11, 27, 43, 12, 28, 44 };
+    if (kanto)
+    {
+        ThemeCardTiles(tiles, sKantoLabel, ARRAY_COUNT(sKantoLabel), 14, CARD_TEXT_COLOR(TRUE), FALSE);
+        ThemeCardTiles(tiles, sKantoNumbers, ARRAY_COUNT(sKantoNumbers), 3, CARD_TEXT_COLOR(TRUE), TRUE);
+    }
+    else
+    {
+        ThemeCardTiles(tiles, sHoennLabel, ARRAY_COUNT(sHoennLabel), 1, CARD_TEXT_COLOR(FALSE), FALSE);
+        ThemeCardTiles(tiles, sHoennNumbers, ARRAY_COUNT(sHoennNumbers), 1, CARD_TEXT_COLOR(FALSE), TRUE);
     }
 }
 
@@ -1475,8 +1494,8 @@ static u8 SetCardBgsAndPals(void)
         LoadBgTiles(3, sData->badgeTiles, ARRAY_COUNT(sData->badgeTiles), 0);
         break;
     case 1:
-        if (gSaveBlock3Ptr->rhSettings.uiTheme && sData->cardType != CARD_TYPE_FRLG)
-            ThemeCardBadgeText(sData->cardTiles);
+        if (gSaveBlock3Ptr->rhSettings.uiTheme)
+            ThemeCardBadgeText(sData->cardTiles, sData->cardType == CARD_TYPE_FRLG);
         LoadBgTiles(0, sData->cardTiles, 0x1800, 0);
         break;
     case 2:
@@ -1497,11 +1516,12 @@ static u8 SetCardBgsAndPals(void)
         LoadPalette(sTrainerCardStar_Pal, BG_PLTT_ID(4), PLTT_SIZE_4BPP);
         // the card (not the Kanto card's title)
         RH_ThemeLoadedRange(BG_PLTT_ID(0), 3 * 16, RH_THEME_MODE_SCREEN, sData->cardType == CARD_TYPE_FRLG ? (1 << 5) | (1 << 8) : 0);
-        if (gSaveBlock3Ptr->rhSettings.uiTheme && sData->cardType != CARD_TYPE_FRLG)
+        if (gSaveBlock3Ptr->rhSettings.uiTheme)
         {
-            // the Hoenn card's BADGES label and badge numbers (color 6, see ThemeCardBadgeText): white
-            gPlttBufferUnfaded[BG_PLTT_ID(0) + 6] = RGB_WHITE;
-            gPlttBufferFaded[BG_PLTT_ID(0) + 6] = RGB_WHITE;
+            // the BADGES label and badge numbers (see ThemeCardBadgeText): white
+            u32 color = CARD_TEXT_COLOR(sData->cardType == CARD_TYPE_FRLG);
+            gPlttBufferUnfaded[BG_PLTT_ID(0) + color] = RGB_WHITE;
+            gPlttBufferFaded[BG_PLTT_ID(0) + color] = RGB_WHITE;
         }
         break;
     case 3:
