@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "main.h"
 #include "battle.h"
 #include "battle_anim.h"
@@ -1162,7 +1163,7 @@ static const struct SpriteTemplate sSpriteTemplate_StatusCondition =
     .oam = &sOamData_StatusCondition,
     .anims = sSpriteAnimTable_StatusCondition,
 };
-static const u16 sMarkings_Pal[] = INCGFX_U16("graphics/summary_screen/markings.pal", ".gbapal");
+const u16 sMarkings_Pal[] = INCGFX_U16("graphics/summary_screen/markings.pal", ".gbapal");
 
 // code
 static u8 ShowCategoryIcon(enum DamageCategory category)
@@ -1442,6 +1443,7 @@ static bool8 DecompressGraphics(void)
     case 1:
         if (FreeTempTileDataBuffersIfPossible() != 1)
         {
+            RH_ThemeSummaryTiles();   // UI Theme: the page dots
             DecompressDataWithHeaderWram(gSummaryPage_Info_Tilemap, sMonSummaryScreen->bgTilemapBuffers[PSS_PAGE_INFO][0]);
             sMonSummaryScreen->switchCounter++;
         }

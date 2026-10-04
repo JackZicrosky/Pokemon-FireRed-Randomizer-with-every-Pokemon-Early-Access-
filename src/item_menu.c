@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "pokemon_storage_system.h"
 #include "item_menu.h"
 #include "battle.h"
@@ -858,6 +859,7 @@ static bool8 LoadBagMenu_Graphics(void)
     case 1:
         if (FreeTempTileDataBuffersIfPossible() != TRUE)
         {
+            RH_ThemeBagTiles();   // UI Theme: the pocket ball
             DecompressDataWithHeaderWram(gBagScreen_GfxTileMap, gBagMenu->tilemapBuffer);
             gBagMenu->graphicsLoadState++;
         }

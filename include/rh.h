@@ -104,5 +104,9 @@ void RH_ThemeLoadedPalette(const void *src, u32 offset, u32 size);
 enum { RH_THEME_MODE_TEXT, RH_THEME_MODE_SCREEN, RH_THEME_MODE_FRAME, RH_THEME_MODE_DARK };
 void RH_ThemeLoadedRange(u32 offset, u32 count, u32 mode, u16 keep);
 void RH_ThemeAccentRange(u32 offset, u16 mask);   // Randomizer theme: these colors become the brand purple
+void RH_ThemeOverrides(const u16 *src, u32 offset, u32 count);   // after RH_ThemeLoadedRange: the owner's exact colors
+void RH_ThemeSummaryTiles(void);
+void RH_ThemeBagTiles(void);
+void RH_ThemePokedexTiles(u32 interfaceTileStart, const u32 *menuGfx);
 
 #endif

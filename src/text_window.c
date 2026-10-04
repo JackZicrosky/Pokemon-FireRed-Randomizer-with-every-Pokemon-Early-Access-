@@ -51,7 +51,7 @@ static const u16 sTextWindowFrame18_Pal[] = INCGFX_U16("graphics/text_window/18.
 static const u16 sTextWindowFrame19_Pal[] = INCGFX_U16("graphics/text_window/19.png", ".gbapal");
 static const u16 sTextWindowFrame20_Pal[] = INCGFX_U16("graphics/text_window/20.png", ".gbapal");
 
-static const u16 sTextWindowPalettes[][16] =
+const u16 sTextWindowPalettes[][16] =
 {
     INCGFX_U16("graphics/text_window/message_box.png", ".gbapal"),
     INCGFX_U16("graphics/text_window/text_pal1.pal", ".gbapal"),

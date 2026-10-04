@@ -189,7 +189,7 @@ EWRAM_DATA static struct NamingScreenData *sNamingScreen = NULL;
 static EWRAM_DATA struct NamingScreenTemplate sRhTextTemplate = {0};
 static const u8 sPCIconOff_Gfx[] = INCGFX_U8("graphics/naming_screen/pc_icon_off.png", ".4bpp");
 static const u8 sPCIconOn_Gfx[] = INCGFX_U8("graphics/naming_screen/pc_icon_on.png", ".4bpp");
-static const u16 sKeyboard_Pal[] = INCGFX_U16("graphics/naming_screen/keyboard.pal", ".gbapal");
+const u16 sKeyboard_Pal[] = INCGFX_U16("graphics/naming_screen/keyboard.pal", ".gbapal");
 static const u16 sRival_Gfx[] = INCGFX_U16("graphics/naming_screen/rival.png", ".4bpp");
 static const u16 sRival_Pal[] = INCGFX_U16("graphics/naming_screen/rival.pal", ".gbapal");
 
@@ -1967,6 +1967,8 @@ static void LoadPalettes(void)
     LoadPalette(GetTextWindowPalette(2), BG_PLTT_ID(11), PLTT_SIZE_4BPP);
     RH_ThemeLoadedRange(BG_PLTT_ID(0), sizeof(gNamingScreenMenu_Pal) / 2, RH_THEME_MODE_SCREEN, 0);   // UI Theme
     RH_ThemeLoadedRange(BG_PLTT_ID(10), sizeof(sKeyboard_Pal) / 2, RH_THEME_MODE_SCREEN, 0);
+    RH_ThemeOverrides(gNamingScreenMenu_Pal[0], BG_PLTT_ID(0), sizeof(gNamingScreenMenu_Pal) / 2);
+    RH_ThemeOverrides(sKeyboard_Pal, BG_PLTT_ID(10), sizeof(sKeyboard_Pal) / 2);
 }
 
 static void DrawBgTilemap(u8 bg, const void *src)
@@ -2028,10 +2030,19 @@ static void PrintKeyboardKeys(u8 window, u8 page)
 {
     u8 i;
 
+    u8 colors[3];
+
     FillWindowPixelBuffer(window, sFillValues[page]);
+    memcpy(colors, sKeyboardTextColors[page], sizeof(colors));
+    if (gSaveBlock3Ptr->rhSettings.uiTheme)
+    {
+        // UI Theme: white / dark gray are also the text box's colors, which stay dark / light: spare colors 6-7
+        colors[1] = TEXT_COLOR_GREEN;
+        colors[2] = TEXT_COLOR_LIGHT_GREEN;
+    }
 
     for (i = 0; i < KBROW_COUNT; i++)
-        AddTextPrinterParameterized3(window, FONT_NORMAL, 0, i * 16 + 1, sKeyboardTextColors[page], 0, sNamingScreenKeyboardText[page][i]);
+        AddTextPrinterParameterized3(window, FONT_NORMAL, 0, i * 16 + 1, colors, 0, sNamingScreenKeyboardText[page][i]);
 
     PutWindowTilemap(window);
 }

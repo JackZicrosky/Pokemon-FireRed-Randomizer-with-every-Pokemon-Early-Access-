@@ -14,6 +14,10 @@
 #include "menu.h"
 #include "palette.h"
 #include "text_window.h"
+#include "sprite.h"
+#include "malloc.h"
+#include "bg.h"
+#include "decompress.h"
 #include "rh.h"
 #include "rh_internal.h"
 
@@ -216,6 +220,354 @@ static const struct ThemedPal sThemed[] =
     { gBattleWindowTextPalette, 16, MODE_TEXT },
 };
 
+// The owner's exact colors for single palette entries (from their edited screenshots), per theme: { Randomizer, AMOLED }.
+// NONE = that theme's normal result. Default is never changed. OV_BG / OV_OBJ: only where the palette is loaded for
+// backgrounds / sprites. OV_LATE: the screen themes the palette itself (RH_ThemeLoadedRange), which then calls
+// RH_ThemeOverrides.
+#define NONE 0xFFFF
+#define OV_BG   1
+#define OV_OBJ  2
+#define OV_LATE 4
+struct ThemeOverride
+{
+    const u16 *pal;
+    u8 index;
+    u8 flags;
+    u16 color[RH_THEME_COUNT - 1];
+};
+
+extern const u16 sTextWindowPalettes[][16];
+extern const u16 sOptionMenuText_Pal[];
+extern const u16 sMarkings_Pal[];
+extern const u16 sKeyboard_Pal[];
+extern const u16 sScrollingBg_Pal[];
+
+
+#define BOTH(r, g, b) { RGB(r, g, b), RGB(r, g, b) }
+#define DEX_OVERRIDES(pal)                                                                                     \
+    { pal, 7, OV_BG, { NONE, RGB(12, 3, 2) } },      /* the ball's red top (RH_ThemePokedexTiles) */             \
+    { pal, 9, OV_BG, { NONE, RGB(14, 14, 14) } },    /* and its grey half */                                     \
+    { pal, 10, OV_OBJ, { NONE, RGB(5, 5, 5) } },     /* START / SELECT buttons (RH_ThemePokedexTiles) */         \
+    { pal, 13, OV_OBJ, { NONE, RGB_WHITE } },        /* their text and the scroll bar */                         \
+    { pal, 14, 0, { NONE, RGB_BLACK } }              /* the scroll bar's track and rim */
+
+static const struct ThemeOverride sOverrides[] =
+{
+    // Summary: page dots (current: the theme's accent; later pages: white; earlier pages: dark, see
+    // RH_ThemeSummaryTiles), OT name, female symbol, EXP label; AMOLED: dim markings.
+    { gSummaryScreen_Pal, 68, 0, { RGB(13, 8, 21), RGB(16, 0, 0) } },
+    { gSummaryScreen_Pal, 69, 0, { RGB(16, 10, 26), RGB(24, 0, 0) } },
+    { gSummaryScreen_Pal, 74, 0, { RGB(1, 2, 2), RGB(2, 2, 2) } },
+    { gSummaryScreen_Pal, 75, 0, { RGB(3, 4, 5), RGB(5, 5, 5) } },
+    { gSummaryScreen_Pal, 76, 0, { RGB(23, 23, 24), RGB(23, 23, 23) } },
+    { gSummaryScreen_Pal, 107, 0, BOTH(17, 30, 31) },
+    { gSummaryScreen_Pal, 105, 0, BOTH(31, 19, 18) },
+    { gSummaryScreen_Pal, 35, 0, BOTH(30, 30, 30) },   // EXP label (RH_ThemeSummaryTiles)
+    { gSummaryScreen_Pal, 47, 0, { NONE, RGB_BLACK } },   // AMOLED: the backgrounds pure black
+    { gSummaryScreen_Pal, 67, 0, { NONE, RGB_BLACK } },
+    { gSummaryScreen_Pal, 72, 0, { NONE, RGB_BLACK } },
+    { gSummaryScreen_Pal, 55, 0, { NONE, RGB_BLACK } },
+    { gSummaryScreen_Pal, 56, 0, { NONE, RGB_BLACK } },
+    { gSummaryScreen_Pal, 57, 0, { NONE, RGB_BLACK } },
+    { gSummaryScreen_Pal, 58, 0, { NONE, RGB_BLACK } },
+    { sMarkings_Pal, 1, 0, { NONE, RGB(6, 5, 9) } },
+    { sMarkings_Pal, 2, 0, { NONE, RGB(6, 5, 9) } },
+    // Window frame (type 1), AMOLED: its rounded corners black.
+    { gTextWindowFrame1_Pal, 7, 0, { NONE, RGB_BLACK } },
+    // Bag: the current pocket's dot; AMOLED: the pocket ball red and grey (RH_ThemeBagTiles).
+    { gBagScreenMale_Pal, 30, 0, { RGB(14, 9, 21), RGB_WHITE } },
+    { gBagScreenFemale_Pal, 30, 0, { RGB(14, 9, 21), RGB_WHITE } },
+    { gBagScreenMale_Pal, 14, 0, { NONE, RGB(12, 3, 2) } },
+    { gBagScreenFemale_Pal, 14, 0, { NONE, RGB(12, 3, 2) } },
+    { gBagScreenMale_Pal, 15, 0, { NONE, RGB(14, 14, 14) } },
+    { gBagScreenFemale_Pal, 15, 0, { NONE, RGB(14, 14, 14) } },
+    // Pokedex (AMOLED): a red and grey Poke Ball behind SEEN / OWN, white START / SELECT and scroll bar.
+    DEX_OVERRIDES(gPokedexBgHoenn_Pal),
+    DEX_OVERRIDES(gPokedexBgNational_Pal),
+    DEX_OVERRIDES(gPokedexSearchResults_Pal),
+    // Shop list and PC box background (AMOLED): their stripes nearly black.
+    { gShopMenu_Pal, 9, 0, { NONE, RGB(1, 1, 1) } },
+    { gShopMenu_Pal, 10, 0, { NONE, RGB_BLACK } },
+    { sScrollingBg_Pal, 9, OV_LATE, { NONE, RGB(1, 1, 1) } },
+    // Options: the chosen values and their shadows.
+    { sOptionMenuText_Pal, 5, OV_LATE, { RGB(13, 8, 20), RGB(24, 4, 2) } },
+    { sOptionMenuText_Pal, 4, OV_LATE, { RGB(17, 11, 26), RGB(24, 13, 12) } },
+    // Naming screen: title bar (white text), keyboard letters (drawn with spare colors 6-7 when themed, see
+    // naming_screen.c), gender symbol, the text box's edge, buttons.
+    { sTextWindowPalettes[2], 15, 0, { RGB(19, 12, 29), RGB(4, 4, 4) } },
+    { sTextWindowPalettes[2], 1, 0, BOTH(31, 31, 31) },
+    { sTextWindowPalettes[2], 2, 0, BOTH(8, 8, 8) },
+    { sKeyboard_Pal, 6, OV_LATE, BOTH(31, 31, 31) },
+    { sKeyboard_Pal, 7, OV_LATE, { RGB(6, 7, 9), RGB(8, 8, 8) } },
+    { gNamingScreenMenu_Pal[0], 2, OV_LATE | OV_BG, { RGB(7, 8, 10), RGB(7, 7, 7) } },
+    { gNamingScreenMenu_Pal[0], 12, OV_LATE | OV_BG, { NONE, RGB_BLACK } },   // AMOLED: backgrounds pure black
+    { gNamingScreenMenu_Pal[0], 13, OV_LATE | OV_BG, { NONE, RGB_BLACK } },
+    { gNamingScreenMenu_Pal[0], 29, OV_LATE | OV_BG, { NONE, RGB_BLACK } },
+    { gNamingScreenMenu_Pal[0], 44, OV_LATE | OV_BG, { NONE, RGB_BLACK } },
+    { gNamingScreenMenu_Pal[0], 45, OV_LATE | OV_BG, { NONE, RGB_BLACK } },
+    { sKeyboard_Pal, 13, OV_LATE, { NONE, RGB_BLACK } },
+    { sKeyboard_Pal, 14, OV_LATE, { NONE, RGB_BLACK } },
+    { sKeyboard_Pal, 15, OV_LATE, { NONE, RGB_BLACK } },
+    { sKeyboard_Pal, 4, OV_LATE, BOTH(28, 1, 1) },
+    { sKeyboard_Pal, 5, OV_LATE, BOTH(31, 23, 14) },
+    { gNamingScreenMenu_Pal[0], 15, OV_LATE | OV_BG, { NONE, RGB_BLACK } },
+    { gNamingScreenMenu_Pal[0], 76, OV_OBJ, { RGB(13, 8, 20), RGB(4, 4, 4) } },
+    { gNamingScreenMenu_Pal[0], 77, OV_OBJ, { RGB(19, 12, 29), RGB_BLACK } },
+    { gNamingScreenMenu_Pal[0], 67, OV_OBJ, { NONE, RGB(4, 4, 4) } },
+    { gNamingScreenMenu_Pal[0], 68, OV_OBJ, { NONE, RGB(7, 7, 7) } },
+    { gNamingScreenMenu_Pal[0], 72, OV_OBJ, { NONE, RGB(4, 4, 4) } },
+    { gNamingScreenMenu_Pal[0], 73, OV_OBJ, { NONE, RGB(4, 4, 4) } },
+    { gNamingScreenMenu_Pal[0], 43, OV_OBJ, { NONE, RGB(4, 4, 4) } },
+    { gNamingScreenMenu_Pal[0], 45, OV_OBJ, { NONE, RGB(4, 4, 4) } },
+    { gNamingScreenMenu_Pal[0], 61, OV_OBJ, { NONE, RGB_BLACK } },
+    { gNamingScreenMenu_Pal[0], 74, OV_OBJ, { NONE, RGB(4, 4, 4) } },
+    { gNamingScreenMenu_Pal[0], 75, OV_OBJ, { NONE, RGB_BLACK } },
+    { gNamingScreenMenu_Pal[0], 78, OV_OBJ, { NONE, RGB_BLACK } },
+    { gNamingScreenMenu_Pal[0], 79, OV_OBJ, { NONE, RGB_BLACK } },
+};
+
+static void ApplyOverrides(const u16 *src, u32 offset, u32 count, bool32 late)
+{
+    u32 theme = gSaveBlock3Ptr->rhSettings.uiTheme, i, at;
+    const u16 *p;
+    if (theme == RH_THEME_DEFAULT || theme >= RH_THEME_COUNT)
+        return;
+    for (i = 0; i < ARRAY_COUNT(sOverrides); i++)
+    {
+        const struct ThemeOverride *ov = &sOverrides[i];
+        if (ov->color[theme - 1] == NONE || late != ((ov->flags & OV_LATE) != 0))
+            continue;
+        p = ov->pal + ov->index;
+        if (p < src || p >= src + count)
+            continue;
+        at = offset + (p - src);
+        if (at >= PLTT_BUFFER_SIZE || ((ov->flags & OV_BG) && at >= OBJ_PLTT_OFFSET) || ((ov->flags & OV_OBJ) && at < OBJ_PLTT_OFFSET))
+            continue;
+        gPlttBufferUnfaded[at] = gPlttBufferFaded[at] = ov->color[theme - 1];
+    }
+}
+
+void RH_ThemeOverrides(const u16 *src, u32 offset, u32 count)
+{
+    ApplyOverrides(src, offset, count, TRUE);
+}
+
+// Recolors 4bpp tiles in VRAM (16-bit accesses only). recolor(x, y, color) gets the pixel's position in a block
+// of blockW tiles across and returns its new color.
+static void RecolorVramTiles(u16 *vram, u32 firstTile, u32 blockW, u32 blockH, const u8 *tileIds, u32 (*recolor)(u32, u32, u32, const u8 *), const u8 *block)
+{
+    u32 i, y, x, c;
+    for (i = 0; i < blockW * blockH; i++)
+    {
+        u16 *tile = vram + (firstTile + tileIds[i]) * 16;
+        for (y = 0; y < 8; y++)
+        {
+            for (x = 0; x < 8; x += 4)
+            {
+                u16 v = tile[y * 2 + x / 4], n = 0;
+                u32 k;
+                for (k = 0; k < 4; k++)
+                {
+                    c = (v >> (k * 4)) & 15;
+                    c = recolor((i % blockW) * 8 + x + k, (i / blockW) * 8 + y, c, block);
+                    n |= c << (k * 4);
+                }
+                tile[y * 2 + x / 4] = n;
+            }
+        }
+    }
+}
+
+// Summary page dots: an earlier page's dot is one solid disc of color 2, the same color as the later dots' rims. Its
+// rim and its middle (a 5x5 square) move to the spare colors 10 and 11 (sOverrides: dark).
+static u32 RecolorEarlierDot(u32 x, u32 y, u32 c, const u8 *block)
+{
+    // the disc is 7x7 at (3, 4) of its 16x16 block of tiles (the header's underline below it: color 2 too)
+    if (c != 2 || y < 4 || y > 10)
+        return c;
+    return (x >= 4 && x <= 8 && y >= 5 && y <= 9) ? 11 : 10;
+}
+
+// The EXP label (colors 7-8, also used elsewhere) -> spare color 3 (white).
+static u32 RecolorExpLabel(u32 x, u32 y, u32 c, const u8 *block)
+{
+    return (c == 7 || c == 8) ? 3 : c;
+}
+
+// The later pages' dots: a rim of color 2 (also the header's purple underline) -> spare color 12 (white).
+static u32 RecolorLaterDot(u32 x, u32 y, u32 c, const u8 *block)
+{
+    return (c == 2 && y >= 4 && y <= 10) ? 12 : c;
+}
+
+void RH_ThemeSummaryTiles(void)
+{
+    static const u8 sEarlierDot[] = { 70, 71, 86, 87 };
+    static const u8 sLaterDot[] = { 67, 68, 83, 84 };
+    static const u8 sLastDot[] = { 72, 73, 88, 89 };
+    static const u8 sExpLabel[] = { 96, 97 };
+    if (gSaveBlock3Ptr->rhSettings.uiTheme == RH_THEME_DEFAULT)
+        return;
+    RecolorVramTiles((u16 *)BG_CHAR_ADDR(2), 0, 2, 2, sEarlierDot, RecolorEarlierDot, NULL);
+    RecolorVramTiles((u16 *)BG_CHAR_ADDR(2), 0, 2, 2, sLaterDot, RecolorLaterDot, NULL);
+    RecolorVramTiles((u16 *)BG_CHAR_ADDR(2), 0, 2, 2, sLastDot, RecolorLaterDot, NULL);
+    RecolorVramTiles((u16 *)BG_CHAR_ADDR(2), 0, 2, 1, sExpLabel, RecolorExpLabel, NULL);
+}
+
+// Bag (AMOLED): the pocket ball's two halves share color 14; the lower half moves to spare color 15 (grey).
+static u32 RecolorBallLowerHalf(u32 x, u32 y, u32 c, const u8 *block)
+{
+    return c == 14 ? 15 : c;
+}
+
+void RH_ThemeBagTiles(void)
+{
+    static const u8 sLowerHalf[] = { 12, 13 };
+    if (gSaveBlock3Ptr->rhSettings.uiTheme != RH_THEME_AMOLED)
+        return;
+    RecolorVramTiles((u16 *)BG_CHAR_ADDR(3), 0, 2, 1, sLowerHalf, RecolorBallLowerHalf, NULL);
+}
+
+// Pokedex (AMOLED): the START / SELECT buttons' text shares color 15 with every outline: the text pixels (not
+// touching the edge of the button) move to spare color 13 (white), their body (11, also the list's arrows) to spare
+// color 10. Tiles 32-39 and 48-55: 32x16 sprites. The scroll bar (tile 3): its fill 15 -> 13 too.
+static u32 RecolorScrollBar(u32 x, u32 y, u32 c, const u8 *block)
+{
+    return c == 15 ? 13 : c;
+}
+
+static u32 RecolorButtonText(u32 x, u32 y, u32 c, const u8 *block)
+{
+    s32 dx, dy;
+    if (c == 11)
+        return 10;            // the button's body
+    if (c != 15 || x >= 22)   // (from x 22: the dark round button, kept)
+        return c;
+    for (dy = -1; dy <= 1; dy++)
+    {
+        for (dx = -1; dx <= 1; dx++)
+        {
+            s32 nx = x + dx, ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= 32 || ny >= 16 || block[ny * 32 + nx] == 0)
+                return c;   // outline
+        }
+    }
+    return 13;
+}
+
+// The Pokedex list's ball (BG1, palette row 0, color 8): its top and bottom halves are the same tiles flipped, so it
+// gets new tiles (from tile 256 on): the ring red above the middle, then a gap, then grey; the round button grey.
+#define DEX_BALL_COLS 7
+#define DEX_BALL_ROWS 20
+#define DEX_BALL_FIRST_NEW_TILE 256
+
+void RH_ThemePokedexTiles(u32 interfaceTileStart, const u32 *menuGfx)
+{
+    static const u8 sButtons[2][8] = { { 32, 33, 34, 35, 36, 37, 38, 39 }, { 48, 49, 50, 51, 52, 53, 54, 55 } };
+    static const u8 sScrollBar[] = { 3 };
+    u16 *tilemap, *objVram, *bgVram, *menuTiles;
+    u8 *pix, *block;
+    u32 i, x, y, k, newTiles = 0;
+    if (gSaveBlock3Ptr->rhSettings.uiTheme != RH_THEME_AMOLED)
+        return;
+
+    // START / SELECT text
+    objVram = (u16 *)(OBJ_VRAM0) + interfaceTileStart * 16;
+    block = Alloc(32 * 16);
+    if (block == NULL)
+        return;
+    for (i = 0; i < 2; i++)
+    {
+        for (k = 0; k < 8; k++)   // the button's pixels, to find its edge
+        {
+            u16 *tile = objVram + sButtons[i][k] * 16;
+            for (y = 0; y < 8; y++)
+                for (x = 0; x < 8; x++)
+                    block[((k / 4) * 8 + y) * 32 + (k % 4) * 8 + x] = (tile[y * 2 + x / 4] >> ((x % 4) * 4)) & 15;
+        }
+        RecolorVramTiles(objVram, 0, 4, 2, sButtons[i], RecolorButtonText, block);
+    }
+    Free(block);
+    RecolorVramTiles(objVram, 0, 1, 1, sScrollBar, RecolorScrollBar, NULL);
+
+    // the ball
+    tilemap = GetBgTilemapBuffer(1);
+    bgVram = (u16 *)BG_CHAR_ADDR(0);
+    pix = Alloc(DEX_BALL_COLS * 8 * DEX_BALL_ROWS * 8);
+    menuTiles = Alloc(GetDecompressedDataSize(menuGfx));   // (the copy to VRAM may not be done yet)
+    if (tilemap == NULL || pix == NULL || menuTiles == NULL)
+    {
+        Free(pix);
+        Free(menuTiles);
+        return;
+    }
+    DecompressDataWithHeaderWram(menuGfx, menuTiles);
+    for (y = 0; y < DEX_BALL_ROWS * 8; y++)
+    {
+        for (x = 0; x < DEX_BALL_COLS * 8; x++)
+        {
+            u16 e = tilemap[(y / 8) * 32 + x / 8];
+            u32 tx = (e & 0x400) ? 7 - x % 8 : x % 8, ty = (e & 0x800) ? 7 - y % 8 : y % 8;
+            u16 *tile = menuTiles + (e & 0x3FF) * 16;
+            pix[y * DEX_BALL_COLS * 8 + x] = ((e >> 12) == 0) ? (tile[ty * 2 + tx / 4] >> ((tx % 4) * 4)) & 15 : 0;
+        }
+    }
+    for (y = 0; y < DEX_BALL_ROWS * 8; y++)
+    {
+        u8 *row = pix + y * DEX_BALL_COLS * 8;
+        u32 runs = 0, firstRunEnd = 0;
+        for (x = 0; x < DEX_BALL_COLS * 8; x++)   // a row with two runs of color 8: the first is the round button
+        {
+            if (row[x] == 8 && (x == 0 || row[x - 1] != 8))
+                runs++;
+            if (runs == 1 && row[x] == 8)
+                firstRunEnd = x;
+        }
+        for (x = 0; x < DEX_BALL_COLS * 8; x++)
+        {
+            if (row[x] != 8)
+                continue;
+            if (runs >= 2 && x <= firstRunEnd)
+                row[x] = 9;                 // round button: grey
+            else if (y < 78)
+                row[x] = 7;                 // ring, top: red
+            else if (y <= 83)
+                row[x] = 0;                 // the gap
+            else
+                row[x] = 9;                 // ring, bottom: grey
+        }
+    }
+    for (y = 0; y < DEX_BALL_ROWS; y++)
+    {
+        for (x = 0; x < DEX_BALL_COLS; x++)
+        {
+            u16 *e = &tilemap[y * 32 + x], tile[16];
+            bool32 hasBall = FALSE;
+            u32 ty, tx;
+            if ((*e >> 12) != 0)
+                continue;
+            for (ty = 0; ty < 8; ty++)
+            {
+                for (tx = 0; tx < 8; tx++)
+                {
+                    u32 c = pix[(y * 8 + ty) * DEX_BALL_COLS * 8 + x * 8 + tx];
+                    if (c == 7 || c == 9 || (c == 0 && y * 8 + ty >= 78 && y * 8 + ty <= 83))
+                        hasBall = TRUE;
+                    if (tx % 4 == 0)
+                        tile[ty * 2 + tx / 4] = 0;
+                    tile[ty * 2 + tx / 4] |= c << ((tx % 4) * 4);
+                }
+            }
+            if (!hasBall)
+                continue;
+            CpuCopy16(tile, bgVram + (DEX_BALL_FIRST_NEW_TILE + newTiles) * 16, sizeof(tile));
+            *e = DEX_BALL_FIRST_NEW_TILE + newTiles++;
+        }
+    }
+    Free(pix);
+    Free(menuTiles);
+}
+
 // Returns the mode for a themed palette, or -1.
 // Returns the mode for a color of a themed palette (or -1), its keep mask and its index in its row of 16.
 static s32 ThemedMode(const u16 *src, u32 offset, u16 *keep, u16 *white, u16 *merge, u16 *frame, u16 *accent, u32 *index)
@@ -257,6 +609,11 @@ static s32 ThemedMode(const u16 *src, u32 offset, u16 *keep, u16 *white, u16 *me
     return -1;
 }
 
+#ifndef RELEASE
+// Test builds: the source of every palette row's color 0 (for working out which palette draws what on screen).
+EWRAM_DATA const u16 *gRhThemeRowSrc[PLTT_BUFFER_SIZE / 16] = {0};
+#endif
+
 // Called by LoadPalette / LoadPaletteFast after the copy (only when a theme is on).
 void RH_ThemeLoadedPalette(const void *src, u32 offset, u32 size)
 {
@@ -267,6 +624,10 @@ void RH_ThemeLoadedPalette(const void *src, u32 offset, u32 size)
     s32 mode;
     if (theme == RH_THEME_DEFAULT || offset >= PLTT_BUFFER_SIZE)
         return;
+#ifndef RELEASE
+    for (i = offset & ~15; i < offset + size / 2 && i < PLTT_BUFFER_SIZE; i += 16)
+        gRhThemeRowSrc[i / 16] = pal + i - offset;
+#endif
     size /= 2;
     if (offset + size > PLTT_BUFFER_SIZE)
         size = PLTT_BUFFER_SIZE - offset;
@@ -308,6 +669,7 @@ void RH_ThemeLoadedPalette(const void *src, u32 offset, u32 size)
         }
     }
     CpuCopy16(&gPlttBufferUnfaded[offset], &gPlttBufferFaded[offset], size * 2);
+    ApplyOverrides(pal, offset, size, FALSE);
 }
 
 // For screens whose palettes are private to their own file: theme colors just loaded at offset (row-aligned keep mask).

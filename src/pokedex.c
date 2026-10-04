@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "battle_main.h"
 #include "battle_script_commands.h"
 #include "bg.h"
@@ -1985,6 +1986,7 @@ static bool8 LoadPokedexListPage(u8 page)
         CreateMonSpritesAtPos(sPokedexView->selectedPokemon, 0xE);
         sPokedexView->menuIsOpen = FALSE;
         sPokedexView->menuY = 0;
+        RH_ThemePokedexTiles(GetSpriteTileStartByTag(TAG_DEX_INTERFACE), gPokedexMenu_Gfx);   // UI Theme (AMOLED)
         CopyBgTilemapBufferToVram(0);
         CopyBgTilemapBufferToVram(1);
         CopyBgTilemapBufferToVram(2);

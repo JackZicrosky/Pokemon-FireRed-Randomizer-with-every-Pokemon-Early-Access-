@@ -89,7 +89,7 @@ static const u8 gText_ButtonTypeNormal[]   = _("{COLOR GREEN}{SHADOW LIGHT_GREEN
 static const u8 gText_ButtonTypeLR[]       = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}LR");
 static const u8 gText_ButtonTypeLEqualsA[] = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}L=A");
 
-static const u16 sOptionMenuText_Pal[] = INCGFX_U16("graphics/interface/option_menu_text.pal", ".gbapal");
+const u16 sOptionMenuText_Pal[] = INCGFX_U16("graphics/interface/option_menu_text.pal", ".gbapal");
 // note: this is only used in the Japanese release
 static const u8 sEqualSignGfx[] = INCGFX_U8("graphics/interface/option_menu_equals_sign.png", ".4bpp");
 
@@ -237,6 +237,7 @@ void CB2_InitOptionMenu(void)
         LoadPalette(sOptionMenuText_Pal, BG_PLTT_ID(1), sizeof(sOptionMenuText_Pal));
         RH_ThemeLoadedRange(BG_PLTT_ID(1), ARRAY_COUNT(sOptionMenuText_Pal), RH_THEME_MODE_TEXT, 0);
         RH_ThemeAccentRange(BG_PLTT_ID(1), 1 << 5);   // the selected choice (red): purple in the Randomizer theme
+        RH_ThemeOverrides(sOptionMenuText_Pal, BG_PLTT_ID(1), ARRAY_COUNT(sOptionMenuText_Pal));
         gMain.state++;
         break;
     case 6:
