@@ -983,6 +983,12 @@ void LoadBattleMenuWindowGfx(void)
         // its color 9 (not used by the frame) is light on the dark menu
         gPlttBufferUnfaded[BG_PLTT_ID(1) + 9] = RGB(28, 28, 29);
         gPlttBufferFaded[BG_PLTT_ID(1) + 9] = RGB(28, 28, 29);
+        if (gSaveBlock3Ptr->rhSettings.uiTheme == RH_THEME_AMOLED)
+        {
+            // AMOLED: the cursor arrows red, with a dark red shadow (color 7)
+            gPlttBufferUnfaded[BG_PLTT_ID(1) + 9] = gPlttBufferFaded[BG_PLTT_ID(1) + 9] = RGB(31, 0, 0);
+            gPlttBufferUnfaded[BG_PLTT_ID(1) + 7] = gPlttBufferFaded[BG_PLTT_ID(1) + 7] = RGB(11, 0, 0);
+        }
     }
     LoadPalette(gBattleWindowTextPalette, BG_PLTT_ID(5), PLTT_SIZE_4BPP);
 

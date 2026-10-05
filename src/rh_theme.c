@@ -703,3 +703,18 @@ void RH_ThemeAccentRange(u32 offset, u16 mask)
         }
     }
 }
+
+// Battle move menu: the normal PP numbers (state 3 of gPPTextPalette; the low-PP colors stay) in the owner's colors.
+// Returns TRUE if it changed them.
+bool32 RH_ThemePPNumberColors(u32 state, u16 *text, u16 *shadow)
+{
+    static const u16 sText[RH_THEME_COUNT - 1] = { RGB(28, 28, 29), RGB(30, 30, 30) };
+    static const u16 sShadow[RH_THEME_COUNT - 1] = { RGB(7, 8, 11), RGB(6, 6, 6) };
+    u32 theme = gSaveBlock3Ptr->rhSettings.uiTheme;
+    if (theme == RH_THEME_DEFAULT || theme >= RH_THEME_COUNT || state != 3)
+        return FALSE;
+    *text = sText[theme - 1];
+    *shadow = sShadow[theme - 1];
+    return TRUE;
+}
+

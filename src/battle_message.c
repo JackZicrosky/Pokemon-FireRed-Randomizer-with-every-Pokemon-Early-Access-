@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "battle.h"
 #include "battle_anim.h"
 #include "battle_ai_record.h"
@@ -3946,6 +3947,7 @@ void SetPPNumbersPaletteInMoveSelection(enum BattlerId battler)
 
     gPlttBufferUnfaded[BG_PLTT_ID(5) + 12] = palPtr[(var * 2) + 0];
     gPlttBufferUnfaded[BG_PLTT_ID(5) + 11] = palPtr[(var * 2) + 1];
+    RH_ThemePPNumberColors(var, &gPlttBufferUnfaded[BG_PLTT_ID(5) + 12], &gPlttBufferUnfaded[BG_PLTT_ID(5) + 11]);
 
     CpuCopy16(&gPlttBufferUnfaded[BG_PLTT_ID(5) + 12], &gPlttBufferFaded[BG_PLTT_ID(5) + 12], PLTT_SIZEOF(1));
     CpuCopy16(&gPlttBufferUnfaded[BG_PLTT_ID(5) + 11], &gPlttBufferFaded[BG_PLTT_ID(5) + 11], PLTT_SIZEOF(1));
