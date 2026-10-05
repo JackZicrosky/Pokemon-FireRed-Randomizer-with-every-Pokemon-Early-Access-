@@ -23,19 +23,22 @@ CHANGES = {
     "0.7": "NEW: UI Theme option (Misc. Tweaks): Default, Randomizer (dark menus in the randomizer screen's colors) or AMOLED (pitch black). It re-colors text boxes, menus, the bag, party, summary, shop, battle text boxes, Pokedex, Trainer Card, Options, PC boxes and the naming screen. v0.6 saves keep working; old settings codes and presets don't load.",
     "0.7.1": "UI Theme fixes: the white labels on the summary screen (name, level, Dex number, page title...) stay white and readable; the striped backgrounds of the bag and party screens become one plain color in the Randomizer and AMOLED themes. v0.6 / v0.7 saves keep working.",
     "0.7.2": "UI Theme fix: the START RELEARN prompt on the summary screen's move pages is white and readable again in the Randomizer and AMOLED themes. v0.6 / v0.7 saves keep working.",
+    "0.7.3": "UI Theme restyle (the Default theme is unchanged): the Randomizer theme follows the randomizer screen's colors with purple highlights (party selector, chosen options, bag arrows and pocket dot, naming screen, summary page dot); AMOLED goes true black with red and white highlights (Poke Ball bag icon and Pokedex background, red battle cursors, white START / SELECT); lighter grey text and PP numbers, colored text kept; dark battle surroundings and menus; visible party genders; readable Pokedex labels; white BADGES label and numbers on the Trainer Card. v0.6 / v0.7 saves keep working.",
 }
 SAVES = {"0.1": "Start a new game.", "0.2": "Start a new game (v0.1 saves don't carry over).",
          "0.6": "Start a new game (saves from older versions don't carry over).",
          "0.6.1": "v0.6 saves keep working; start a new game if you come from v0.5.2 or older.",
          "0.7": "v0.6 / v0.6.1 saves keep working; start a new game if you come from v0.5.2 or older.",
          "0.7.1": "v0.6 and v0.7 saves keep working; start a new game if you come from v0.5.2 or older.",
-         "0.7.2": "v0.6 and v0.7 saves keep working; start a new game if you come from v0.5.2 or older."}
+         "0.7.2": "v0.6 and v0.7 saves keep working; start a new game if you come from v0.5.2 or older.",
+         "0.7.3": "v0.6 and v0.7 saves keep working; start a new game if you come from v0.5.2 or older."}
 
 # Lines written to the owner that shouldn't appear in public READMEs.
 TEXT_SUBS = [
     (b" - the one in this folder is correct)", b")"),
     (b"Healing Kit icon redrawn from your design: ", b"Healing Kit icon redrawn: "),
     (b"is why you got the normal sprite.", b"is why the normal sprite showed up."),
+    (b"UI Theme restyle, following your notes and edited screenshots.", b"UI Theme restyle."),
 ]
 LINE_SUBS = {b"Your list": b"Requested changes", b"Bugs you hit": b"Bug fixes"}
 

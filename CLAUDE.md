@@ -25,7 +25,8 @@
 - **Test everything** you change: the in-ROM self-test on 3 pools, plus emulator screenshots of the real
   flows (see §5). The owner once asked to "test every single setting to make sure they work", and that
   standard still applies.
-- **Latest released version: v0.7.2** (tag `v0.7.2`): UI Theme option (Default / Randomizer / AMOLED) + owner's fixes.
+- **Latest released version: v0.7.3** (tag `v0.7.3`): UI Theme restyle from the owner's notes and edited screenshots.
+- **Never change the Default UI theme** (owner: "DO NOT EVER CHANGE THE DEFAULT THEMES!!!"). Only Randomizer / AMOLED.
 
 ---
 
@@ -501,6 +502,7 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 | v0.5 | Randomizer Settings key item, Reset The Run, dark centred "RANDOMIZE GAME" title menu |
 | v0.5.1 | Item description; rainbow Infinite Candy; randomizer-palette HM Kit icon |
 | v0.5.2 | Healing Kit icon from the owner's drawing (white case, red cross) |
+| v0.7.3 | UI Theme restyle (Default unchanged): owner's exact colours per theme in `sOverrides[]` (rh_theme.c), tile recolours where one palette colour drew things styled differently (summary page dots / EXP label, bag pocket ball, Pokedex ball + START/SELECT, battle cursor shadow), keyboard letters on spare colours, PP numbers, AMOLED red battle cursors. Made with the owner's edited screenshots (diff them pixel-exactly; build/th tools src.py, bgpix.py, objpix.py, derive*.py, vdiff.py). FireRed got these as cherry-picks; the Emerald port stays off `main` |
 | v0.7.2 | UI Theme: summary screen copies the unthemed std palette into BG palette 15 (the START RELEARN prompt; the summary never loads 15 itself, it inherits the previous screen's) |
 | v0.7.1 | UI Theme: summary white labels kept (rows 6-7 colours 3-4); bag (colours 12-13) and party (row 1 colours 4-5) stripes merged into one colour (`merge` mask in `sThemed[]`) |
 | v0.7 | UI Theme option (Misc. Tweaks): Default / Randomizer / AMOLED re-lights text boxes, menus, bag, party, summary, shop, battle boxes, Pokédex, trainer card, options, PC boxes, naming screen; CODE_VERSION 3 (uses the old runIndoors byte) |
