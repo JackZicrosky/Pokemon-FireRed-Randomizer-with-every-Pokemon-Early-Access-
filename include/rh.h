@@ -108,6 +108,7 @@ void RH_ThemeOverrides(const u16 *src, u32 offset, u32 count);   // after RH_The
 void RH_ThemeSummaryTiles(void);
 void RH_ThemeBagTiles(void);
 bool32 RH_ThemePPNumberColors(u32 state, u16 *text, u16 *shadow);
+void RH_ThemeBattleCursorTiles(void);
 void RH_ThemePokedexTiles(u32 interfaceTileStart, const u32 *menuGfx);
 
 #endif

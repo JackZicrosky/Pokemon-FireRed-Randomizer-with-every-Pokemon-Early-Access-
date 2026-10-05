@@ -985,9 +985,9 @@ void LoadBattleMenuWindowGfx(void)
         gPlttBufferFaded[BG_PLTT_ID(1) + 9] = RGB(28, 28, 29);
         if (gSaveBlock3Ptr->rhSettings.uiTheme == RH_THEME_AMOLED)
         {
-            // AMOLED: the cursor arrows red, with a dark red shadow (color 7)
+            // AMOLED: the cursor arrows red, with a dark red shadow (spare color 10, see RH_ThemeBattleCursorTiles)
             gPlttBufferUnfaded[BG_PLTT_ID(1) + 9] = gPlttBufferFaded[BG_PLTT_ID(1) + 9] = RGB(31, 0, 0);
-            gPlttBufferUnfaded[BG_PLTT_ID(1) + 7] = gPlttBufferFaded[BG_PLTT_ID(1) + 7] = RGB(11, 0, 0);
+            gPlttBufferUnfaded[BG_PLTT_ID(1) + 10] = gPlttBufferFaded[BG_PLTT_ID(1) + 10] = RGB(11, 0, 0);
         }
     }
     LoadPalette(gBattleWindowTextPalette, BG_PLTT_ID(5), PLTT_SIZE_4BPP);
@@ -1011,6 +1011,7 @@ void DrawMainBattleBackground(void)
 void LoadBattleTextboxAndBackground(void)
 {
     DecompressDataWithHeaderVram(gBattleTextboxTiles, (void *)(BG_CHAR_ADDR(0)));
+    RH_ThemeBattleCursorTiles();
     CopyToBgTilemapBuffer(0, gBattleTextboxTilemap, 0, 0);
     CopyBgTilemapBufferToVram(0);
     LoadPalette(gBattleTextboxPalette, BG_PLTT_ID(0), 2 * PLTT_SIZE_4BPP);
@@ -1347,6 +1348,7 @@ bool8 LoadChosenBattleElement(u8 caseId)
     {
     case 0:
         DecompressDataWithHeaderVram(gBattleTextboxTiles, (void *)(BG_CHAR_ADDR(0)));
+    RH_ThemeBattleCursorTiles();
         break;
     case 1:
         CopyToBgTilemapBuffer(0, gBattleTextboxTilemap, 0, 0);

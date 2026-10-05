@@ -718,3 +718,18 @@ bool32 RH_ThemePPNumberColors(u32 state, u16 *text, u16 *shadow)
     return TRUE;
 }
 
+
+// Battle cursor arrow (AMOLED): its shadow (color 7) is also the menu frames' corner color, so in the cursor's tiles
+// (1-2 of the battle text box graphics) it moves to spare color 10 (dark red, battle_bg.c).
+static u32 RecolorCursorShadow(u32 x, u32 y, u32 c, const u8 *block)
+{
+    return c == 7 ? 10 : c;
+}
+
+void RH_ThemeBattleCursorTiles(void)
+{
+    static const u8 sCursor[] = { 1, 2 };
+    if (gSaveBlock3Ptr->rhSettings.uiTheme != RH_THEME_AMOLED)
+        return;
+    RecolorVramTiles((u16 *)BG_CHAR_ADDR(0), 0, 2, 1, sCursor, RecolorCursorShadow, NULL);
+}
