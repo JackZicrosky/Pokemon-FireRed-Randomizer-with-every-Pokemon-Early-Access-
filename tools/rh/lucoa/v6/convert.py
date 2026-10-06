@@ -136,6 +136,10 @@ if __name__ == '__main__':
         K, C, T = frame(Image.open(f'm3d/out/flat_{i}.png').convert('RGBA'), Image.open(f'm3d/out/lit_{i}.png').convert('RGBA'))
         out = finish(K, C, T)
         if i in (1, 2) and FIST_MODE == 'auto': fist.place(out, K, hands[str(i)]['wrist'], hands[str(i)]['knuckle'])
+        if FIST_MODE == 'red':
+            import red_hands
+            cfg = json.loads(os.environ.get('REDCFG', '{}'))
+            if str(i) in cfg: red_hands.apply(out, i, *cfg[str(i)]); red_hands.fix(out, i)
         if FIST_MODE == 'manual':
             import hands_manual; hands_manual.apply(out, i)
         frames.append(to_img(out))
