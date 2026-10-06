@@ -6,7 +6,7 @@ from collections import Counter
 import backpal
 N = 64; B = 8
 import os
-FIST_MODE = os.environ.get('FIST', 'auto')
+FIST_MODE = os.environ.get('FIST', 'redsmall')
 def cls(p):
     r, g, b = p[:3]
     h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
@@ -27,7 +27,7 @@ def tone_rgb(c, t, k):
     return (round(r * 255), round(g * 255), round(b * 255))
 def frame(flat, lit, lo=0.62, hi=0.86):
     f = flat.load(); L = lit.load()
-    K = [[None] * N for _ in range(N)]; C = [[None] * N for _ in range(N)]; T = [[1] * N for _ in range(N)]
+    K = [[None] * N for _ in range(N)]; C = [[None] * N for _ in range(N)]; T = [[1] * N for _ in range(N)]; LUM = {}
     for Y in range(N):
         for X in range(N):
             ps = []; ls = []
@@ -40,8 +40,13 @@ def frame(flat, lit, lo=0.62, hi=0.86):
             sel = [p for p in ps if cls(p) == k]
             col = tuple(sum(p[i] for p in sel) // len(sel) for i in range(3))
             lum = sum(ls) / len(ls)
-            K[Y][X] = k; C[Y][X] = col
+            K[Y][X] = k; C[Y][X] = col; LUM[(X, Y)] = lum
             T[Y][X] = 2 if lum > hi else 1 if lum > lo else 0
+    # tank top: tones by rank within the top itself, so the bust always gets a lit top, mid and shaded underside
+    tk = sorted((v, p) for p, v in LUM.items() if K[p[1]][p[0]] == 'tank')
+    for n, (v, (X, Y)) in enumerate(tk):
+        r = n / max(1, len(tk) - 1)
+        T[Y][X] = 0 if r < 0.4 else 1 if r < 0.8 else 2
     return K, C, T
 def smooth(K, C, T):
     # horns: widen by one pixel toward the outside so the rings read
@@ -140,8 +145,10 @@ if __name__ == '__main__':
             import red_hands
             cfg = json.loads(os.environ.get('REDCFG', '{}'))
             if str(i) in cfg: red_hands.apply(out, i, *cfg[str(i)]); red_hands.fix(out, i)
+        if os.environ.get('BUST', '1') == '1':
+            import bust; bust.apply(out, i)
         if FIST_MODE == 'redsmall':
-            import red_hands_small; red_hands_small.apply(out, i)
+            import red_hands_small; red_hands_small.apply(out, i, hands[str(i)]['wrist'])
         if FIST_MODE == 'manual':
             import hands_manual; hands_manual.apply(out, i)
         # fill pinholes (a clear pixel with 3+ filled neighbours) with outline: no stray checkerboards
@@ -150,6 +157,7 @@ if __name__ == '__main__':
                 for x in range(1, 63):
                     if out[y][x] is None and sum(out[y + dy][x + dx] is not None for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) >= 3:
                         out[y][x] = backpal.O
+        import bust as _b; _b.fill_enclosed(out, backpal.PAL['tank'][2])
         frames.append(to_img(out))
     sheet = Image.new('RGBA', (64, 320), (0, 0, 0, 0))
     for i, fr in enumerate(frames): sheet.alpha_composite(fr, (0, 64 * i))

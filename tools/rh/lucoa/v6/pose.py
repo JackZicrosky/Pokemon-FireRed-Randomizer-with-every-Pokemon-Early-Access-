@@ -27,7 +27,7 @@ def twist(arm, name, axis, deg):
 
 DOWN_L = [('LeftArm', (0.22, -1, 0.05)), ('LeftForeArm', (0.08, -1, 0.15)), ('LeftHand', (0.05, -1, 0.2))]
 DOWN_R = [('RightArm', (-0.22, -1, 0.05)), ('RightForeArm', (-0.08, -1, 0.15)), ('RightHand', (-0.05, -1, 0.2))]
-TW1, TW2, TW3, TW4 = [float(v) for v in os.environ.get('TW', '15,22,-18,-24').split(',')]
+TW1, TW2, TW3, TW4 = [float(v) for v in os.environ.get('TW', '15,22,-50,-55').split(',')]
 LEAN = [float(v) for v in os.environ.get('LEAN', '10,13,8,18,24').split(',')]
 POSES = [
     # (spine twist deg about up axis, spine lean fwd deg, left (throwing) arm, right arm like Red's other arm)
@@ -39,11 +39,11 @@ POSES = [
     (TW2, LEAN[2], [('LeftArm', (0.8, -0.5, -0.3)), ('LeftForeArm', (0.2, 1, -0.25)), ('LeftHand', (0.1, 1, -0.15))],
      [('RightArm', (-0.4, -0.9, 0.05)), ('RightForeArm', (-0.35, -0.9, 0.15)), ('RightHand', (-0.35, -0.9, 0.15))]),
     # release: left arm sweeps toward the foe; right arm pulled back and bent, hand by the far hip
-    (TW3, LEAN[3], [('LeftArm', (-0.75, 0.4, 0.55)), ('LeftForeArm', (-0.85, 0.35, 0.4)), ('LeftHand', (-0.85, 0.3, 0.4))],
-     [('RightArm', (-0.25, -0.7, -0.7)), ('RightForeArm', (0.6, -0.35, -0.6)), ('RightHand', (0.6, -0.4, -0.5))]),
+    (TW3, LEAN[3], [('LeftArm', (float(os.environ.get('AX',-0.2)), float(os.environ.get('AY',0.3)), 0.9)), ('LeftForeArm', (float(os.environ.get('AX',-0.2)) - 0.1, float(os.environ.get('FY',0.05)), 0.9)), ('LeftHand', (float(os.environ.get('AX',-0.2)) - 0.1, float(os.environ.get('FY',0.05)), 0.9))],
+     [('RightArm', (-0.4, -0.85, -0.3)), ('RightForeArm', (0.3, -0.45, 0.6)), ('RightHand', (0.3, -0.5, 0.55))]),
     # follow-through: left arm down across in front; right arm still back and bent
-    (TW4, LEAN[4], [('LeftArm', (-0.65, -0.35, 0.7)), ('LeftForeArm', (-0.8, -0.5, 0.35)), ('LeftHand', (-0.8, -0.55, 0.25))],
-     [('RightArm', (-0.25, -0.75, -0.6)), ('RightForeArm', (0.6, -0.45, -0.5)), ('RightHand', (0.6, -0.5, -0.4))]),
+    (TW4, LEAN[4], [('LeftArm', (-0.15, -0.45, 0.85)), ('LeftForeArm', (-0.25, -0.55, 0.75)), ('LeftHand', (-0.25, -0.6, 0.7))],
+     [('RightArm', (-0.4, -0.85, -0.25)), ('RightForeArm', (0.3, -0.5, 0.6)), ('RightHand', (0.3, -0.55, 0.55))]),
 ]
 
 def grow_horns(mesh, k):
@@ -84,7 +84,7 @@ def apply_pose(arm, i):
         for f in ('Index', 'Middle', 'Ring', 'Pinky'):
             for k in (1, 2, 3):
                 pb = arm.pose.bones['mixamorig:LeftHand%s%d' % (f, k)]
-                pb.rotation_quaternion = Quaternion((1, 0, 0), math.radians(float(os.environ.get('CURL', 70)) if i in (1, 2) else 35))
+                pb.rotation_quaternion = Quaternion((1, 0, 0), math.radians(float(os.environ.get('CURL', 55)) if i in (1, 2) else 35))
         bpy.context.view_layer.update()
     bpy.context.view_layer.update()
 
@@ -99,11 +99,11 @@ if __name__ == '__main__':
     # fixed camera for all frames: behind her, a little to her left, slightly above
     cam_d = bpy.data.cameras.new('cam'); cam_d.type = 'ORTHO'; cam_d.ortho_scale = 112
     cam = bpy.data.objects.new('cam', cam_d); sc.collection.objects.link(cam); sc.camera = cam
-    yaw, pit = math.radians(float(os.environ.get('YAW', 140))), math.radians(12)
+    yaw, pit = math.radians(float(os.environ.get('YAW', 215))), math.radians(12)
     target = Vector((0, 0, 151))
     pos = target + Vector((math.sin(yaw) * math.cos(pit), -math.cos(yaw) * math.cos(pit), math.sin(pit))) * 600
     cam.location = pos; cam.rotation_euler = (target - pos).to_track_quat('-Z', 'Y').to_euler(); cam_d.clip_end = 3000
-    cam_d.shift_x = float(os.environ.get('SHX', -0.12)); cam_d.shift_y = -0.02
+    cam_d.shift_x = float(os.environ.get('SHX', -0.06)); cam_d.shift_y = -0.02
     if mode == 'lit':
         # grey diffuse + sun from the upper left (camera side) for shading levels
         for m in mesh.data.materials:
@@ -115,7 +115,12 @@ if __name__ == '__main__':
         so.rotation_euler = (math.radians(45), 0, math.radians(float(os.environ.get('SUNZ', 160))))
         w = bpy.data.worlds.new('w'); sc.world = w; w.use_nodes = True
         w.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.35
-        sc.cycles.samples = 32
+        sc.cycles.samples = 64
+        # smooth shading + a weaker fill light from her front right, so the bust and arms get rounded form
+        for poly in mesh.data.polygons: poly.use_smooth = True
+        fill = bpy.data.lights.new('fill', 'SUN'); fill.energy = float(os.environ.get('FILL', 1.6))
+        fo = bpy.data.objects.new('fill', fill); sc.collection.objects.link(fo)
+        fo.rotation_euler = (math.radians(60), 0, math.radians(float(os.environ.get('FILLZ', 330))))
     os.makedirs('m3d/out', exist_ok=True)
     from bpy_extras.object_utils import world_to_camera_view
     import json

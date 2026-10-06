@@ -28,39 +28,45 @@ HANDS = {
         "..OmmmmmO.",
         "...OOmmO..",
     ]},
-    3: {'at': (55, 19), 'rows': [        # open hand flung toward the foe: fingers along the top, thumb down (Red's frame 4)
-        "...nnn...",
-        " nnLLmnnn",
-        " LLLLmmnm",
-        " LLLLLLLO",
-        " LLLLLLmO",
-        " mLLLLnO.",
-        " nLLLmO..",
-        "..OmmO...",
-        "...OO....",
+    3: {'at': (55, 23), 'rows': [        # Red's frame-4 hand at 75%: fingers out toward the foe, thumb hanging down
+        "...nn.....",
+        ".nnLLm..n.",
+        "OLLLmmnnmn",
+        "MLLLLLLLLO",
+        "MLLLLLLLmO",
+        "MMLLLLnOO.",
+        "OOmLLmO...",
+        "..OmmmO...",
+        "...OmmO...",
+        "....OO....",
     ]},
 }
 # pixels that close the outline where a hand meets the arm: {frame: {(x, y): letter}}
-JOIN = {3: {(55, 21): 'O', (55, 26): 'M', (56, 26): 'O', (55, 27): 'O'}}
-def erase(img, i):
+JOIN = {3: {}}
+# the wrist each patch was drawn for; patches and erase areas follow the real wrist from hands.json
+REF = {1: (10, 31), 2: (13, 20), 3: (55, 27)}
+def erase(img, i, d=(0, 0)):
+    ox, oy = d
     if i == 1:      # the rendered hand: everything past the wrist, up and to the left
-        for y in range(18, 33):
-            for x in range(0, 15):
-                if (x - 10) * -0.8 + (y - 31) * -0.6 > 0.5 and img[y][x] in (backpal.O,) + tuple(SK): img[y][x] = None
+        for y in range(18 + oy, 33 + oy):
+            for x in range(0, 15 + ox):
+                if 0 <= y < 64 and (x - 10 - ox) * -0.8 + (y - 31 - oy) * -0.6 > 0.5 and img[y][x] in (backpal.O,) + tuple(SK): img[y][x] = None
     if i == 3:
-        for y in range(16, 31):
-            for x in range(57, 64):
+        for y in range(20 + oy, 34 + oy):
+            for x in range((54 if y < 25 + oy else 55) + ox, 64):
                 if img[y][x] in (backpal.O,) + tuple(SK): img[y][x] = None
     if i == 2:
-        for y in range(6, 16):
-            for x in range(5, 18):
+        for y in range(6 + oy, 16 + oy):
+            for x in range(max(0, 5 + ox), 18 + ox):
                 if img[y][x] in (backpal.O,) + tuple(SK): img[y][x] = None
-def apply(img, i):
+def apply(img, i, wrist=None):
     if i not in HANDS: return
-    erase(img, i)
+    d = (0, 0)
+    if wrist: d = (round(wrist[0]) - REF[i][0], round(wrist[1]) - REF[i][1])
+    erase(img, i, d)
     C = {'O': backpal.O, 'L': SK[0], 'M': SK[2], 'm': MID, 'n': LINE, '.': None}
-    ax, ay = HANDS[i]['at']
+    ax, ay = HANDS[i]['at']; ax += d[0]; ay += d[1]
     for dy, row in enumerate(HANDS[i]['rows']):
         for dx, c in enumerate(row):
-            if c != ' ': img[ay + dy][ax + dx] = C[c]
+            if c != ' ' and 0 <= ax + dx < 64 and 0 <= ay + dy < 64: img[ay + dy][ax + dx] = C[c]
     for (x, y), c in JOIN.get(i, {}).items(): img[y][x] = C[c]
