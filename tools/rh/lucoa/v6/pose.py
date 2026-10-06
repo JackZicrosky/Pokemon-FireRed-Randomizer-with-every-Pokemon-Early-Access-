@@ -75,7 +75,7 @@ def apply_pose(arm, i):
             pb = arm.pose.bones['mixamorig:' + side + b]; pb.scale = (1.25, 1.0, 1.25)
             for c in pb.children: c.scale = (1 / 1.25, 1.0, 1 / 1.25)
         arm.pose.bones['mixamorig:' + side + 'Hand'].scale = (1.3, 1.3, 1.3) if i < 3 else (1.0, 1.0, 1.0)
-    if i in (1, 2): arm.pose.bones['mixamorig:LeftHand'].scale = (2.0, 2.0, 2.0)   # fist holding the ball
+    # (frames 2-3 get a hand-drawn fist in convert.py)
     # throwing hand: fingers curled around the ball
     if True:
         for f in ('Index', 'Middle', 'Ring', 'Pinky'):
@@ -114,6 +114,15 @@ if __name__ == '__main__':
         w.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.35
         sc.cycles.samples = 32
     os.makedirs('m3d/out', exist_ok=True)
+    from bpy_extras.object_utils import world_to_camera_view
+    import json
+    hands = {}
     for i in range(5):
         apply_pose(arm, i)
         R.render(f'm3d/out/{mode}_{i}.png')
+        # where the throwing hand is in the 64x64 sprite (wrist and knuckles), for the hand-drawn fist
+        def px(bone):
+            co = arm.matrix_world @ arm.pose.bones['mixamorig:' + bone].head
+            v = world_to_camera_view(sc, cam, co); return [v.x * 64, (1 - v.y) * 64]
+        hands[i] = {'wrist': px('LeftHand'), 'knuckle': px('LeftHandMiddle2')}
+    json.dump(hands, open('m3d/out/hands.json', 'w'))

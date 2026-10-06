@@ -5,6 +5,8 @@ from PIL import Image
 from collections import Counter
 import backpal
 N = 64; B = 8
+import os
+FIST_MODE = os.environ.get('FIST', 'auto')
 def cls(p):
     r, g, b = p[:3]
     h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
@@ -127,10 +129,16 @@ def to_img(out, bg=(0, 0, 0, 0)):
             if out[y][x]: im.putpixel((x, y), out[y][x] + (255,))
     return im
 if __name__ == '__main__':
+    import json, fist
+    hands = json.load(open('m3d/out/hands.json'))
     frames = []
     for i in range(5):
         K, C, T = frame(Image.open(f'm3d/out/flat_{i}.png').convert('RGBA'), Image.open(f'm3d/out/lit_{i}.png').convert('RGBA'))
-        frames.append(to_img(finish(K, C, T)))
+        out = finish(K, C, T)
+        if i in (1, 2) and FIST_MODE == 'auto': fist.place(out, K, hands[str(i)]['wrist'], hands[str(i)]['knuckle'])
+        if FIST_MODE == 'manual':
+            import hands_manual; hands_manual.apply(out, i)
+        frames.append(to_img(out))
     sheet = Image.new('RGBA', (64, 320), (0, 0, 0, 0))
     for i, fr in enumerate(frames): sheet.alpha_composite(fr, (0, 64 * i))
     # one shared palette for all frames
