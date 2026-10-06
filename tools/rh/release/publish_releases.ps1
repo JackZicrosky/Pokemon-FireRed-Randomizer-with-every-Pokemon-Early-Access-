@@ -3,7 +3,7 @@
 # Versions that already have a release are skipped.
 $ErrorActionPreference = 'Continue'  # gh writes normal messages to stderr; check $LASTEXITCODE instead
 $repo = 'JackZicrosky/Pokemon-FireRed-Randomizer-with-every-Pokemon-Early-Access-'
-$versions = '0.1', '0.2', '0.3', '0.4', '0.5', '0.5.1', '0.5.2', '0.6', '0.6.1', '0.7', '0.7.1', '0.7.2', '0.7.3'
+$versions = '0.1', '0.2', '0.3', '0.4', '0.5', '0.5.1', '0.5.2', '0.6', '0.6.1', '0.7', '0.7.1', '0.7.2', '0.7.3', '0.7.4'
 $latest = $versions[-1]
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..\..')
 $fireRed = Split-Path $root -Parent   # the project lives in ...\Fire Red\source

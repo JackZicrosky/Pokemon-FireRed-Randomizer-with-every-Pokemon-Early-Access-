@@ -25,7 +25,7 @@
 - **Test everything** you change: the in-ROM self-test on 3 pools, plus emulator screenshots of the real
   flows (see §5). The owner once asked to "test every single setting to make sure they work", and that
   standard still applies.
-- **Latest released version: v0.7.3** (tag `v0.7.3`): UI Theme restyle from the owner's notes and edited screenshots.
+- **Latest released version: v0.7.4** (tag `v0.7.4`): Change Impossible Evos fix (trade evolutions with a Linking Cord sibling now become level-up).
 - **Never change the Default UI theme** (owner: "DO NOT EVER CHANGE THE DEFAULT THEMES!!!"). Only Randomizer / AMOLED.
 
 ---

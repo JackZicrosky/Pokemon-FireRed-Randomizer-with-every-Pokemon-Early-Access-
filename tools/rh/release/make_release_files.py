@@ -24,6 +24,7 @@ CHANGES = {
     "0.7.1": "UI Theme fixes: the white labels on the summary screen (name, level, Dex number, page title...) stay white and readable; the striped backgrounds of the bag and party screens become one plain color in the Randomizer and AMOLED themes. v0.6 / v0.7 saves keep working.",
     "0.7.2": "UI Theme fix: the START RELEARN prompt on the summary screen's move pages is white and readable again in the Randomizer and AMOLED themes. v0.6 / v0.7 saves keep working.",
     "0.7.3": "UI Theme restyle (the Default theme is unchanged): the Randomizer theme follows the randomizer screen's colors with purple highlights (party selector, chosen options, bag arrows and pocket dot, naming screen, summary page dot); AMOLED goes true black with red and white highlights (Poke Ball bag icon and Pokedex background, red battle cursors, white START / SELECT); lighter grey text and PP numbers, colored text kept; dark battle surroundings and menus; visible party genders; readable Pokedex labels; white BADGES label and numbers on the Trainer Card. v0.6 / v0.7 saves keep working.",
+    "0.7.4": "Fix: \"Change Impossible Evos\" now turns the trade evolutions of Kadabra, Machoke, Graveler, Haunter, Boldore, Gurdurr, Phantump and Pumpkaboo into level-up evolutions (before, they could still only evolve with a Linking Cord). v0.6 / v0.7 saves keep working.",
 }
 SAVES = {"0.1": "Start a new game.", "0.2": "Start a new game (v0.1 saves don't carry over).",
          "0.6": "Start a new game (saves from older versions don't carry over).",
@@ -31,7 +32,8 @@ SAVES = {"0.1": "Start a new game.", "0.2": "Start a new game (v0.1 saves don't 
          "0.7": "v0.6 / v0.6.1 saves keep working; start a new game if you come from v0.5.2 or older.",
          "0.7.1": "v0.6 and v0.7 saves keep working; start a new game if you come from v0.5.2 or older.",
          "0.7.2": "v0.6 and v0.7 saves keep working; start a new game if you come from v0.5.2 or older.",
-         "0.7.3": "v0.6 and v0.7 saves keep working; start a new game if you come from v0.5.2 or older."}
+         "0.7.3": "v0.6 and v0.7 saves keep working; start a new game if you come from v0.5.2 or older.",
+         "0.7.4": "v0.6 and v0.7 saves keep working; start a new game if you come from v0.5.2 or older."}
 
 # Lines written to the owner that shouldn't appear in public READMEs.
 TEXT_SUBS = [
