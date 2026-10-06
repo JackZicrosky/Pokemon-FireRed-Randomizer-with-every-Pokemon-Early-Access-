@@ -16,15 +16,17 @@ HANDS = {
         "..OmmmmmO.",
         "...OOmmmMO",
     ]},
-    2: {'at': (8, 8), 'rows': [         # raised hand, fingers together, thumb bump on the side (after Red's frame 3)
-        "..OOOO...",
-        ".OmLLmO..",
-        "OmmLLmnO.",
-        "OmmmmmLLO",
-        ".nmmmmmLO",
-        "..nmmmmO.",
-        "..OmmmmO.",
-        "...OmmO..",
+    2: {'at': (7, 6), 'rows': [         # the same hand as frame 2 (approved), held up; wrist narrowed to her forearm
+        "...nn.....",
+        "..nmLn....",
+        ".nmnLn..nn",
+        ".nmnmmnnLn",
+        "OmLmmmmmLO",
+        "OmmmmmmmmO",
+        "Ommmmmmmn.",
+        ".Ommmmmmn.",
+        "..OmmmmmO.",
+        "...OOmmO..",
     ]},
 }
 def erase(img, i):
