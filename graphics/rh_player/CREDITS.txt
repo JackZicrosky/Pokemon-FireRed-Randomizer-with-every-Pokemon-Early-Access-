@@ -61,3 +61,8 @@ From=Pokémon Snakewood
 Creator=Cutlerine
 Adapter=Voliol // The watering can, decorate, and underwater sprites needed to be custom-made. Everything else is directly from Snakewood.
 
+[Lucoa]
+From=Miss Kobayashi's Dragon Maid
+Creator=JackZicrosky (owner of this romhack) with Claude (Anthropic); battle back pic and the
+surf/bike/fish/item poses are based on Leaf's FR/LG sprites by Gamefreak
+

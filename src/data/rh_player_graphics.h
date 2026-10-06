@@ -689,6 +689,59 @@ static const struct SpriteFrameImage sRhPg12_PicFish[] = { overworld_ascending_f
 static const struct SpriteFrameImage sRhPg12_PicItem[] = { overworld_ascending_frames(sRhPg12_Item, 2, 4) };
 static const struct SpriteFrameImage sRhPg12_PicItemBike[] = { overworld_ascending_frames(sRhPg12_ItemBike, 4, 4) };
 
+static const u16 sRhPg13_Normal[] = INCGFX_U16("graphics/rh_player/lucoa/normal.png", ".4bpp", "-mwidth 2 -mheight 4");
+static const u16 sRhPg13_Surf[] = INCGFX_U16("graphics/rh_player/lucoa/surf.png", ".4bpp", "-mwidth 2 -mheight 4");
+static const u16 sRhPg13_Bike[] = INCGFX_U16("graphics/rh_player/lucoa/bike.png", ".4bpp", "-mwidth 4 -mheight 4");
+static const u16 sRhPg13_Fish[] = INCGFX_U16("graphics/rh_player/lucoa/fish.png", ".4bpp", "-mwidth 4 -mheight 4");
+static const u16 sRhPg13_Item[] = INCGFX_U16("graphics/rh_player/lucoa/item.png", ".4bpp", "-mwidth 2 -mheight 4");
+static const u16 sRhPg13_ItemBike[] = INCGFX_U16("graphics/rh_player/lucoa/itembike.png", ".4bpp", "-mwidth 4 -mheight 4");
+const u16 gRhPlayerPal13[] = INCGFX_U16("graphics/rh_player/lucoa/normal.png", ".gbapal");
+static const u32 sRhPg13_Front[] = INCGFX_U32("graphics/rh_player/lucoa/front.png", ".4bpp.smol");
+static const u16 sRhPg13_FrontPal[] = INCGFX_U16("graphics/rh_player/lucoa/front.png", ".gbapal");
+static const u32 sRhPg13_Oak[] = INCGFX_U32("graphics/rh_player/lucoa/oak.png", ".8bpp.smol");
+static const u8 sRhPg13_Back[] = INCGFX_U8("graphics/rh_player/lucoa/back.png", ".4bpp");
+static const u16 sRhPg13_BackPal[] = INCGFX_U16("graphics/rh_player/lucoa/back.png", ".gbapal");
+static const struct SpriteFrameImage sRhPg13_PicNormal[] = {
+    overworld_frame(sRhPg13_Normal, 2, 4, 0),
+    overworld_frame(sRhPg13_Normal, 2, 4, 1),
+    overworld_frame(sRhPg13_Normal, 2, 4, 2),
+    overworld_frame(sRhPg13_Normal, 2, 4, 3),
+    overworld_frame(sRhPg13_Normal, 2, 4, 4),
+    overworld_frame(sRhPg13_Normal, 2, 4, 5),
+    overworld_frame(sRhPg13_Normal, 2, 4, 6),
+    overworld_frame(sRhPg13_Normal, 2, 4, 7),
+    overworld_frame(sRhPg13_Normal, 2, 4, 8),
+    overworld_frame(sRhPg13_Normal, 2, 4, 9),
+    overworld_frame(sRhPg13_Normal, 2, 4, 10),
+    overworld_frame(sRhPg13_Normal, 2, 4, 11),
+    overworld_frame(sRhPg13_Normal, 2, 4, 12),
+    overworld_frame(sRhPg13_Normal, 2, 4, 13),
+    overworld_frame(sRhPg13_Normal, 2, 4, 14),
+    overworld_frame(sRhPg13_Normal, 2, 4, 15),
+    overworld_frame(sRhPg13_Normal, 2, 4, 16),
+    overworld_frame(sRhPg13_Normal, 2, 4, 17),
+    overworld_frame(sRhPg13_Normal, 2, 4, 18),
+    overworld_frame(sRhPg13_Normal, 2, 4, 19),
+};
+static const struct SpriteFrameImage sRhPg13_PicSurf[] = {
+    overworld_frame(sRhPg13_Surf, 2, 4, 0),
+    overworld_frame(sRhPg13_Surf, 2, 4, 1),
+    overworld_frame(sRhPg13_Surf, 2, 4, 2),
+    overworld_frame(sRhPg13_Surf, 2, 4, 0),
+    overworld_frame(sRhPg13_Surf, 2, 4, 0),
+    overworld_frame(sRhPg13_Surf, 2, 4, 1),
+    overworld_frame(sRhPg13_Surf, 2, 4, 1),
+    overworld_frame(sRhPg13_Surf, 2, 4, 2),
+    overworld_frame(sRhPg13_Surf, 2, 4, 2),
+    overworld_frame(sRhPg13_Surf, 2, 4, 0),
+    overworld_frame(sRhPg13_Surf, 2, 4, 1),
+    overworld_frame(sRhPg13_Surf, 2, 4, 2),
+};
+static const struct SpriteFrameImage sRhPg13_PicBike[] = { overworld_ascending_frames(sRhPg13_Bike, 4, 4) };
+static const struct SpriteFrameImage sRhPg13_PicFish[] = { overworld_ascending_frames(sRhPg13_Fish, 4, 4) };
+static const struct SpriteFrameImage sRhPg13_PicItem[] = { overworld_ascending_frames(sRhPg13_Item, 2, 4) };
+static const struct SpriteFrameImage sRhPg13_PicItemBike[] = { overworld_ascending_frames(sRhPg13_ItemBike, 4, 4) };
+
 static const struct RhPlayerPack sRhPlayerPacks[] = {
     { .normal = sRhPg0_PicNormal, .surf = sRhPg0_PicSurf, .bike = sRhPg0_PicBike, .fish = sRhPg0_PicFish, .item = sRhPg0_PicItem, .itemBike = sRhPg0_PicItemBike, .front = sRhPg0_Front, .frontPal = sRhPg0_FrontPal, .oak = sRhPg0_Oak, .back = sRhPg0_Back, .backPal = sRhPg0_BackPal },
     { .normal = sRhPg1_PicNormal, .surf = sRhPg1_PicSurf, .bike = sRhPg1_PicBike, .fish = sRhPg1_PicFish, .item = sRhPg1_PicItem, .itemBike = sRhPg1_PicItemBike, .front = sRhPg1_Front, .frontPal = sRhPg1_FrontPal, .oak = sRhPg1_Oak, .back = sRhPg1_Back, .backPal = sRhPg1_BackPal },
@@ -703,6 +756,7 @@ static const struct RhPlayerPack sRhPlayerPacks[] = {
     { .normal = sRhPg10_PicNormal, .surf = sRhPg10_PicSurf, .bike = sRhPg10_PicBike, .fish = sRhPg10_PicFish, .item = sRhPg10_PicItem, .itemBike = sRhPg10_PicItemBike, .front = sRhPg10_Front, .frontPal = sRhPg10_FrontPal, .oak = sRhPg10_Oak, .back = sRhPg10_Back, .backPal = sRhPg10_BackPal },
     { .normal = sRhPg11_PicNormal, .surf = sRhPg11_PicSurf, .bike = sRhPg11_PicBike, .fish = sRhPg11_PicFish, .item = sRhPg11_PicItem, .itemBike = sRhPg11_PicItemBike, .front = sRhPg11_Front, .frontPal = sRhPg11_FrontPal, .oak = sRhPg11_Oak, .back = sRhPg11_Back, .backPal = sRhPg11_BackPal },
     { .normal = sRhPg12_PicNormal, .surf = sRhPg12_PicSurf, .bike = sRhPg12_PicBike, .fish = sRhPg12_PicFish, .item = sRhPg12_PicItem, .itemBike = sRhPg12_PicItemBike, .front = sRhPg12_Front, .frontPal = sRhPg12_FrontPal, .oak = sRhPg12_Oak, .back = sRhPg12_Back, .backPal = sRhPg12_BackPal },
+    { .normal = sRhPg13_PicNormal, .surf = sRhPg13_PicSurf, .bike = sRhPg13_PicBike, .fish = sRhPg13_PicFish, .item = sRhPg13_PicItem, .itemBike = sRhPg13_PicItemBike, .front = sRhPg13_Front, .frontPal = sRhPg13_FrontPal, .oak = sRhPg13_Oak, .back = sRhPg13_Back, .backPal = sRhPg13_BackPal },
 };
 const u8 *const gRhPlayerGraphicsNames[] = {
     COMPOUND_STRING("Default"),
@@ -719,5 +773,6 @@ const u8 *const gRhPlayerGraphicsNames[] = {
     COMPOUND_STRING("Cynthia"),
     COMPOUND_STRING("Ghost (Snakewood)"),
     COMPOUND_STRING("Wraith (Snakewood)"),
+    COMPOUND_STRING("Lucoa"),
 };
 const u8 gRhPlayerGraphicsCount = ARRAY_COUNT(gRhPlayerGraphicsNames);

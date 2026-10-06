@@ -1,5 +1,3 @@
-# Lucoa overworld frames (FRLG normal.png: 20 frames of 16x32). Master copy = owner's edited sheet.
-# One letter per pixel; see PAL in lucoa22.py. Edit here, then run lucoa22.py.
 # frame 0
 ................
 ................
@@ -11,7 +9,7 @@
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK.KKKKKKKK.KoK
 KOKKpPPPPPPpKKOK
@@ -23,10 +21,10 @@ KoOKPPPPPPPPKOoK
 .KYKKWWWWWWKKYK.
 .KYKYttttttYKYK.
 ..KsYYKYYKYYsK..
-.KYKpShSYDSpKYK.
+.KYKpSGSYVSpKYK.
 .KYhKgSSSSgKhYK.
 .KhcKSTSSTSKchK.
-.KcSsTtTTtTsScK.
+.KccsTtTTtTsccK.
 .KcSsTTTTTTsScK.
 ..KssDDDDDDssK..
 ...KKDDKKDDKK...
@@ -44,7 +42,7 @@ KoOKPPPPPPPPKOoK
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK..KKKKKK..KoK
 KOK.KPPPPPPK.KOK
@@ -89,10 +87,10 @@ KWtpppoOppppKYK.
 .KtttpppppKKYYK.
 ..KKKKKKKKKKYYgK
 ..KSSKYYYYYYYYK.
-...KShYYggggYYK.
-....KSSKYgYYYYK.
-...KtTTKhhhhhhK.
-....KTTSKccccK..
+...KSGYYggggYYK.
+....KSSYYgYYYYK.
+...KtTThhhhhhhK.
+....KTTScccccK..
 ....KTTSSKKKK...
 ....KDDssK......
 ....KDDKK.......
@@ -111,7 +109,7 @@ KWtpppoOppppKYK.
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK.KKKKKKKK.KoK
 KOKKpPPPPPPpKKOK
@@ -123,10 +121,10 @@ KoOKPPPPPPPPKOoK
 .KYKKWWWWWWKKYK.
 .KYKYttttttYKYK.
 ..KsYYKYYKYYsK..
-.KYKpShSYDSpKYK.
+.KYKpSGSYVSpKYK.
 .KYhKgSSSSgKhYK.
 .KhcKSTSSTSKchK.
-.KcSsTtTTtTsscK.
+.KccsTtTTtTsscK.
 .KcSsTTTTTTcKcK.
 ..KssDDDDDDK.K..
 ...KKDDKKPpK....
@@ -144,7 +142,7 @@ KoOKPPPPPPPPKOoK
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK.KKKKKKKK.KoK
 KOKKpPPPPPPpKKOK
@@ -156,10 +154,10 @@ KoOKPPPPPPPPKOoK
 .KYKKWWWWWWKKYK.
 .KYKYttttttYKYK.
 ..KsYYKYYKYYsK..
-.KYKpShSYDSpKYK.
+.KYKpSGSYVSpKYK.
 .KYhKgSSSSgKhYK.
 .KhcKSTSSTSKchK.
-.KcssTtTTtTsScK.
+.KcssTtTTtTsccK.
 .KcKcTTTTTTsScK.
 ..K.KDDDDDDssK..
 ....KpPKKDDKK...
@@ -177,7 +175,7 @@ KoOKPPPPPPPPKOoK
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK..KKKKKK..KoK
 KOK.KPPPPPPK.KOK
@@ -210,7 +208,7 @@ KoOKPPPPPPPPKOoK
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK..KKKKKK..KoK
 KOK.KPPPPPPK.KOK
@@ -255,10 +253,10 @@ KWtpppoOppppKYK.
 .KtttpppppKKYYK.
 ..KKKKKKKKKKYYgK
 ..KSSKYYYYYYYYK.
-...KShYYggggYYK.
-....KSSKYgYYYYK.
-...KtThKhhhhhhK.
-....KTTSKKccccK.
+...KSGYYggggYYK.
+....KSSYYgYYYYK.
+...KtThhhhhhhhK.
+....KTTSccccccK.
 ....KDDSSKKKKK..
 ...KDDKSsKPpK...
 ...KPpKKKKKK....
@@ -288,9 +286,9 @@ KWtpppoOppppKYK.
 .KtttpppppKKYYK.
 ..KKKKKKKKKKYYgK
 ..KSSKYYYYYYYYK.
-...KShYYggggYYK.
-....KSSKYgYYYYK.
-...KtTTKhghhhhK.
+...KSGYYggggYYK.
+....KSSTYgYYYYK.
+...KtTTThghhhhK.
 ....KTTKSSKcccK.
 ....KTTKssKcKK..
 ....KDDDKKK.....
@@ -307,7 +305,7 @@ KWtpppoOppppKYK.
 ................
 ...K.KK..KK.K...
 ..KcKchKKhcKcK..
-KKKhchhcchhchKKK
+.KKhchhcchhchKK.
 KOKYhYYhhYYhYKOK
 KoKYKKKKKKKKYKoK
 KOKKpPPPPPPpKKOK
@@ -319,7 +317,7 @@ KoOKPPPPPPPPKOoK
 ..KKWWppppWWKK..
 ..KYKWWWWWWKYK..
 ..KYsYKYYKYsYK..
-...KpShSYDSpK...
+...KpSGSYVSpK...
 ..KSsKSSSSKsSK..
 ..KSsKTSSTKsSK..
 ...KKtTTTTtKK...
@@ -341,7 +339,7 @@ KoOKPPPPPPPPKOoK
 ................
 ...K.KK..KK.K...
 ..KccchKKhcccK..
-KKKhchhcchhchKKK
+.KKhchhcchhchKK.
 KOKYhYYhhYYhYKOK
 KoKYKKKKKKKKYKoK
 KOKKpPPPPPPpKKOK
@@ -353,10 +351,10 @@ KoOKPPPPPPPPKOoK
 ..KKWWppppWWKK..
 .KKYKWWWWWWKYK..
 KSSKsYKYYKYsYK..
-KsSKpShSYDSpK...
+KsSKpSGSYVSpK...
 .KK.KKSSSSKK....
 ....KSTSSTSK....
-...KTtTTTtKKK...
+...KTtTTTtSKK...
 ...KTTTTTKSSK...
 ....KDDDDKssK...
 ....KDDKKKKK....
@@ -374,7 +372,7 @@ KsSKpShSYDSpK...
 ................
 ...K.KK..KK.K...
 ..KcKchKKhcKcK..
-KKKhchhcchhchKKK
+.KKhchhcchhchKK.
 KOKYhYYhhYYhYKOK
 KoKYKKKKKKKKYKoK
 KOKKpPPPPPPpKKOK
@@ -386,10 +384,10 @@ KoOKPPPPPPPPKOoK
 ..KKWWppppWWKK..
 ..KYKWWWWWWKYKK.
 ..KYsYKYYKYsKSSK
-...KpShSYDSpKSsK
+...KpSGSYVSpKSsK
 ....KKSSSSKK.KK.
 ....KSTSSTSK....
-...KKKtTTTtTK...
+...KKStTTTtTK...
 ...KSSKTTTTTK...
 ...KssKDDDDK....
 ....KKKKKDDK....
@@ -407,7 +405,7 @@ KoOKPPPPPPPPKOoK
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK..KKKKKK..KoK
 KOK.KPPPPPPK.KOK
@@ -441,7 +439,7 @@ KoOKPPPPPPPPKOoK
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK..KKKKKK..KoK
 KOK.KPPPPPPK.KOK
@@ -474,7 +472,7 @@ KoOKPPPPPPPPKOoK
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK..KKKKKK..KoK
 KOK.KPPPPPPK.KOK
@@ -518,13 +516,13 @@ KWtpppoOppppKYK.
 .KtttpppppKKYYK.
 ..KKKKKKKKKKYYgK
 ..KSSKSYYYYYYYK.
-...KShSYggggYYK.
+...KSGSYggggYYK.
 ....KSSKYgYYYYK.
 ....KtTTKhhhhcK.
 .....KTTSKcccK..
 .....KTTSSKKK...
 .....KDDSsK.....
-.....KPpKKK.....
+.....KPpKK......
 ......KK........
 ................
 ................
@@ -552,12 +550,12 @@ KWtpppoOppppKYK.
 .KtttpppppKKYYK.
 ..KKKKKKKKKKYYgK
 ..KSSKSYYYYYYYK.
-...KShSYggggYYK.
+...KSGSYggggYYK.
 ...KKSSKYgYYYYK.
 ..KSSTTKKhhhcK..
 ..KssTTKKKKKK...
 ...KKDDDKKPpK...
-.....KPpKKKKK...
+.....KPpKKKK....
 ......KK........
 ................
 ................
@@ -585,12 +583,12 @@ KWtpppoOppppKYK.
 .KtttpppppKKYYK.
 ..KKKKKKKKKKYYgK
 ..KSSKSYYYYYYYK.
-...KShSYggggYYK.
+...KSGSYggggYYK.
 ....KSSKYgYYYYK.
 ...KTTTKhhSScK..
 ...KKTTTKKssK...
 ..KPpKKDDDKKK...
-..KKKK..KPpK....
+...KKK..KPpK....
 .........KK.....
 ................
 ................
@@ -605,7 +603,7 @@ KWtpppoOppppKYK.
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK.KKKKKKKK.KoK
 KOKKpPPPPPPpKKOK
@@ -617,10 +615,10 @@ KoOKPPPPPPPPKOoK
 .KYKKWWWWWWKKYK.
 ..KKYttttttYKK..
 .KYsYYKYYKYYsYK.
-.KYKpShSYDSpKYK.
+.KYKpSGSYVSpKYK.
 .KYhKgSSSSgKhYK.
 .KhcKSTSSTSKchK.
-.KcSsTtTTtTsScK.
+.KccsTtTTtTsccK.
 .KcSsTTTTTTsScK.
 ..KssDDDDDDssK..
 ...KKDDKKDDKK...
@@ -638,7 +636,7 @@ KoOKPPPPPPPPKOoK
 ................
 ................
 ................
-KK............KK
+.K............K.
 KOK..........KOK
 KoK.KKKKKKKK.KoK
 KOKKpPPPPPPpKKOK
@@ -650,10 +648,10 @@ KoOKPPPPPPPPKOoK
 .KYKKWWWWWWKKYK.
 ..KKYttttttYKK..
 .KYsYYKYYKYYsYK.
-.KYKpShSYDSpKYK.
+.KYKpSGSYVSpKYK.
 .KYhKgSSSSgKhYK.
 .KhcKSTSSTSKchK.
-.KcSsTtTTtTsScK.
+.KccsTtTTtTsccK.
 .KcSsTTTTTTsScK.
 ..KssDDDDDDssK..
 ...KKDDKKDDKK...
