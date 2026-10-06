@@ -42,7 +42,7 @@ POSES = [
     (TW3, LEAN[3], [('LeftArm', (float(os.environ.get('AX',-0.2)), float(os.environ.get('AY',0.3)), 0.9)), ('LeftForeArm', (float(os.environ.get('AX',-0.2)) - 0.1, float(os.environ.get('FY',0.05)), 0.9)), ('LeftHand', (float(os.environ.get('AX',-0.2)) - 0.1, float(os.environ.get('FY',0.05)), 0.9))],
      [('RightArm', (-0.3, -0.9, -0.35)), ('RightForeArm', (-0.1, -0.95, 0.2)), ('RightHand', (-0.1, -0.95, 0.25))]),
     # follow-through: left arm down across in front; right arm still back and bent
-    (TW4, LEAN[4], [('LeftArm', (-0.15, -0.45, 0.85)), ('LeftForeArm', (-0.25, -0.55, 0.75)), ('LeftHand', (-0.25, -0.6, 0.7))],
+    (TW4, LEAN[4], [('LeftArm', (float(os.environ.get('F5X',-0.05)), float(os.environ.get('F5Y',-0.8)), 0.6)), ('LeftForeArm', (-0.3, -0.75, 0.55)), ('LeftHand', (-0.3, -0.8, 0.5))],
      [('RightArm', (-0.3, -0.9, -0.3)), ('RightForeArm', (-0.1, -0.95, 0.2)), ('RightHand', (-0.1, -0.95, 0.25))]),
 ]
 
