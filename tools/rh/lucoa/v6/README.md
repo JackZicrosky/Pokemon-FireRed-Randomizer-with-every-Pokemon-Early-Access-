@@ -12,7 +12,7 @@ Put it at `model/01- Quetzalcoatl Lucoa/` and run from the folder above `m3d/`, 
   outlines, horn rings, wavy hair colour bands and the cap's snapback opening.
 - `backpal.py` is the palette, based on the owner's normal.png.
 - `red_hands_small.py` = Red's FR/LG hands from his frames 2 and 3, redrawn at ~70% to fit Lucoa's arms
-  (frames 2 and 3). `red_hands.py` holds the shared colours.
+  (frames 2, 3 and 4). `red_hands.py` holds the shared colours.
 - (older) `red_hands.py` put Red's FR/LG hands (cut at his wristband, recoloured to Lucoa's skin) on frames 2 and 3,
   with a few joining pixels at the wrist. (`hands_manual.py`/`fist.py` = earlier attempts, unused.)
 

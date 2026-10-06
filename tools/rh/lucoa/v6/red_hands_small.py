@@ -28,12 +28,29 @@ HANDS = {
         "..OmmmmmO.",
         "...OOmmO..",
     ]},
+    3: {'at': (55, 19), 'rows': [        # open hand flung toward the foe: fingers along the top, thumb down (Red's frame 4)
+        "...nnn...",
+        " nnLLmnnn",
+        " LLLLmmnm",
+        " LLLLLLLO",
+        " LLLLLLmO",
+        " mLLLLnO.",
+        " nLLLmO..",
+        "..OmmO...",
+        "...OO....",
+    ]},
 }
+# pixels that close the outline where a hand meets the arm: {frame: {(x, y): letter}}
+JOIN = {3: {(55, 21): 'O', (55, 26): 'M', (56, 26): 'O', (55, 27): 'O'}}
 def erase(img, i):
     if i == 1:      # the rendered hand: everything past the wrist, up and to the left
         for y in range(18, 33):
             for x in range(0, 15):
                 if (x - 10) * -0.8 + (y - 31) * -0.6 > 0.5 and img[y][x] in (backpal.O,) + tuple(SK): img[y][x] = None
+    if i == 3:
+        for y in range(16, 31):
+            for x in range(57, 64):
+                if img[y][x] in (backpal.O,) + tuple(SK): img[y][x] = None
     if i == 2:
         for y in range(6, 16):
             for x in range(5, 18):
@@ -46,3 +63,4 @@ def apply(img, i):
     for dy, row in enumerate(HANDS[i]['rows']):
         for dx, c in enumerate(row):
             if c != ' ': img[ay + dy][ax + dx] = C[c]
+    for (x, y), c in JOIN.get(i, {}).items(): img[y][x] = C[c]
