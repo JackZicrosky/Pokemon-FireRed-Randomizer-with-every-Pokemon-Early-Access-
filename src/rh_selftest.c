@@ -390,6 +390,23 @@ static void TestEvolutionFixes(void)
             }
         }
     }
+    // Every vanilla trade evolution becomes a level-up or item evolution into the same Pokemon (Haunter -> Gengar
+    // by level, not only by Linking Cord).
+    FOR_POOL(sp, 1)
+    {
+        const struct Evolution *v = GetSpeciesEvolutionsVanilla(sp), *e = GetSpeciesEvolutions(sp);
+        u32 i, j;
+        for (i = 0; v != NULL && v[i].method != EVOLUTIONS_END; i++)
+        {
+            bool32 found = FALSE;
+            if (v[i].method != EVO_TRADE)
+                continue;
+            for (j = 0; e != NULL && e[j].method != EVOLUTIONS_END; j++)
+                if (e[j].targetSpecies == v[i].targetSpecies && (e[j].method == EVO_LEVEL || (e[j].method == EVO_ITEM && e[j].param != ITEM_LINKING_CORD)))
+                    found = TRUE;
+            Check(found, "trade evo changed", sp, v[i].targetSpecies);
+        }
+    }
     // Eevee keeps every stone and Leafeon/Glaceon aren't forced at a level
     {
         u16 t[12];

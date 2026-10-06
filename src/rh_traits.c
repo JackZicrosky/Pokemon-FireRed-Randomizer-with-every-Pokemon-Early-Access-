@@ -1028,10 +1028,11 @@ static void AdjustEvolution(struct Evolution *e, struct EvolutionParam *buf, con
     if (e->method == EVO_NONE || e->targetSpecies == SPECIES_NONE)
         return;
 
-    if (S->evoChangeImpossible && HasImpossibleCondition(&all[k]))
+    if (S->evoChangeImpossible && e->method != EVO_TRADE && HasImpossibleCondition(&all[k]))
     {
         // Another, possible entry already leads to the same Pokemon (Eevee's Leafeon/Glaceon stones,
-        // Magnezone's Thunder Stone...): just drop this one.
+        // Magnezone's Thunder Stone...): just drop this one. Not for trades: their Linking Cord entry stays, and
+        // the trade itself becomes a level-up evolution (FVX).
         for (i = 0; all[i].method != EVOLUTIONS_END; i++)
         {
             if (i != k && all[i].targetSpecies == all[k].targetSpecies && !HasImpossibleCondition(&all[i]))
