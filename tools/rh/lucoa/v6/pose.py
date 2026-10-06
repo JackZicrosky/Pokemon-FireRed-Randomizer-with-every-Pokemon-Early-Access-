@@ -34,16 +34,16 @@ POSES = [
     (0, LEAN[0], DOWN_L, DOWN_R),
     # wind-up: left arm down, forearm up to the hand; right arm swung out down-right
     (TW1, LEAN[1], [('LeftArm', (0.4, -0.9, -0.2)), ('LeftForeArm', (0.5, 0.55, -0.55)), ('LeftHand', (0.45, 0.7, -0.45))],
-     [('RightArm', (-0.75, -0.7, 0.1)), ('RightForeArm', (-0.7, -0.7, 0.15)), ('RightHand', (-0.7, -0.7, 0.15))]),
+     [('RightArm', (-0.5, -0.85, 0.1)), ('RightForeArm', (-0.35, -0.9, 0.25)), ('RightHand', (-0.3, -0.9, 0.3))]),
     # cocked: elbow out, fist beside her head; right arm down, a little out
     (TW2, LEAN[2], [('LeftArm', (0.8, -0.5, -0.3)), ('LeftForeArm', (0.2, 1, -0.25)), ('LeftHand', (0.1, 1, -0.15))],
      [('RightArm', (-0.4, -0.9, 0.05)), ('RightForeArm', (-0.35, -0.9, 0.15)), ('RightHand', (-0.35, -0.9, 0.15))]),
     # release: left arm sweeps toward the foe; right arm pulled back and bent, hand by the far hip
     (TW3, LEAN[3], [('LeftArm', (float(os.environ.get('AX',-0.2)), float(os.environ.get('AY',0.3)), 0.9)), ('LeftForeArm', (float(os.environ.get('AX',-0.2)) - 0.1, float(os.environ.get('FY',0.05)), 0.9)), ('LeftHand', (float(os.environ.get('AX',-0.2)) - 0.1, float(os.environ.get('FY',0.05)), 0.9))],
-     [('RightArm', (-0.4, -0.85, -0.3)), ('RightForeArm', (0.3, -0.45, 0.6)), ('RightHand', (0.3, -0.5, 0.55))]),
+     [('RightArm', (-0.3, -0.9, -0.35)), ('RightForeArm', (-0.1, -0.95, 0.2)), ('RightHand', (-0.1, -0.95, 0.25))]),
     # follow-through: left arm down across in front; right arm still back and bent
     (TW4, LEAN[4], [('LeftArm', (-0.15, -0.45, 0.85)), ('LeftForeArm', (-0.25, -0.55, 0.75)), ('LeftHand', (-0.25, -0.6, 0.7))],
-     [('RightArm', (-0.4, -0.85, -0.25)), ('RightForeArm', (0.3, -0.5, 0.6)), ('RightHand', (0.3, -0.55, 0.55))]),
+     [('RightArm', (-0.3, -0.9, -0.3)), ('RightForeArm', (-0.1, -0.95, 0.2)), ('RightHand', (-0.1, -0.95, 0.25))]),
 ]
 
 def grow_horns(mesh, k):
@@ -78,6 +78,9 @@ def apply_pose(arm, i):
             pb = arm.pose.bones['mixamorig:' + side + b]; pb.scale = (1.25, 1.0, 1.25)
             for c in pb.children: c.scale = (1 / 1.25, 1.0, 1 / 1.25)
         arm.pose.bones['mixamorig:' + side + 'Hand'].scale = (1.0, 1.0, 1.0)
+    if i == 2:   # raised forearm in frame 3: thicker so the wrist matches the hand
+        k = 1.7; pb = arm.pose.bones['mixamorig:LeftForeArm']; pb.scale = (k, 1.0, k)
+        arm.pose.bones['mixamorig:LeftHand'].scale = (1 / k, 1.0, 1 / k)
     # (frames 2-3 get a hand-drawn fist in convert.py)
     # throwing hand: fingers curled around the ball
     if True:

@@ -28,23 +28,25 @@ HANDS = {
         "..OmmmmmO.",
         "...OOmmO..",
     ]},
-    3: {'at': (55, 23), 'rows': [        # Red's frame-4 hand at 75%: fingers out toward the foe, thumb hanging down
-        "...nn.....",
-        ".nnLLm..n.",
-        "OLLLmmnnmn",
-        "MLLLLLLLLO",
-        "MLLLLLLLmO",
-        "MMLLLLnOO.",
-        "OOmLLmO...",
-        "..OmmmO...",
-        "...OmmO...",
-        "....OO....",
+    3: {'at': (55, 21), 'rows': [        # the approved frame-2 hand turned 90 degrees: fingers toward the foe, thumb down
+        "...OOO....",
+        "..Ommmnn..",
+        ".OmmmLmmn.",
+        "Ommmmmnnmn",
+        "OmmmmmmLLn",
+        "mmmmmmmnn.",
+        "mmmmmmn...",
+        "mmmmmmn...",
+        "OOnnmLLn..",
+        "....OOnn..",
     ]},
 }
 # pixels that close the outline where a hand meets the arm: {frame: {(x, y): letter}}
 JOIN = {3: {}}
 # the wrist each patch was drawn for; patches and erase areas follow the real wrist from hands.json
 REF = {1: (10, 31), 2: (13, 20), 3: (55, 27)}
+# frame 3: widen the raised forearm under the hand to 2 pixels (rows below the wrist, relative to the wrist)
+WIDEN = {2: range(-5, 4)}
 def erase(img, i, d=(0, 0)):
     ox, oy = d
     if i == 1:      # the rendered hand: everything past the wrist, up and to the left
@@ -70,3 +72,9 @@ def apply(img, i, wrist=None):
         for dx, c in enumerate(row):
             if c != ' ' and 0 <= ax + dx < 64 and 0 <= ay + dy < 64: img[ay + dy][ax + dx] = C[c]
     for (x, y), c in JOIN.get(i, {}).items(): img[y][x] = C[c]
+    for dy in WIDEN.get(i, ()):
+        y = REF[i][1] + d[1] + dy
+        xs = [x for x in range(0, 30) if img[y][x] in (SK[0], SK[2], MID)]
+        if xs and len(xs) < 2:
+            r = max(xs)
+            if img[y][r + 1] == backpal.O: img[y][r + 1] = img[y][r]; img[y][r + 2] = backpal.O
