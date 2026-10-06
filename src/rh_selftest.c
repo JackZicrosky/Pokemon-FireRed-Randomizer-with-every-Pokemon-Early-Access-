@@ -407,6 +407,18 @@ static void TestEvolutionFixes(void)
             Check(found, "trade evo changed", sp, v[i].targetSpecies);
         }
     }
+    // The game's own level-up check: a level 60 Haunter evolves into Gengar (owner's report)
+    {
+        struct Pokemon *mon = Alloc(sizeof(struct Pokemon));
+        if (mon != NULL)
+        {
+            bool32 canStop = TRUE;
+            CreateMon(mon, SPECIES_HAUNTER, 60, 0, OTID_STRUCT_PLAYER_ID);
+            Check(GetEvolutionTargetSpecies(mon, EVO_MODE_NORMAL, ITEM_NONE, NULL, &canStop, CHECK_EVO) == SPECIES_GENGAR,
+                  "haunter levels up", GetEvolutionTargetSpecies(mon, EVO_MODE_NORMAL, ITEM_NONE, NULL, &canStop, CHECK_EVO), 0);
+            Free(mon);
+        }
+    }
     // Eevee keeps every stone and Leafeon/Glaceon aren't forced at a level
     {
         u16 t[12];
