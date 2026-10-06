@@ -28,19 +28,22 @@ def twist(arm, name, axis, deg):
 DOWN_L = [('LeftArm', (0.22, -1, 0.05)), ('LeftForeArm', (0.08, -1, 0.15)), ('LeftHand', (0.05, -1, 0.2))]
 DOWN_R = [('RightArm', (-0.22, -1, 0.05)), ('RightForeArm', (-0.08, -1, 0.15)), ('RightHand', (-0.05, -1, 0.2))]
 TW1, TW2, TW3, TW4 = [float(v) for v in os.environ.get('TW', '15,22,-18,-24').split(',')]
+LEAN = [float(v) for v in os.environ.get('LEAN', '10,13,8,18,24').split(',')]
 POSES = [
-    # (spine twist deg about up axis, spine lean fwd deg, left (throwing) arm, right arm)
-    (0, 0, DOWN_L, DOWN_R),
-    # wind-up: left arm swings down and back
-    (TW1, 3, [('LeftArm', (0.55, -0.8, -0.3)), ('LeftForeArm', (0.7, -0.55, -0.45)), ('LeftHand', (0.7, -0.5, -0.45))], DOWN_R),
-    # cocked: left arm up and back, ball hand above the shoulder
-    (TW2, -2, [('LeftArm', (0.8, -0.5, -0.3)), ('LeftForeArm', (0.2, 1, -0.25)), ('LeftHand', (0.1, 1, -0.15))], DOWN_R),
-    # release: left arm sweeps forward and up toward the foe
-    (TW3, 8, [('LeftArm', (-0.75, 0.4, 0.55)), ('LeftForeArm', (-0.85, 0.35, 0.4)), ('LeftHand', (-0.85, 0.3, 0.4))],
-     [('RightArm', (-0.5, -0.7, -0.45)), ('RightForeArm', (-0.4, -0.7, -0.4)), ('RightHand', (-0.4, -0.7, -0.4))]),
-    # follow-through: left arm comes down across in front
-    (TW4, 14, [('LeftArm', (-0.65, -0.35, 0.7)), ('LeftForeArm', (-0.8, -0.5, 0.35)), ('LeftHand', (-0.8, -0.55, 0.25))],
-     [('RightArm', (-0.45, -0.8, -0.3)), ('RightForeArm', (-0.3, -0.8, -0.2)), ('RightHand', (-0.3, -0.8, -0.2))]),
+    # (spine twist deg about up axis, spine lean fwd deg, left (throwing) arm, right arm like Red's other arm)
+    (0, LEAN[0], DOWN_L, DOWN_R),
+    # wind-up: left arm down, forearm up to the hand; right arm swung out down-right
+    (TW1, LEAN[1], [('LeftArm', (0.4, -0.9, -0.2)), ('LeftForeArm', (0.5, 0.55, -0.55)), ('LeftHand', (0.45, 0.7, -0.45))],
+     [('RightArm', (-0.75, -0.7, 0.1)), ('RightForeArm', (-0.7, -0.7, 0.15)), ('RightHand', (-0.7, -0.7, 0.15))]),
+    # cocked: elbow out, fist beside her head; right arm down, a little out
+    (TW2, LEAN[2], [('LeftArm', (0.8, -0.5, -0.3)), ('LeftForeArm', (0.2, 1, -0.25)), ('LeftHand', (0.1, 1, -0.15))],
+     [('RightArm', (-0.4, -0.9, 0.05)), ('RightForeArm', (-0.35, -0.9, 0.15)), ('RightHand', (-0.35, -0.9, 0.15))]),
+    # release: left arm sweeps toward the foe; right arm pulled back and bent, hand by the far hip
+    (TW3, LEAN[3], [('LeftArm', (-0.75, 0.4, 0.55)), ('LeftForeArm', (-0.85, 0.35, 0.4)), ('LeftHand', (-0.85, 0.3, 0.4))],
+     [('RightArm', (-0.25, -0.7, -0.7)), ('RightForeArm', (0.6, -0.35, -0.6)), ('RightHand', (0.6, -0.4, -0.5))]),
+    # follow-through: left arm down across in front; right arm still back and bent
+    (TW4, LEAN[4], [('LeftArm', (-0.65, -0.35, 0.7)), ('LeftForeArm', (-0.8, -0.5, 0.35)), ('LeftHand', (-0.8, -0.55, 0.25))],
+     [('RightArm', (-0.25, -0.75, -0.6)), ('RightForeArm', (0.6, -0.45, -0.5)), ('RightHand', (0.6, -0.5, -0.4))]),
 ]
 
 def grow_horns(mesh, k):
@@ -74,7 +77,7 @@ def apply_pose(arm, i):
         for b in ('Arm', 'ForeArm'):
             pb = arm.pose.bones['mixamorig:' + side + b]; pb.scale = (1.25, 1.0, 1.25)
             for c in pb.children: c.scale = (1 / 1.25, 1.0, 1 / 1.25)
-        arm.pose.bones['mixamorig:' + side + 'Hand'].scale = (1.3, 1.3, 1.3) if i < 3 else (1.0, 1.0, 1.0)
+        arm.pose.bones['mixamorig:' + side + 'Hand'].scale = (1.0, 1.0, 1.0)
     # (frames 2-3 get a hand-drawn fist in convert.py)
     # throwing hand: fingers curled around the ball
     if True:

@@ -140,8 +140,16 @@ if __name__ == '__main__':
             import red_hands
             cfg = json.loads(os.environ.get('REDCFG', '{}'))
             if str(i) in cfg: red_hands.apply(out, i, *cfg[str(i)]); red_hands.fix(out, i)
+        if FIST_MODE == 'redsmall':
+            import red_hands_small; red_hands_small.apply(out, i)
         if FIST_MODE == 'manual':
             import hands_manual; hands_manual.apply(out, i)
+        # fill pinholes (a clear pixel with 3+ filled neighbours) with outline: no stray checkerboards
+        for _ in range(2):
+            for y in range(1, 63):
+                for x in range(1, 63):
+                    if out[y][x] is None and sum(out[y + dy][x + dx] is not None for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) >= 3:
+                        out[y][x] = backpal.O
         frames.append(to_img(out))
     sheet = Image.new('RGBA', (64, 320), (0, 0, 0, 0))
     for i, fr in enumerate(frames): sheet.alpha_composite(fr, (0, 64 * i))
