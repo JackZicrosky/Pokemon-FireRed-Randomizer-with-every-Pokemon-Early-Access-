@@ -25,6 +25,32 @@ enum { PG_NORMAL, PG_BIKE, PG_SURF, PG_FIELD_MOVE, PG_FISH, PG_VS_SEEKER, PG_VS_
 
 static EWRAM_DATA struct ObjectEventGraphicsInfo sPlayerGfx[PG_COUNT] = {0};
 
+#if !IS_FRLG
+// The packs' walking sheet has FireRed's layout: 9 walking frames, then 9 running frames as down x3, up x3, left x3
+// (stand, step, step), then 2 more. Emerald's running animations want the three standing frames first, then the
+// steps (down, down, up, up, left, left): this table gives each Emerald frame number the pack's frame.
+#define PACK_NORMAL_FRAMES 20
+static const u8 sEmeraldNormalFrame[PACK_NORMAL_FRAMES] =
+{
+    0, 1, 2, 3, 4, 5, 6, 7, 8,
+    9 + 0, 9 + 3, 9 + 6, 9 + 1, 9 + 2, 9 + 4, 9 + 5, 9 + 7, 9 + 8,
+    18, 19,
+};
+static EWRAM_DATA struct SpriteFrameImage sEmeraldNormal[PACK_NORMAL_FRAMES] = {0};
+
+static const struct SpriteFrameImage *EmeraldNormalFrames(const struct SpriteFrameImage *pack)
+{
+    u32 i;
+    for (i = 0; i < PACK_NORMAL_FRAMES; i++)
+    {
+        sEmeraldNormal[i].data = (const u8 *)pack->data + sEmeraldNormalFrame[i] * pack->size;
+        sEmeraldNormal[i].size = pack->size;
+        sEmeraldNormal[i].relativeFrames = FALSE;
+    }
+    return sEmeraldNormal;
+}
+#endif
+
 static s32 KindOf(u16 graphicsId)
 {
     switch (graphicsId)
@@ -106,7 +132,11 @@ const struct ObjectEventGraphicsInfo *RH_PlayerObjectGraphics(u16 graphicsId, co
     info->paletteTag = OBJ_EVENT_PAL_TAG_RH_PLAYER + gSaveBlock3Ptr->rhSettings.playerGraphics - 1;
     switch (kind)
     {
+#if IS_FRLG
     case PG_NORMAL:         info->images = pack->normal; break;
+#else
+    case PG_NORMAL:         info->images = EmeraldNormalFrames(pack->normal); break;
+#endif
     case PG_BIKE:           info->images = pack->bike; break;
     case PG_SURF:           info->images = pack->surf; break;
     case PG_FIELD_MOVE:
