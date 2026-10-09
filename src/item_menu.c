@@ -1232,12 +1232,21 @@ void DisplayItemMessage(u8 taskId, u8 fontId, const u8 *str, TaskFunc callback)
     ScheduleBgCopyTilemapToVram(1);
 }
 
+static void CloseItemMessage_RebuildList(u8 taskId);
+
+// romhack: in two steps. The message box is cleared first; the item list (which reuses the box's tiles) is rebuilt
+// on the next frame, once the cleared box is on screen, so the box never shows garbage for a frame.
 void CloseItemMessage(u8 taskId)
+{
+    RemoveItemMessageWindow(ITEMWIN_MESSAGE);
+    gTasks[taskId].func = CloseItemMessage_RebuildList;
+}
+
+static void CloseItemMessage_RebuildList(u8 taskId)
 {
     s16 *data = gTasks[taskId].data;
     u16 *scrollPos = &gBagPosition.scrollPosition[gBagPosition.pocket];
     u16 *cursorPos = &gBagPosition.cursorPosition[gBagPosition.pocket];
-    RemoveItemMessageWindow(ITEMWIN_MESSAGE);
     DestroyListMenuTask(tListTaskId, scrollPos, cursorPos);
     UpdatePocketItemList(gBagPosition.pocket);
     UpdatePocketListPosition(gBagPosition.pocket);
