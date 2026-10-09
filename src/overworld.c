@@ -1,6 +1,7 @@
 #include "global.h"
 #include "overworld.h"
 #include "rh.h"
+#include "config/rh_test.h"
 #include "battle_pyramid.h"
 #include "battle_setup.h"
 #include "battle_util.h"
@@ -1943,6 +1944,9 @@ void CB2_NewGame(void)
         gFieldCallback = FieldCB_WarpExitFadeFromBlack;
     else
         gFieldCallback = ExecuteTruckSequence;
+#if defined(RH_TEST_WHITEOUT) && !defined(RELEASE)
+    gFieldCallback = FieldCB_RushInjuredPokemonToCenter;   // test builds: start on the whiteout message screen
+#endif
     gFieldCallback2 = NULL;
     DoMapLoadLoop(&gMain.state);
     SetFieldVBlankCallback();
