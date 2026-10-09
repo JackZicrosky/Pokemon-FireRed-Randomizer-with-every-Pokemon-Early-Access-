@@ -298,6 +298,15 @@ static const struct ThemeOverride sOverrides[] =
     { sScrollingBg_Pal, 3, OV_LATE, { RGB(3, 4, 5), RGB_BLACK } },
     { sScrollingBgMoveItems_Pal, 2, OV_LATE, { RGB(28, 28, 29), RGB_WHITE } },
     { sScrollingBgMoveItems_Pal, 3, OV_LATE, { RGB(3, 4, 5), RGB_BLACK } },
+    // PC: the gender symbol (colours 4-5 male, 6-7 female) keeps its normal blue / pink instead of going dark
+    { sScrollingBg_Pal, 4, OV_LATE, { RGB(15, 23, 31), RGB(15, 23, 31) } },
+    { sScrollingBg_Pal, 5, OV_LATE, { RGB(0, 15, 31), RGB(0, 15, 31) } },
+    { sScrollingBg_Pal, 6, OV_LATE, { RGB(31, 16, 16), RGB(31, 16, 16) } },
+    { sScrollingBg_Pal, 7, OV_LATE, { RGB(21, 3, 3), RGB(21, 3, 3) } },
+    { sScrollingBgMoveItems_Pal, 4, OV_LATE, { RGB(15, 23, 31), RGB(15, 23, 31) } },
+    { sScrollingBgMoveItems_Pal, 5, OV_LATE, { RGB(0, 15, 31), RGB(0, 15, 31) } },
+    { sScrollingBgMoveItems_Pal, 6, OV_LATE, { RGB(31, 16, 16), RGB(31, 16, 16) } },
+    { sScrollingBgMoveItems_Pal, 7, OV_LATE, { RGB(21, 3, 3), RGB(21, 3, 3) } },
     // Options: the chosen values and their shadows.
     { sOptionMenuText_Pal, 5, OV_LATE, { RGB(13, 8, 20), RGB(24, 4, 2) } },
     { sOptionMenuText_Pal, 4, OV_LATE, { RGB(17, 11, 26), RGB(24, 13, 12) } },
