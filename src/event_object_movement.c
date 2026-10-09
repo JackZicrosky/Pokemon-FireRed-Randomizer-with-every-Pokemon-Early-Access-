@@ -3223,10 +3223,14 @@ const struct ObjectEventGraphicsInfo *GetObjectEventGraphicsInfo(u16 graphicsId)
     return gObjectEventGraphicsInfoPointers[graphicsId];
 }
 
-// Custom Player Graphics (rh_player_graphics.c): another object's vanilla graphics info.
-const struct ObjectEventGraphicsInfo *RH_VanillaObjectGraphics(u16 graphicsId)
+// Custom Player Graphics (rh_player_graphics.c): make a graphics info a 16x32 sprite (FireRed's player frame size).
+void RH_ObjectGraphicsShape16x32(struct ObjectEventGraphicsInfo *info)
 {
-    return gObjectEventGraphicsInfoPointers[graphicsId];
+    info->size = 256;
+    info->width = 16;
+    info->height = 32;
+    info->oam = &gObjectEventBaseOam_16x32;
+    info->subspriteTables = sOamTables_16x32;
 }
 
 static void SetObjectEventDynamicGraphicsId(struct ObjectEvent *objectEvent)

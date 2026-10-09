@@ -25,7 +25,7 @@ enum { PG_NORMAL, PG_BIKE, PG_SURF, PG_FIELD_MOVE, PG_FISH, PG_VS_SEEKER, PG_VS_
 
 static EWRAM_DATA struct ObjectEventGraphicsInfo sPlayerGfx[PG_COUNT] = {0};
 
-const struct ObjectEventGraphicsInfo *RH_VanillaObjectGraphics(u16 graphicsId);   // event_object_movement.c
+void RH_ObjectGraphicsShape16x32(struct ObjectEventGraphicsInfo *info);   // event_object_movement.c
 
 #if !IS_FRLG
 // The packs' walking sheet has FireRed's layout: 9 walking frames, then 9 running frames as down x3, up x3, left x3
@@ -132,12 +132,10 @@ const struct ObjectEventGraphicsInfo *RH_PlayerObjectGraphics(u16 graphicsId, co
     info = &sPlayerGfx[kind];
     *info = *vanilla;
 #if !IS_FRLG
-    // The packs' surfing and field move frames are FireRed's 16x32 ones (Emerald's own are 32x32): take the sprite
-    // shape from FireRed's player (Red), which this engine also has.
-    if (kind == PG_SURF)
-        *info = *RH_VanillaObjectGraphics(OBJ_EVENT_GFX_RED_SURF);
-    else if (kind == PG_FIELD_MOVE)
-        *info = *RH_VanillaObjectGraphics(OBJ_EVENT_GFX_RED_FIELD_MOVE);
+    // The packs' surfing and field move frames are FireRed's 16x32 ones (Emerald's own are 32x32).
+    // (FireRed's own player graphics entries aren't built into Emerald, so the shape is set here.)
+    if (kind == PG_SURF || kind == PG_FIELD_MOVE)
+        RH_ObjectGraphicsShape16x32(info);
 #endif
     info->paletteTag = OBJ_EVENT_PAL_TAG_RH_PLAYER + gSaveBlock3Ptr->rhSettings.playerGraphics - 1;
     switch (kind)
