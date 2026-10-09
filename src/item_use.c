@@ -1587,17 +1587,24 @@ void ItemUseOutOfBattle_TownMap(u8 taskId)
 // ---------------------------------------------------------------------------
 // Romhack key items: Healing Kit (Nuzlocke mode) and HM Kit.
 // ---------------------------------------------------------------------------
-static const u8 sText_RH_PartyHealed[] = _("Your POKéMON were fully healed!");
 static const u8 sText_RH_HMKitAuto[] = _("The HM KIT works by itself: just walk\nup to a tree, boulder, rock or water.\pIt can FLY you from the bag once you\nhave HM02 and the right BADGE.");
+
+// No message (owner): the party is healed with the healing sound, then the bag / field carries on.
+static void Task_RH_HealingKitDoneOnField(u8 taskId)
+{
+    DestroyTask(taskId);
+    ScriptUnfreezeObjectEvents();
+    UnlockPlayerFieldControls();
+}
 
 void ItemUseOutOfBattle_HealingKit(u8 taskId)
 {
     HealPlayerParty();
     PlaySE(SE_USE_ITEM);
     if (!gTasks[taskId].tUsingRegisteredKeyItem)
-        DisplayItemMessage(taskId, FONT_NORMAL, sText_RH_PartyHealed, CloseItemMessage);
+        gTasks[taskId].func = CloseItemMessage;           // back to the item list (there is no message to close)
     else
-        DisplayItemMessageOnField(taskId, sText_RH_PartyHealed, Task_CloseCantUseKeyItemMessage);
+        gTasks[taskId].func = Task_RH_HealingKitDoneOnField;
 }
 
 static void ItemUseOnFieldCB_HMKitFlash(u8 taskId)

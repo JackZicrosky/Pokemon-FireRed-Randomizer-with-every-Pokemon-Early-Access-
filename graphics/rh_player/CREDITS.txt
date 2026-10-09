@@ -63,5 +63,7 @@ Adapter=Voliol // The watering can, decorate, and underwater sprites needed to b
 
 [Lucoa]
 From=Miss Kobayashi's Dragon Maid (fan art)
-Creator=JackZicrosky (owner) and Claude; built on the Cynthia pack frames by NachoPenalva
+Creator=JackZicrosky (owner) and Claude (overworld: owner's walk/run sheet, other sheets built off Leaf's FR/LG frames)
+Battle front / Oak intro picture: based on the fan pixel art "Lucoa Pixel Art 1" (artist unknown)
+Battle back picture: rendered from a fan-made rigged 3D model of Lucoa (artist unknown)
 

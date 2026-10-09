@@ -3223,6 +3223,12 @@ const struct ObjectEventGraphicsInfo *GetObjectEventGraphicsInfo(u16 graphicsId)
     return gObjectEventGraphicsInfoPointers[graphicsId];
 }
 
+// Custom Player Graphics (rh_player_graphics.c): another object's vanilla graphics info.
+const struct ObjectEventGraphicsInfo *RH_VanillaObjectGraphics(u16 graphicsId)
+{
+    return gObjectEventGraphicsInfoPointers[graphicsId];
+}
+
 static void SetObjectEventDynamicGraphicsId(struct ObjectEvent *objectEvent)
 {
     if (objectEvent->graphicsId >= OBJ_EVENT_GFX_VARS && objectEvent->graphicsId <= OBJ_EVENT_GFX_VAR_F)

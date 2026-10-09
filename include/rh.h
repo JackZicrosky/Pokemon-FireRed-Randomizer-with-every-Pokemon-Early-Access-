@@ -107,6 +107,7 @@ void RH_ThemeAccentRange(u32 offset, u16 mask);   // Randomizer theme: these col
 void RH_ThemeOverrides(const u16 *src, u32 offset, u32 count);   // after RH_ThemeLoadedRange: the owner's exact colors
 void RH_ThemeSummaryTiles(void);
 void RH_ThemeBagTiles(void);
+void RH_ThemeTextOnBlack(u32 offset);
 bool32 RH_ThemePPNumberColors(u32 state, u16 *text, u16 *shadow);
 void RH_ThemeBattleCursorTiles(void);
 void RH_ThemePokedexTiles(u32 interfaceTileStart, const u32 *menuGfx);

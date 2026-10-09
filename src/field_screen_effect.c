@@ -1,4 +1,5 @@
 #include "global.h"
+#include "rh.h"
 #include "cable_club.h"
 #include "event_data.h"
 #include "fieldmap.h"
@@ -1433,6 +1434,7 @@ static void Task_RushInjuredPokemonToCenter(u8 taskId)
         windowId = AddWindow(&sWindowTemplate_WhiteoutText);
         gTasks[taskId].tWindowId = windowId;
         Menu_LoadStdPalAt(BG_PLTT_ID(15));
+        RH_ThemeTextOnBlack(BG_PLTT_ID(15));   // UI Theme: white text on the black screen
         FillWindowPixelBuffer(windowId, PIXEL_FILL(0));
         PutWindowTilemap(windowId);
         CopyWindowToVram(windowId, COPYWIN_FULL);

@@ -945,7 +945,7 @@ static const u16 sPkmnData_Tilemap[]         = INCBIN_U16("graphics/pokemon_stor
 static const u16 sInterface_Pal[]            = INCGFX_U16("graphics/pokemon_storage/interface.pal", ".gbapal");
 static const u16 sPkmnDataGray_Pal[]         = INCGFX_U16("graphics/pokemon_storage/pkmn_data_gray.pal", ".gbapal");
 const u16 sScrollingBg_Pal[]          = INCGFX_U16("graphics/pokemon_storage/scrolling_bg.pal", ".gbapal");
-static const u16 sScrollingBgMoveItems_Pal[] = INCGFX_U16("graphics/pokemon_storage/scrolling_bg_move_items.pal", ".gbapal");
+const u16 sScrollingBgMoveItems_Pal[] = INCGFX_U16("graphics/pokemon_storage/scrolling_bg_move_items.pal", ".gbapal");
 static const u16 sCloseBoxButton_Tilemap[]   = INCBIN_U16("graphics/pokemon_storage/close_box_button.bin");
 static const u16 sPartySlotFilled_Tilemap[]  = INCBIN_U16("graphics/pokemon_storage/party_slot_filled.bin");
 static const u16 sPartySlotEmpty_Tilemap[]   = INCBIN_U16("graphics/pokemon_storage/party_slot_empty.bin");
@@ -3884,7 +3884,7 @@ static void InitPalettesAndSprites(void)
         LoadPalette(sScrollingBgMoveItems_Pal, BG_PLTT_ID(3), sizeof(sScrollingBgMoveItems_Pal));
     RH_ThemeLoadedRange(BG_PLTT_ID(15), 16, RH_THEME_MODE_TEXT, 0);   // UI Theme: message windows
     RH_ThemeLoadedRange(BG_PLTT_ID(3), 16, RH_THEME_MODE_SCREEN, 0);  // and the scrolling background
-    RH_ThemeOverrides(sScrollingBg_Pal, BG_PLTT_ID(3), 16);
+    RH_ThemeOverrides(sStorage->boxOption != OPTION_MOVE_ITEMS ? sScrollingBg_Pal : sScrollingBgMoveItems_Pal, BG_PLTT_ID(3), 16);
 
     SetGpuReg(REG_OFFSET_BG1CNT, BGCNT_PRIORITY(1) | BGCNT_CHARBASE(1) | BGCNT_16COLOR | BGCNT_SCREENBASE(30));
     CreateDisplayMonSprite();

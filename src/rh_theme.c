@@ -104,6 +104,8 @@ static u16 ThemeColor(u16 color, u32 theme, u32 mode)
     switch (mode)
     {
     case MODE_FRAME:    // keeps the frame's shading, from the header bar to the dim grey
+        if (chroma == 0 && l >= 248)
+            return ThemeColor(color, theme, MODE_TEXT);   // white inside the frame = the text background
         return BrandColor(56 + l * (116 - 56) / 248);
     case MODE_DARK:     // everything dark (white = the panel color)
         nl = (theme == RH_THEME_AMOLED) ? l * 6 / 248 : 20 + l * 14 / 248;
@@ -241,6 +243,7 @@ extern const u16 sOptionMenuText_Pal[];
 extern const u16 sMarkings_Pal[];
 extern const u16 sKeyboard_Pal[];
 extern const u16 sScrollingBg_Pal[];
+extern const u16 sScrollingBgMoveItems_Pal[];
 
 
 #define BOTH(r, g, b) { RGB(r, g, b), RGB(r, g, b) }
@@ -289,6 +292,11 @@ static const struct ThemeOverride sOverrides[] =
     { gShopMenu_Pal, 9, 0, { NONE, RGB(1, 1, 1) } },
     { gShopMenu_Pal, 10, 0, { NONE, RGB_BLACK } },
     { sScrollingBg_Pal, 9, OV_LATE, { NONE, RGB(1, 1, 1) } },
+    // PC: the Pokemon's name / level / item text (row 3's colours 2-3): light text with a dark shadow
+    { sScrollingBg_Pal, 2, OV_LATE, { RGB(28, 28, 29), RGB_WHITE } },
+    { sScrollingBg_Pal, 3, OV_LATE, { RGB(3, 4, 5), RGB_BLACK } },
+    { sScrollingBgMoveItems_Pal, 2, OV_LATE, { RGB(28, 28, 29), RGB_WHITE } },
+    { sScrollingBgMoveItems_Pal, 3, OV_LATE, { RGB(3, 4, 5), RGB_BLACK } },
     // Options: the chosen values and their shadows.
     { sOptionMenuText_Pal, 5, OV_LATE, { RGB(13, 8, 20), RGB(24, 4, 2) } },
     { sOptionMenuText_Pal, 4, OV_LATE, { RGB(17, 11, 26), RGB(24, 13, 12) } },
@@ -732,4 +740,15 @@ void RH_ThemeBattleCursorTiles(void)
     if (gSaveBlock3Ptr->rhSettings.uiTheme != RH_THEME_AMOLED)
         return;
     RecolorVramTiles((u16 *)BG_CHAR_ADDR(0), 0, 2, 1, sCursor, RecolorCursorShadow, NULL);
+}
+
+// Text drawn straight on the black screen (the whiteout message), palette row loaded from gStandardMenuPalette:
+// white text (colour 1) with a dark shadow (colour 2) instead of the themed (inverted) menu colours.
+void RH_ThemeTextOnBlack(u32 offset)
+{
+    u32 theme = gSaveBlock3Ptr->rhSettings.uiTheme;
+    if (theme == RH_THEME_DEFAULT || theme >= RH_THEME_COUNT)
+        return;
+    gPlttBufferUnfaded[offset + 1] = gPlttBufferFaded[offset + 1] = (theme == RH_THEME_AMOLED) ? RGB_WHITE : RGB(28, 28, 29);
+    gPlttBufferUnfaded[offset + 2] = gPlttBufferFaded[offset + 2] = (theme == RH_THEME_AMOLED) ? RGB_BLACK : RGB(7, 8, 10);
 }

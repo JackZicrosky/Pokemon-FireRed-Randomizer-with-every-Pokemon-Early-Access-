@@ -2659,7 +2659,9 @@ static void RemoveItemMessageWindow(u8 windowType)
         // This ClearWindowTilemap call is redundant, since ClearDialogWindowAndFrameToTransparent already calls it.
         ClearWindowTilemap(*windowId);
         RemoveWindow(*windowId);
-        ScheduleBgCopyTilemapToVram(1);
+        // romhack: send the cleared tilemap now, not at the end of the frame. The item list is rebuilt right after
+        // this and reuses the window's tiles, so a late copy showed the box full of garbage for one frame.
+        CopyBgTilemapBufferToVram(1);
         *windowId = WINDOW_NONE;
     }
 }

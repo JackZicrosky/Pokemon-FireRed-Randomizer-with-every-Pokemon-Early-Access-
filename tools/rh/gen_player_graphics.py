@@ -31,7 +31,9 @@ PACKS = [
 # Packs made for this romhack: already in FireRed format in graphics/rh_player/<folder>/ (not converted).
 LOCAL_PACKS = [
     ('lucoa', 'Lucoa', "From=Miss Kobayashi's Dragon Maid (fan art)\n"
-                       "Creator=JackZicrosky (owner) and Claude; built on the Cynthia pack frames by NachoPenalva\n"),
+                       "Creator=JackZicrosky (owner) and Claude (overworld: owner's walk/run sheet, other sheets built off Leaf's FR/LG frames)\n"
+                       "Battle front / Oak intro picture: based on the fan pixel art \"Lucoa Pixel Art 1\" (artist unknown)\n"
+                       "Battle back picture: rendered from a fan-made rigged 3D model of Lucoa (artist unknown)\n"),
 ]
 
 WALK_ORDER = [(0, 0), (0, 1), (0, 2), (1, 0), (2, 0), (1, 1), (2, 1), (1, 2), (2, 2)]
