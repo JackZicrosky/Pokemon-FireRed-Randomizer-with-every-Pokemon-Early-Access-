@@ -104,8 +104,6 @@ static u16 ThemeColor(u16 color, u32 theme, u32 mode)
     switch (mode)
     {
     case MODE_FRAME:    // keeps the frame's shading, from the header bar to the dim grey
-        if (chroma == 0 && l >= 248)
-            return ThemeColor(color, theme, MODE_TEXT);   // white inside the frame = the text background
         return BrandColor(56 + l * (116 - 56) / 248);
     case MODE_DARK:     // everything dark (white = the panel color)
         nl = (theme == RH_THEME_AMOLED) ? l * 6 / 248 : 20 + l * 14 / 248;
@@ -275,6 +273,9 @@ static const struct ThemeOverride sOverrides[] =
     { gSummaryScreen_Pal, 58, 0, { NONE, RGB_BLACK } },
     { sMarkings_Pal, 1, 0, { NONE, RGB(6, 5, 9) } },
     { sMarkings_Pal, 2, 0, { NONE, RGB(6, 5, 9) } },
+    // Overworld message box, Randomizer: the white ring between its frame and the text (colour 12) takes the
+    // text background's colour, so the text area doesn't show as a separate, off-centre box.
+    { gMessageBox_Pal, 12, 0, { RGB(3, 4, 5), NONE } },
     // Window frame (type 1), AMOLED: its rounded corners black.
     { gTextWindowFrame1_Pal, 7, 0, { NONE, RGB_BLACK } },
     // Bag: the current pocket's dot; AMOLED: the pocket ball red and grey (RH_ThemeBagTiles).
