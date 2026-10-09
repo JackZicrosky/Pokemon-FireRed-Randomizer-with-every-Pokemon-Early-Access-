@@ -25,7 +25,8 @@
 - **Test everything** you change: the in-ROM self-test on 3 pools, plus emulator screenshots of the real
   flows (see §5). The owner once asked to "test every single setting to make sure they work", and that
   standard still applies.
-- **Latest released version: v0.7.4** (tag `v0.7.4`): Change Impossible Evos fix (trade evolutions with a Linking Cord sibling now become level-up).
+- **Latest released version: v0.7.5** (tag `v0.7.5`): new Lucoa sprites, Healing Kit without a message, HM Kit message
+  waits for a button at the end, AMOLED/Randomizer PC + whiteout text and PC gender colours, Randomizer message box ring.
 - **Never change the Default UI theme** (owner: "DO NOT EVER CHANGE THE DEFAULT THEMES!!!"). Only Randomizer / AMOLED.
 
 ---
@@ -476,8 +477,13 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 - UI Theme (v0.7) covers the main screens; rarely seen ones (Hall of Fame, mail, town/fly map, Trainer Tower, berry
   screens...) keep their normal colours. Add a screen by listing its palette in `sThemed[]` or calling
   `RH_ThemeLoadedRange`, then check screenshots in all 3 themes (test ROMs: `build/th/b3.sh`, `b4.sh`, `b5.sh`).
-- Lucoa's battle front/back pics are placeholder recolours of Cynthia's (no cap/horns); her overworld sheet is the
-  owner's (`build/lucoa/image-*.png`, generator `build/lucoa/lucoa_pack.py`).
+- Lucoa (v0.7.5): sprites from the owner's handoff zips in `graphics/rh_player/lucoa/` (part1 = CLAUDE.md + sprites,
+  part2 = only back-reference videos; zips are the owner's files, untracked). walk/run = owner's newest sheet
+  (`references/pasted_images/12.png`), surf/item/bike/itembike/fish = the handoff's round-4 text grids (the owner hadn't
+  reviewed those), front/back = the approved `current_sprites/front.png` / `back.png`, oak = front on a 64x96 canvas.
+  Each sheet group reduced to 15 colours (Lab-distance merge; back pic lost the cap's darker pink step).
+- Emerald player packs: surf / field move use a 16x32 shape (`RH_ObjectGraphicsShape16x32`); FireRed's Red graphics
+  entries are `#if IS_FRLG` only, so never read `gObjectEventGraphicsInfoPointers[OBJ_EVENT_GFX_RED_*]` in Emerald.
 - Amulet Coin + Luck Incense stacking (v0.6) compiled and code-reviewed but not yet checked in a battle.
 - Some NPC dialogue still names the original Pokémon.
 - New-game-only settings don't apply when changed mid-run with the key item.
@@ -502,6 +508,8 @@ Romhack items (in `include/constants/items.h`, after the Mega Stones):
 | v0.5 | Randomizer Settings key item, Reset The Run, dark centred "RANDOMIZE GAME" title menu |
 | v0.5.1 | Item description; rainbow Infinite Candy; randomizer-palette HM Kit icon |
 | v0.5.2 | Healing Kit icon from the owner's drawing (white case, red cross) |
+| v0.7.5 | Lucoa's new sprites (owner's handoff); Healing Kit heals with no message (item_use.c); HM Kit text ends with PAUSE_UNTIL_PRESS (its 2nd page used to flash and close at once = the "glitchy box"); AMOLED/Randomizer: PC info text light + dark shadow, PC gender colours kept (sOverrides on sScrollingBg*_Pal), whiteout text `RH_ThemeTextOnBlack`; Randomizer overworld message box white ring = text bg (gMessageBox_Pal idx 12). Test hooks: `RH_TEST_WHITEOUT` |
+| v0.7.4 | Change Impossible Evos: trade evolutions with a Linking Cord sibling become level-up |
 | v0.7.3 | UI Theme restyle (Default unchanged): owner's exact colours per theme in `sOverrides[]` (rh_theme.c), tile recolours where one palette colour drew things styled differently (summary page dots / EXP label, bag pocket ball, Pokedex ball + START/SELECT, battle cursor shadow), keyboard letters on spare colours, PP numbers, AMOLED red battle cursors. Made with the owner's edited screenshots (diff them pixel-exactly; build/th tools src.py, bgpix.py, objpix.py, derive*.py, vdiff.py). FireRed got these as cherry-picks; the Emerald port stays off `main` |
 | v0.7.2 | UI Theme: summary screen copies the unthemed std palette into BG palette 15 (the START RELEARN prompt; the summary never loads 15 itself, it inherits the previous screen's) |
 | v0.7.1 | UI Theme: summary white labels kept (rows 6-7 colours 3-4); bag (colours 12-13) and party (row 1 colours 4-5) stripes merged into one colour (`merge` mask in `sThemed[]`) |
