@@ -1587,7 +1587,7 @@ void ItemUseOutOfBattle_TownMap(u8 taskId)
 // ---------------------------------------------------------------------------
 // Romhack key items: Healing Kit (Nuzlocke mode) and HM Kit.
 // ---------------------------------------------------------------------------
-static const u8 sText_RH_HMKitAuto[] = _("The HM KIT works by itself: just walk\nup to a tree, boulder, rock or water.\pIt can FLY you from the bag once you\nhave HM02 and the right BADGE.");
+static const u8 sText_RH_HMKitAuto[] = _("The HM KIT works by itself: just walk\nup to a tree, boulder, rock or water.\pIt can FLY you from the bag once you\nhave HM02 and the right BADGE.{PAUSE_UNTIL_PRESS}");
 
 // No message (owner): the party is healed with the healing sound, then the bag / field carries on.
 static void Task_RH_HealingKitDoneOnField(u8 taskId)
